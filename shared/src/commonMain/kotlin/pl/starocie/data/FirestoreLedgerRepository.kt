@@ -1,6 +1,7 @@
 package pl.starocie.data
 
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.WriteBatch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -8,6 +9,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -65,10 +68,17 @@ class FirestoreLedgerRepository(
      * unable to bootstrap itself.
      */
     private suspend fun ensureWorkspace() {
-        val exists = runCatching { workspace.get().exists }.getOrDefault(false)
-        if (exists) return
-        runCatching { workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true) }
-            .onFailure { _syncError.value = "Nie można utworzyć magazynu: ${it.message}" }
+        // Bounded, because both calls await the server and the listeners are queued
+        // behind this. Offline neither ever returns, and without the timeout the
+        // ledger would never emit at all. Firestore queues the write locally the
+        // moment set() is called, so abandoning the wait does not lose it.
+        withTimeoutOrNull(WORKSPACE_BOOTSTRAP_TIMEOUT_MS) {
+            val exists = runCatching { workspace.get().exists }.getOrDefault(false)
+            if (!exists) {
+                runCatching { workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true) }
+                    .onFailure { _syncError.value = "Nie można utworzyć magazynu: ${it.message}" }
+            }
+        }
     }
 
     /**
@@ -130,7 +140,7 @@ class FirestoreLedgerRepository(
                 val item = draft.toItem(buyId = buyId, at = at)
                 set(itemsRef.document(item.id), item.toDoc())
             }
-        }.commit()
+        }.commitDetached()
 
         return buyId
     }
@@ -142,7 +152,7 @@ class FirestoreLedgerRepository(
         firestore.batch().apply {
             setEvent(this, at)
             set(itemsRef.document(item.id), item.toDoc())
-        }.commit()
+        }.commitDetached()
 
         return item.id
     }
@@ -177,23 +187,27 @@ class FirestoreLedgerRepository(
                     "updatedAt" to at.toEpochMilliseconds(),
                 )
             }
-        }.commit()
+        }.commitDetached()
     }
 
     override suspend fun removeItem(itemId: String) {
         val at = now()
-        itemsRef.document(itemId).update(
-            "status" to ItemStatus.REMOVED.name,
-            "updatedAt" to at.toEpochMilliseconds(),
-        )
+        detached {
+            itemsRef.document(itemId).update(
+                "status" to ItemStatus.REMOVED.name,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
     }
 
     override suspend fun nameEvent(eventId: String, name: String) {
         val at = now()
-        eventsRef.document(eventId).update(
-            "name" to name.takeIf { it.isNotBlank() },
-            "updatedAt" to at.toEpochMilliseconds(),
-        )
+        detached {
+            eventsRef.document(eventId).update(
+                "name" to name.takeIf { it.isNotBlank() },
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
     }
 
     /**
@@ -203,7 +217,7 @@ class FirestoreLedgerRepository(
      * market both write `2026-08-01` rather than inventing separate events, and
      * merge means whichever arrives second does not clobber a name already set.
      */
-    private fun setEvent(batch: dev.gitlive.firebase.firestore.WriteBatch, at: Instant) {
+    private fun setEvent(batch: WriteBatch, at: Instant) {
         val date = events.dateOf(at)
         val event = Event(
             id = events.eventIdFor(date),
@@ -213,6 +227,29 @@ class FirestoreLedgerRepository(
             updatedAt = at,
         )
         batch.set(eventsRef.document(event.id), event.toDoc(), merge = true)
+    }
+
+    /**
+     * Commits without waiting for the server.
+     *
+     * Firestore applies a write to its local cache straight away and the snapshot
+     * listeners fire from that cache, so the UI is already correct. `commit()` only
+     * completes once the *server* acknowledges — which never happens offline.
+     * Awaiting it leaves a save silently doing nothing at a market stall, which is
+     * precisely the situation this app is built for.
+     */
+    private fun WriteBatch.commitDetached() {
+        scope.launch {
+            runCatching { commit() }
+                .onFailure { _syncError.value = it.message ?: "Nie zapisano" }
+        }
+    }
+
+    private fun detached(block: suspend () -> Unit) {
+        scope.launch {
+            runCatching { block() }
+                .onFailure { _syncError.value = it.message ?: "Nie zapisano" }
+        }
     }
 
     private fun DraftItem.toItem(buyId: String?, at: Instant) = Item(
@@ -233,6 +270,7 @@ class FirestoreLedgerRepository(
     private fun newId(): String = Uuid.random().toString()
 
     private companion object {
+        const val WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 3_000L
         const val WORKSPACES = "workspaces"
         const val EVENTS = "events"
         const val BUYS = "buys"
