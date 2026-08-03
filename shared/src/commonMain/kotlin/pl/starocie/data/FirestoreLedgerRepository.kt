@@ -187,7 +187,7 @@ class FirestoreLedgerRepository(
         id = newId(),
         buyId = buyId,
         date = events.dateOf(at),
-        name = name?.takeIf { it.isNotBlank() },
+        name = name.trim(),
         note = note?.takeIf { it.isNotBlank() },
         price = price,
         splittable = splittable,

@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** An item as the user drafts it while unpacking, before it becomes an [Item]. */
 data class DraftItem(
-    val name: String? = null,
+    val name: String,
     val price: Money? = null,
     val splittable: Boolean = false,
     val note: String? = null,

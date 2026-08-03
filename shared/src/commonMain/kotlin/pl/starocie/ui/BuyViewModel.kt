@@ -47,6 +47,7 @@ data class BuyUiState(
                 Item(
                     id = previewId(index),
                     date = PREVIEW_DATE,
+                    name = draft.name,
                     price = draft.price,
                     status = ItemStatus.IN_STOCK,
                     createdBy = "",
@@ -71,9 +72,11 @@ class BuyViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun onNameChange(value: String) = _state.update { it.copy(name = value) }
 
+    /** A name is required — it is how the item will be found when selling. */
     fun addDraft(name: String, priceText: String, splittable: Boolean) {
+        if (name.isBlank()) return
         val draft = DraftItem(
-            name = name.takeIf { it.isNotBlank() },
+            name = name.trim(),
             price = parseMoney(priceText),
             splittable = splittable,
         )
@@ -92,9 +95,9 @@ class BuyViewModel(private val repository: LedgerRepository) : ViewModel() {
             repository.recordBuy(
                 price = current.total,
                 name = current.name,
-                // A buy with no items listed still records the spend; an item can be
-                // attached later rather than blocking the save.
-                items = current.drafts.ifEmpty { listOf(DraftItem()) },
+                // A buy with no items still records the spend; items can be attached
+                // later rather than blocking the save.
+                items = current.drafts,
             )
             _state.update { it.copy(saved = true) }
         }

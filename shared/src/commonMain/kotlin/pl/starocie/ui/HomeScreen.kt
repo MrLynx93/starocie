@@ -107,7 +107,7 @@ fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(item?.name ?: "bez nazwy")
+                            Text(item?.name ?: "—")
                             val stats = item?.let { ledger.itemStats(it) }
                             val profit = stats?.profit
                             Text(

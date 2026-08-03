@@ -30,7 +30,7 @@ data class SellUiState(
 }
 
 private fun Item.matches(query: String): Boolean =
-    name?.contains(query, ignoreCase = true) == true ||
+    name.contains(query, ignoreCase = true) ||
         note?.contains(query, ignoreCase = true) == true
 
 class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
@@ -39,8 +39,8 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     /**
      * Search runs in memory over the whole in-stock list, so it is instant and works
-     * offline. An empty query shows everything — the grid is what makes nameless
-     * items sellable, since you recognise the thing rather than its name.
+     * offline. An empty query shows everything, so the list doubles as the browse
+     * view when you cannot remember what a thing was called.
      */
     val state: StateFlow<SellUiState> = combine(local, repository.ledger) { ui, ledger ->
         val stock = ledger.itemsInStock()

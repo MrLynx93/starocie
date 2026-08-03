@@ -52,8 +52,10 @@ data class Item(
     /** Null when invented at point of sale, which makes its cost genuinely unknown. */
     val buyId: String? = null,
     val date: LocalDate,
-    val name: String? = null,
+    /** Required: this is how an item is found when selling. */
+    val name: String,
     val note: String? = null,
+    /** Optional and supplementary — an item is identified by its name. */
     val photoUrls: List<String> = emptyList(),
     /**
      * The **asking** price, never what the item cost. There is no cost field on an

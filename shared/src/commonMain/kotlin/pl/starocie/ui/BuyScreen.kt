@@ -95,7 +95,7 @@ fun BuyScreen(onDone: () -> Unit) {
                 value = itemName,
                 onValueChange = { itemName = it },
                 singleLine = true,
-                label = { Text("Nazwa") },
+                label = { Text("Nazwa rzeczy") },
                 modifier = Modifier.weight(2f),
             )
             OutlinedTextField(
@@ -113,6 +113,8 @@ fun BuyScreen(onDone: () -> Unit) {
             Text("Na sztuki", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.weight(1f))
             TextButton(
+                // A name is required: it is how the item is found when selling.
+                enabled = itemName.isNotBlank(),
                 onClick = {
                     viewModel.addDraft(itemName, itemPrice, itemSplittable)
                     itemName = ""
@@ -135,7 +137,7 @@ fun BuyScreen(onDone: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(draft.name ?: "bez nazwy", fontWeight = FontWeight.Medium)
+                            Text(draft.name, fontWeight = FontWeight.Medium)
                             val asking = draft.price?.format()?.let { "wyw. $it" }
                             val split = if (draft.splittable) " · na sztuki" else ""
                             if (asking != null || split.isNotEmpty()) {

@@ -1,23 +1,21 @@
 package pl.starocie.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,7 +44,7 @@ fun SellScreen(onDone: () -> Unit) {
             value = state.query,
             onValueChange = viewModel::onQueryChange,
             singleLine = true,
-            placeholder = { Text("Szukaj albo wybierz poniżej") },
+            placeholder = { Text("Zacznij pisać, co sprzedajesz") },
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -65,19 +63,15 @@ fun SellScreen(onDone: () -> Unit) {
 
         if (state.inStock.isEmpty()) {
             Text(
-                "Nic w magazynie.",
+                if (state.query.isBlank()) "Nic w magazynie." else "Nic nie pasuje.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 140.dp),
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 items(state.inStock, key = { it.id }) { item ->
-                    StockTile(item, onClick = { viewModel.select(item) })
+                    StockRow(item, onClick = { viewModel.select(item) })
+                    HorizontalDivider()
                 }
             }
         }
@@ -100,35 +94,29 @@ fun SellScreen(onDone: () -> Unit) {
     }
 }
 
-/**
- * The photo will be the identity here once the camera exists; until then the name,
- * or a visible "bez nazwy" so a nameless item is still recognisably present.
- */
 @Composable
-private fun StockTile(item: Item, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
-        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            Column(modifier = Modifier.align(Alignment.BottomStart)) {
+private fun StockRow(item: Item, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(item.name, fontWeight = FontWeight.Medium)
+            if (item.splittable) {
                 Text(
-                    text = item.name ?: "bez nazwy",
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
+                    "na sztuki",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                item.price?.let {
-                    Text(
-                        "wyw. ${it.format()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (item.splittable) {
-                    Text(
-                        "na sztuki",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
+        }
+        item.price?.let {
+            Text(
+                it.format(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -146,7 +134,7 @@ private fun SellDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(item.name ?: "bez nazwy") },
+        title = { Text(item.name) },
         text = {
             Column {
                 OutlinedTextField(

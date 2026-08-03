@@ -9,7 +9,8 @@ Firebase for storage and sync between two phones.
 **Friction, not completeness.** A tracker that demands tidy bookkeeping gets
 abandoned at the market stall. Partial records are first-class:
 
-- item names are optional — the photo is the real identity
+- an item's **name is required** — it is how the item is found when selling, by
+  typing. Photos are optional and supplementary; they never carry identity
 - costs may be unknown, and unknown must stay unknown rather than being guessed
 - adding must never block on the network
 - the buy and sell paths are a handful of taps each
@@ -41,7 +42,7 @@ sold at a different event from the one where they were bought.
 |---|---|
 | `Event` | `id`, `date`, `name?`, `note?` |
 | `Buy` | `id`, `eventId`, `date`, `price?`, `name?`, `note?`, `photoUrls` |
-| `Item` | `id`, `buyId?`, `date`, `name?`, `note?`, `photoUrls`, `price?`, `splittable`, `status` |
+| `Item` | `id`, `buyId?`, `date`, `name`, `note?`, `photoUrls`, `price?`, `splittable`, `status` |
 | `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `note?`, `soldCompletely` |
 
 All four also carry `createdBy`, `createdAt`, `updatedAt`.
@@ -224,10 +225,10 @@ returns. Android and iOS only; no desktop target.
   (the number you always know), then photograph the contents. Each photo becomes an
   item. One photo → sole item, exact cost. Several → box total, allocated. Never
   asks for a per-item cost.
-- **Sell** — search field above a visual grid of `IN_STOCK` items. The grid is what
-  makes nameless items sellable: you recognise the photo. Tap, enter final price,
-  done. "Add new" creates an item with no buy. Splittables show a note field and a
-  "fully sold" tick setting `soldCompletely`. Long-press offers "remove".
+- **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
+  enter the final price, done. "Add new" creates an item with no buy, leaving its
+  cost unknown. Splittables show a note field and a "fully sold" tick setting
+  `soldCompletely`. The dialog also offers "remove".
 
 ## Setup
 

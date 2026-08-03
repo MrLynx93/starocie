@@ -30,9 +30,11 @@ internal fun item(
     buyId: String? = null,
     status: ItemStatus = ItemStatus.IN_STOCK,
     splittable: Boolean = false,
+    name: String = id,
 ) = Item(
     id = id,
     buyId = buyId,
+    name = name,
     date = D0,
     price = price?.let(::Money),
     splittable = splittable,

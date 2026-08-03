@@ -56,7 +56,7 @@ internal data class ItemDoc(
     val id: String = "",
     val buyId: String? = null,
     val date: String = "",
-    val name: String? = null,
+    val name: String = "",
     val note: String? = null,
     val photoUrls: List<String> = emptyList(),
     val price: Money? = null,
