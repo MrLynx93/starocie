@@ -6,8 +6,9 @@ import kotlinx.coroutines.flow.StateFlow
 data class DraftItem(
     val name: String,
     val price: Money? = null,
-    val splittable: Boolean = false,
+    val quantity: Int = 1,
     val note: String? = null,
+    val photo: String? = null,
 )
 
 /**

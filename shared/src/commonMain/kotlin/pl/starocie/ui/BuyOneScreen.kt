@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,9 +40,10 @@ fun BuyOneScreen(onDone: () -> Unit) {
     val viewModel: BuyOneViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val nameFocus = remember { FocusRequester() }
+    val takePhoto = rememberPhotoCapture(viewModel::onPhotoCaptured)
 
     // Refocus after each save so the next thing can be typed immediately.
-    LaunchedEffect(state.recorded.size) { runCatching { nameFocus.requestFocus() } }
+    LaunchedEffect(state.recordedCount) { runCatching { nameFocus.requestFocus() } }
 
     Scaffold { padding ->
         Column(
@@ -51,7 +51,11 @@ fun BuyOneScreen(onDone: () -> Unit) {
         ) {
             Text("Kupuję rzecz", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Zapisz i od razu wpisuj następną.",
+                text = if (state.recordedCount == 0) {
+                    "Zapisz i od razu wpisuj następną."
+                } else {
+                    "Zapisano w tej serii: ${state.recordedCount}"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -88,48 +92,30 @@ fun BuyOneScreen(onDone: () -> Unit) {
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
                 )
+                OutlinedTextField(
+                    value = state.quantityText,
+                    onValueChange = viewModel::onQuantityChange,
+                    singleLine = true,
+                    label = { Text("Sztuki") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(0.7f),
+                )
             }
-
-            Spacer(Modifier.height(10.dp))
-
-            FilterChip(
-                selected = state.splittable,
-                onClick = { viewModel.onSplittableChange(!state.splittable) },
-                label = { Text("Na sztuki") },
-            )
 
             state.error?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
-            if (state.recorded.isNotEmpty()) {
-                Text(
-                    "Zapisane teraz (${state.recorded.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Spacer(Modifier.height(8.dp))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    state.recorded.take(8).forEach { name ->
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(name, modifier = Modifier.padding(12.dp))
-                        }
-                    }
-                }
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
+            PhotoArea(
+                photo = state.photo,
+                onCapture = takePhoto,
+                onClear = viewModel::clearPhoto,
+                modifier = Modifier.weight(1f),
+            )
 
             // Both actions sit together at the bottom, within thumb reach.
             Spacer(Modifier.height(12.dp))

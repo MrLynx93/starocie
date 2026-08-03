@@ -16,12 +16,16 @@ data class BuyOneUiState(
     val name: String = "",
     val paidText: String = "",
     val askingText: String = "",
-    val splittable: Boolean = false,
-    /** Names recorded in this sitting, newest first — the running tally. */
-    val recorded: List<String> = emptyList(),
+    val quantityText: String = "1",
+    /** Base64 JPEG of the thing in front of you, if a photo was taken. */
+    val photo: String? = null,
+    /** How many recorded in this sitting. */
+    val recordedCount: Int = 0,
     val error: String? = null,
 ) {
     val paid: Money? get() = parseMoney(paidText)
+    /** Blank or nonsense means one, so a stray edit cannot lose the record. */
+    val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
     val canSave: Boolean get() = name.isNotBlank()
 }
 
@@ -40,7 +44,13 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun onAskingChange(value: String) = _state.update { it.copy(askingText = value) }
 
-    fun onSplittableChange(value: Boolean) = _state.update { it.copy(splittable = value) }
+    fun onQuantityChange(value: String) = _state.update { it.copy(quantityText = value) }
+
+    fun onPhotoCaptured(base64: String?) {
+        if (base64 != null) _state.update { it.copy(photo = base64) }
+    }
+
+    fun clearPhoto() = _state.update { it.copy(photo = null) }
 
     /** Saves, then clears the form so the next thing can be typed straight away. */
     fun save() {
@@ -56,14 +66,13 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
                         DraftItem(
                             name = current.name.trim(),
                             price = parseMoney(current.askingText),
-                            splittable = current.splittable,
+                            quantity = current.quantity,
+                            photo = current.photo,
                         ),
                     ),
                 )
             }.onSuccess {
-                _state.update {
-                    BuyOneUiState(recorded = listOf(current.name.trim()) + it.recorded)
-                }
+                _state.update { BuyOneUiState(recordedCount = it.recordedCount + 1) }
             }.onFailure { e ->
                 _state.update { it.copy(error = e.message ?: "Nie zapisano") }
             }

@@ -58,17 +58,31 @@ data class Item(
     /** Optional and supplementary — an item is identified by its name. */
     val photoUrls: List<String> = emptyList(),
     /**
+     * A small JPEG as Base64, stored inline because Cloud Storage needs a paid
+     * plan. Roughly 15 kB against a 1 MiB document limit, and it syncs, so both
+     * phones see the picture.
+     */
+    val photo: String? = null,
+    /**
      * The **asking** price, never what the item cost. There is no cost field on an
      * item at all — cost lives on [Buy]. Also drives the allocation of a box price
      * across its contents.
      */
     val price: Money? = null,
-    val splittable: Boolean = false,
+    /**
+     * How many pieces this record covers. One is a single thing. More than one is a
+     * lot that may sell in parts — it stays in stock until a sale is marked as
+     * completing it, and the count is not decremented per sale.
+     */
+    val quantity: Int = 1,
     val status: ItemStatus = ItemStatus.IN_STOCK,
     val createdBy: String,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    /** A lot of several pieces can be sold across more than one sale. */
+    val splittable: Boolean get() = quantity > 1
+}
 
 data class Sell(
     val id: String,

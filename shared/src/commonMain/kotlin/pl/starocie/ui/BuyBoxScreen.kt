@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -52,7 +51,7 @@ fun BuyBoxScreen(onDone: () -> Unit) {
 
     var itemName by remember { mutableStateOf("") }
     var itemPrice by remember { mutableStateOf("") }
-    var itemSplittable by remember { mutableStateOf(false) }
+    var itemQuantity by remember { mutableStateOf("1") }
     val nameFocus = remember { FocusRequester() }
 
     // Adding clears the row and returns the cursor to the name, so the contents of
@@ -113,25 +112,28 @@ fun BuyBoxScreen(onDone: () -> Unit) {
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
                 )
+                OutlinedTextField(
+                    value = itemQuantity,
+                    onValueChange = { itemQuantity = it },
+                    singleLine = true,
+                    label = { Text("Sztuki") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(0.7f),
+                )
             }
 
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
-                FilterChip(
-                    selected = itemSplittable,
-                    onClick = { itemSplittable = !itemSplittable },
-                    label = { Text("Na sztuki") },
-                )
                 TextButton(
                     enabled = itemName.isNotBlank(),
                     onClick = {
-                        viewModel.addDraft(itemName, itemPrice, itemSplittable)
+                        viewModel.addDraft(itemName, itemPrice, itemQuantity)
                         itemName = ""
                         itemPrice = ""
-                        itemSplittable = false
+                        itemQuantity = "1"
                     },
                 ) { Text("Dodaj i następna") }
             }
@@ -157,7 +159,7 @@ fun BuyBoxScreen(onDone: () -> Unit) {
                             Column(Modifier.weight(1f)) {
                                 Text(draft.name, fontWeight = FontWeight.Medium)
                                 val asking = draft.price?.format()?.let { "wyw. $it" }
-                                val split = if (draft.splittable) " · na sztuki" else ""
+                                val split = if (draft.quantity > 1) " · ${draft.quantity} szt." else ""
                                 if (asking != null || split.isNotEmpty()) {
                                     Text(
                                         (asking ?: "") + split,

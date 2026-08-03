@@ -88,7 +88,7 @@ class LedgerTest {
         val ledger = Ledger(
             buys = listOf(buy("b1", price = 6000)),
             items = listOf(
-                item("plates", price = 7500, buyId = "b1", splittable = true, status = ItemStatus.SOLD),
+                item("plates", price = 7500, buyId = "b1", quantity = 12, status = ItemStatus.SOLD),
             ),
             sells = listOf(
                 sell("s1", "plates", 3000, soldCompletely = false),

@@ -55,6 +55,8 @@ kotlin {
         androidMain.dependencies {
             // Supplies the versions GitLive's Android artifacts leave unspecified.
             implementation(project.dependencies.platform(libs.firebase.bom))
+            // rememberLauncherForActivityResult, for handing capture to the camera app.
+            implementation(libs.androidx.activity.compose)
         }
 
         commonTest.dependencies {

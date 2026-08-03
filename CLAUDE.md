@@ -42,7 +42,7 @@ sold at a different event from the one where they were bought.
 |---|---|
 | `Event` | `id`, `date`, `name?`, `note?` |
 | `Buy` | `id`, `eventId`, `date`, `price?`, `name?`, `note?`, `photoUrls` |
-| `Item` | `id`, `buyId?`, `date`, `name`, `note?`, `photoUrls`, `price?`, `splittable`, `status` |
+| `Item` | `id`, `buyId?`, `date`, `name`, `note?`, `photo?`, `price?`, `quantity`, `status` |
 | `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `note?`, `soldCompletely` |
 
 All four also carry `createdBy`, `createdAt`, `updatedAt`.
@@ -61,9 +61,14 @@ or kept — without it such an item never leaves stock and its buy never resolve
    behaviour this app exists to tolerate.
 3. **Items are never hard-deleted.** `REMOVED` is the exit. Every `Sell.itemId`
    must stay resolvable.
-4. **Nothing derivable is stored** — no thumbnails, no denormalised names, no
-   device paths, no cached statistics.
-5. **Three kinds of "when", each with exactly one job:**
+4. **Nothing derivable is stored** — no denormalised names, no device paths, no
+   cached statistics. The inline photo is an exception only in appearance: it is
+   original data, not a copy of something held elsewhere.
+5. **`quantity` is a count, not a stock level.** One means a single thing; more
+   means a lot that may sell in parts. It is *not* decremented per sale — a
+   splittable lot stays in stock until a sale is marked as completing it, which
+   is the deliberate choice against forcing an accurate running count.
+6. **Three kinds of "when", each with exactly one job:**
    - `createdAt` — audit stamp. Set once, never edited, never used for reporting.
    - `date` — defaulted from `createdAt`, freely editable, drives sorting/filters.
    - `eventId` — the *sole* authority for grouping.
@@ -176,16 +181,28 @@ deterministic id means both write the same document and converge on reconnect. U
 
 ## Photos
 
-Documents carry `photoUrls` only. **A filesystem path must never sync** — it is
-meaningless on the other person's phone.
+Optional and supplementary — an item is found by typing its name, never by
+recognising a picture. A photo simply helps you spot the right thing in a list.
 
-- capture, compress to ~1200px JPEG, write to `filesDir/photos/{itemId}/{n}.jpg`
-- display checks that conventional path first, falls back to the remote URL, so a
-  photo appears instantly, before any upload
-- a device-local `PendingUploadStore` (never synced) tracks what needs uploading
-- a background worker drains it and appends to `photoUrls`
-- no stored thumbnails; Coil downsamples
-- never upload a raw camera file
+**A small JPEG is stored inline on the item document, Base64 encoded.** Cloud
+Storage requires the paid Blaze plan, and photos are not worth a card on file at
+this scale — so the picture rides in the document instead:
+
+- capture is handed to the platform camera app, so no CAMERA permission is
+  declared and none has to be requested
+- the result is scaled to 320px on its long edge and compressed at JPEG 70,
+  roughly 15 kB against Firestore's 1 MiB document limit
+- being part of the document, it syncs like everything else, so both phones see
+  it — which local-only files would not have achieved
+
+`photoUrls` remains on the model for a future move to Cloud Storage. If that
+happens, the inline photo becomes the thumbnail and the URL the full-resolution
+original.
+
+**iOS capture is not implemented.** The `expect`/`actual` seam exists and
+compiles, but there is no Xcode on the development machine, so shipping untested
+`UIImagePickerController` interop would be guesswork. Capture yields nothing on
+iOS until that is done.
 
 ## Architecture
 
@@ -229,6 +246,9 @@ returns. Android and iOS only; no desktop target.
   enter the final price, done. "Add new" creates an item with no buy, leaving its
   cost unknown. Splittables show a note field and a "fully sold" tick setting
   `soldCompletely`. The dialog also offers "remove".
+- **Buying splits in two.** "Rzecz" records one thing at one price and then clears
+  for the next, so its cost is exact and the allocator is not involved. "Pudło"
+  records one payment across several items and allocates.
 
 ## Setup
 

@@ -74,12 +74,12 @@ class BuyBoxViewModel(private val repository: LedgerRepository) : ViewModel() {
     fun onNameChange(value: String) = _state.update { it.copy(name = value) }
 
     /** A name is required — it is how the item will be found when selling. */
-    fun addDraft(name: String, priceText: String, splittable: Boolean) {
+    fun addDraft(name: String, priceText: String, quantityText: String) {
         if (name.isBlank()) return
         val draft = DraftItem(
             name = name.trim(),
             price = parseMoney(priceText),
-            splittable = splittable,
+            quantity = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1,
         )
         _state.update { it.copy(drafts = it.drafts + draft) }
     }
