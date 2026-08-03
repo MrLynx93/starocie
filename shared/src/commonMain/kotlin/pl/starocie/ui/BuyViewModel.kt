@@ -27,6 +27,7 @@ data class BuyUiState(
     val name: String = "",
     val drafts: List<DraftItem> = emptyList(),
     val saved: Boolean = false,
+    val error: String? = null,
 ) {
     val total: Money? get() = parseMoney(totalText)
 
@@ -92,14 +93,19 @@ class BuyViewModel(private val repository: LedgerRepository) : ViewModel() {
         if (!current.canSave) return
 
         viewModelScope.launch {
-            repository.recordBuy(
-                price = current.total,
-                name = current.name,
-                // A buy with no items still records the spend; items can be attached
-                // later rather than blocking the save.
-                items = current.drafts,
-            )
-            _state.update { it.copy(saved = true) }
+            // A rejected write must not reach the dispatcher: an uncaught
+            // PERMISSION_DENIED here kills the app instead of reporting itself.
+            runCatching {
+                repository.recordBuy(
+                    price = current.total,
+                    name = current.name,
+                    // A buy with no items still records the spend; items can be
+                    // attached later rather than blocking the save.
+                    items = current.drafts,
+                )
+            }
+                .onSuccess { _state.update { it.copy(saved = true) } }
+                .onFailure { e -> _state.update { it.copy(error = e.message ?: "Nie zapisano") } }
         }
     }
 }

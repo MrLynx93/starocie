@@ -41,6 +41,7 @@ import pl.starocie.domain.sum
 fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
+    val syncError by repository.syncError.collectAsState()
     val scope = rememberCoroutineScope()
 
     var renaming by remember { mutableStateOf(false) }
@@ -51,6 +52,16 @@ fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
     val stockValue = stock.mapNotNull { it.price }.sum()
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+
+        // Without this an unsynced app looks exactly like an empty one.
+        syncError?.let {
+            Text(
+                "Brak synchronizacji: $it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
 
         if (today != null) {
             val stats = ledger.eventStats(today)

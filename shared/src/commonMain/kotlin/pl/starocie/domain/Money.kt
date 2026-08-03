@@ -41,6 +41,15 @@ fun Money.format(): String {
 }
 
 /**
+ * For pre-filling an editable price field. Whole amounts lose the decimals, so a
+ * 50 zł ask offers "50" rather than "50.0".
+ */
+fun Money.toInputText(): String {
+    val grosz = minor % 100
+    return if (grosz == 0L) "${minor / 100}" else format().removeSuffix(" zł")
+}
+
+/**
  * Parses user input such as "12", "12,50" or "12.5". Returns null when it is not a
  * number, so the caller can simply leave the value unset rather than guess.
  */

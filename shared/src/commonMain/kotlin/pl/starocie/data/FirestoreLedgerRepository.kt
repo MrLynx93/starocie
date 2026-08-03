@@ -7,12 +7,17 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import pl.starocie.domain.Buy
 import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.DraftItem
@@ -45,11 +50,8 @@ class FirestoreLedgerRepository(
     private val itemsRef = workspace.collection(ITEMS)
     private val sellsRef = workspace.collection(SELLS)
 
-    init {
-        // Without a workspace document the rules deny every read and write, so a
-        // fresh project would look like an app that simply does not save.
-        scope.launch { ensureWorkspace() }
-    }
+    private val _syncError = MutableStateFlow<String?>(null)
+    override val syncError: StateFlow<String?> = _syncError.asStateFlow()
 
     /**
      * Creates the workspace on first run, with this user as its only member. The
@@ -66,20 +68,41 @@ class FirestoreLedgerRepository(
         val exists = runCatching { workspace.get().exists }.getOrDefault(false)
         if (exists) return
         runCatching { workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true) }
+            .onFailure { _syncError.value = "Nie można utworzyć magazynu: ${it.message}" }
     }
 
     /**
      * Everything, held in memory. That is what makes computed statistics, name joins
      * and instant offline search all viable at two users' scale.
+     *
+     * The workspace is created *before* the listeners attach. Attaching first meant
+     * every listen was denied — the rules authorise a read by reading the workspace
+     * document, which did not exist yet — and the rejection reached the dispatcher
+     * as a fatal exception, killing the app moments after sign-in.
      */
-    override val ledger: StateFlow<Ledger> = combine(
-        eventsRef.snapshots.map { snap -> snap.documents.map { it.data(EventDoc.serializer()).toDomain() } },
-        buysRef.snapshots.map { snap -> snap.documents.map { it.data(BuyDoc.serializer()).toDomain() } },
-        itemsRef.snapshots.map { snap -> snap.documents.map { it.data(ItemDoc.serializer()).toDomain() } },
-        sellsRef.snapshots.map { snap -> snap.documents.map { it.data(SellDoc.serializer()).toDomain() } },
-    ) { events, buys, items, sells ->
-        Ledger(events = events, buys = buys, items = items, sells = sells)
-    }.stateIn(scope, SharingStarted.Eagerly, Ledger())
+    override val ledger: StateFlow<Ledger> = flow {
+        ensureWorkspace()
+        emitAll(
+            combine(
+                eventsRef.snapshots.map { s -> s.documents.map { it.data(EventDoc.serializer()).toDomain() } },
+                buysRef.snapshots.map { s -> s.documents.map { it.data(BuyDoc.serializer()).toDomain() } },
+                itemsRef.snapshots.map { s -> s.documents.map { it.data(ItemDoc.serializer()).toDomain() } },
+                sellsRef.snapshots.map { s -> s.documents.map { it.data(SellDoc.serializer()).toDomain() } },
+            ) { events, buys, items, sells ->
+                _syncError.value = null
+                Ledger(events = events, buys = buys, items = items, sells = sells)
+            },
+        )
+    }
+        .retryWhen { cause, attempt ->
+            // A listen can still be rejected — the workspace create may have raced,
+            // or this account may genuinely not be a member. Never let that reach
+            // the dispatcher: back off, surface it, and keep trying.
+            _syncError.value = cause.message ?: "Błąd synchronizacji"
+            delay(minOf(500L shl attempt.coerceAtMost(4).toInt(), 10_000L))
+            true
+        }
+        .stateIn(scope, SharingStarted.Eagerly, Ledger())
 
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()

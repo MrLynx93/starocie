@@ -164,6 +164,15 @@ fun BuyScreen(onDone: () -> Unit) {
             }
         }
 
+        state.error?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) { Text("Anuluj") }
             Button(

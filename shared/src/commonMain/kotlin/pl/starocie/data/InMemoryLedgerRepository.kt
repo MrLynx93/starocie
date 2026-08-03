@@ -36,6 +36,9 @@ class InMemoryLedgerRepository(
     private val state = MutableStateFlow(seed)
     override val ledger: StateFlow<Ledger> = state.asStateFlow()
 
+    /** Nothing to sync with, so nothing can fail. */
+    override val syncError: StateFlow<String?> = MutableStateFlow(null).asStateFlow()
+
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()
         val eventId = ensureEvent(at)

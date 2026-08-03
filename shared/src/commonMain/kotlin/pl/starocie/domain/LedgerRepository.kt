@@ -21,6 +21,13 @@ interface LedgerRepository {
     val ledger: StateFlow<Ledger>
 
     /**
+     * Non-null when syncing is failing. Surfaced in the UI because the alternative
+     * is an app that silently records nothing, which is indistinguishable from an
+     * app that is working but empty.
+     */
+    val syncError: StateFlow<String?>
+
+    /**
      * Records one payment and the items it covered. A single item means its cost is
      * exactly [price]; several mean [price] is a box total to be allocated.
      */

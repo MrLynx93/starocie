@@ -164,6 +164,15 @@ private fun SellDialog(
                     }
                 }
 
+                state.error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = onRemove) { Text("Usuń z magazynu") }
             }

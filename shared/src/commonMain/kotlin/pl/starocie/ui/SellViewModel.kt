@@ -13,6 +13,7 @@ import pl.starocie.domain.DraftItem
 import pl.starocie.domain.Item
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.parseMoney
+import pl.starocie.domain.toInputText
 
 data class SellUiState(
     val query: String = "",
@@ -21,6 +22,7 @@ data class SellUiState(
     val priceText: String = "",
     val note: String = "",
     val soldCompletely: Boolean = true,
+    val error: String? = null,
 ) {
     val canConfirm: Boolean get() = selected != null && parseMoney(priceText) != null
 
@@ -55,7 +57,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         it.copy(
             selected = item,
             // Pre-fill with the asking price: usually right, always editable.
-            priceText = item.price?.let { p -> (p.minor / 100.0).toString() } ?: "",
+            priceText = item.price?.toInputText() ?: "",
             note = "",
             soldCompletely = !item.splittable,
         )
@@ -75,13 +77,16 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         val price = parseMoney(current.priceText) ?: return
 
         viewModelScope.launch {
-            repository.recordSell(
-                itemId = item.id,
-                price = price,
-                note = current.note,
-                soldCompletely = current.soldCompletely,
-            )
-            dismiss()
+            runCatching {
+                repository.recordSell(
+                    itemId = item.id,
+                    price = price,
+                    note = current.note,
+                    soldCompletely = current.soldCompletely,
+                )
+            }
+                .onSuccess { dismiss() }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie zapisano") } }
         }
     }
 
@@ -91,19 +96,28 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         if (name.isEmpty()) return
 
         viewModelScope.launch {
-            val id = repository.createLooseItem(DraftItem(name = name))
-            repository.ledger.value.itemById(id)?.let { created ->
-                local.update {
-                    it.copy(query = "", selected = created, priceText = "", soldCompletely = true)
+            runCatching { repository.createLooseItem(DraftItem(name = name)) }
+                .onSuccess { id ->
+                    repository.ledger.value.itemById(id)?.let { created ->
+                        local.update {
+                            it.copy(
+                                query = "",
+                                selected = created,
+                                priceText = "",
+                                soldCompletely = true,
+                            )
+                        }
+                    }
                 }
-            }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie zapisano") } }
         }
     }
 
     fun remove(item: Item) {
         viewModelScope.launch {
-            repository.removeItem(item.id)
-            dismiss()
+            runCatching { repository.removeItem(item.id) }
+                .onSuccess { dismiss() }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie usunięto") } }
         }
     }
 }
