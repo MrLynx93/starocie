@@ -22,7 +22,7 @@ private val PREVIEW_INSTANT = Instant.fromEpochSeconds(0)
 
 private fun previewId(index: Int) = index.toString().padStart(4, '0')
 
-data class BuyUiState(
+data class BuyBoxUiState(
     val totalText: String = "",
     val name: String = "",
     val drafts: List<DraftItem> = emptyList(),
@@ -64,10 +64,10 @@ data class BuyUiState(
     val previewIsEstimated: Boolean get() = drafts.size > 1
 }
 
-class BuyViewModel(private val repository: LedgerRepository) : ViewModel() {
+class BuyBoxViewModel(private val repository: LedgerRepository) : ViewModel() {
 
-    private val _state = MutableStateFlow(BuyUiState())
-    val state: StateFlow<BuyUiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(BuyBoxUiState())
+    val state: StateFlow<BuyBoxUiState> = _state.asStateFlow()
 
     fun onTotalChange(value: String) = _state.update { it.copy(totalText = value) }
 

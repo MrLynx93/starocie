@@ -11,12 +11,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material3.Icon
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import pl.starocie.domain.LedgerRepository
@@ -38,7 +46,7 @@ import pl.starocie.domain.format
 import pl.starocie.domain.sum
 
 @Composable
-fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
+fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
     val syncError by repository.syncError.collectAsState()
@@ -50,88 +58,157 @@ fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
     val today = ledger.events.maxByOrNull { it.date }
     val stock = ledger.itemsInStock()
     val stockValue = stock.mapNotNull { it.price }.sum()
+    val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(30)
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+    Scaffold(
+        floatingActionButton = {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                ExtendedFloatingActionButton(
+                    text = { Text("Pudło") },
+                    icon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
+                    onClick = onBuyBox,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(2.dp),
+                )
+                ExtendedFloatingActionButton(
+                    text = { Text("Rzecz") },
+                    icon = { Icon(Icons.Filled.AddShoppingCart, contentDescription = null) },
+                    onClick = onBuyOne,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(2.dp),
+                )
+                ExtendedFloatingActionButton(
+                    text = { Text("Sprzedaję", fontWeight = FontWeight.Medium) },
+                    icon = { Icon(Icons.Filled.Sell, contentDescription = null) },
+                    onClick = onSell,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+        ) {
+            syncError?.let {
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "Brak synchronizacji: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+            }
 
-        // Without this an unsynced app looks exactly like an empty one.
-        syncError?.let {
+            Spacer(Modifier.height(16.dp))
+
             Text(
-                "Brak synchronizacji: $it",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-            Spacer(Modifier.height(8.dp))
-        }
-
-        if (today != null) {
-            val stats = ledger.eventStats(today)
-            Text(
-                text = today.name ?: today.date.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.clickable {
-                    draftName = today.name.orEmpty()
+                text = today?.name ?: today?.date?.toString() ?: "starocie",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.clickable(enabled = today != null) {
+                    draftName = today?.name.orEmpty()
                     renaming = true
                 },
             )
-            Text(
-                text = "wydane ${stats.spent.format()} · zarobione ${stats.earned.format()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+
+            today?.let {
+                val stats = ledger.eventStats(it)
+                Text(
+                    "wydane ${stats.spent.format()} · zarobione ${stats.earned.format()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "${stock.size} rzeczy w magazynie",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        "warte ${stockValue.format()} wg cen wywoławczych",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             Spacer(Modifier.height(20.dp))
-        }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigAction("Kupuję", Modifier.weight(1f), onBuy)
-            BigAction("Sprzedaję", Modifier.weight(1f), onSell)
-        }
+            if (recentSells.isEmpty()) {
+                Text(
+                    "Nic jeszcze nie sprzedano.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text("Ostatnio sprzedane", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(8.dp))
 
-        Spacer(Modifier.height(24.dp))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(recentSells, key = { it.id }) { sell ->
+                        val item = ledger.itemById(sell.itemId)
+                        val stats = item?.let { ledger.itemStats(it) }
+                        val profit = stats?.profit
 
-        Text(
-            "W magazynie: ${stock.size} · warte ${stockValue.format()}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            "wartość wg cen wywoławczych",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
-
-        val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(20)
-        if (recentSells.isEmpty()) {
-            Text(
-                "Nic jeszcze nie sprzedano.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(recentSells, key = { it.id }) { sell ->
-                    val item = ledger.itemById(sell.itemId)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(item?.name ?: "—")
-                            val stats = item?.let { ledger.itemStats(it) }
-                            val profit = stats?.profit
-                            Text(
-                                text = when {
-                                    profit == null -> "zysk nieznany"
-                                    stats.profitIsEstimated -> "zysk ok. ${profit.format()}"
-                                    else -> "zysk ${profit.format()}"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        Card(
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                            elevation = CardDefaults.cardElevation(1.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(item?.name ?: "—", fontWeight = FontWeight.Medium)
+                                    Text(
+                                        text = when {
+                                            profit == null -> "zysk nieznany"
+                                            stats.profitIsEstimated -> "zysk ok. ${profit.format()}"
+                                            else -> "zysk ${profit.format()}"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (profit != null && profit.minor < 0) {
+                                            MaterialTheme.colorScheme.error
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                }
+                                Text(
+                                    sell.price.format(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
                         }
-                        Text(sell.price.format(), fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -156,20 +233,7 @@ fun HomeScreen(onBuy: () -> Unit, onSell: () -> Unit) {
                     renaming = false
                 }) { Text("Zapisz") }
             },
-            dismissButton = {
-                TextButton(onClick = { renaming = false }) { Text("Anuluj") }
-            },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Anuluj") } },
         )
-    }
-}
-
-@Composable
-private fun BigAction(label: String, modifier: Modifier, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(96.dp),
-        contentPadding = ButtonDefaults.ContentPadding,
-    ) {
-        Text(label, fontSize = 20.sp)
     }
 }

@@ -10,7 +10,8 @@ import org.koin.dsl.module
 import pl.starocie.data.FirestoreLedgerRepository
 import pl.starocie.data.InMemoryLedgerRepository
 import pl.starocie.domain.LedgerRepository
-import pl.starocie.ui.BuyViewModel
+import pl.starocie.ui.BuyBoxViewModel
+import pl.starocie.ui.BuyOneViewModel
 import pl.starocie.ui.SellViewModel
 
 /** Both users share one workspace; there is no multi-tenancy to configure. */
@@ -33,13 +34,15 @@ fun appModule(userId: String) = module {
         )
     }
 
-    viewModel { BuyViewModel(get()) }
+    viewModel { BuyBoxViewModel(get()) }
+    viewModel { BuyOneViewModel(get()) }
     viewModel { SellViewModel(get()) }
 }
 
 /** Same graph without Firebase, for running the UI on a machine with no config. */
 fun offlineModule() = module {
     single<LedgerRepository> { InMemoryLedgerRepository() }
-    viewModel { BuyViewModel(get()) }
+    viewModel { BuyBoxViewModel(get()) }
+    viewModel { BuyOneViewModel(get()) }
     viewModel { SellViewModel(get()) }
 }

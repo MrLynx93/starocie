@@ -1,6 +1,5 @@
 package pl.starocie
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,13 +16,16 @@ import org.koin.compose.KoinApplication
 import pl.starocie.data.FirebaseAuthRepository
 import pl.starocie.di.appModule
 import pl.starocie.domain.AuthRepository
-import pl.starocie.ui.BuyScreen
+import pl.starocie.ui.BuyBoxScreen
+import pl.starocie.ui.BuyOneScreen
 import pl.starocie.ui.HomeScreen
 import pl.starocie.ui.SellScreen
 import pl.starocie.ui.SignInScreen
+import pl.starocie.ui.theme.AppTheme
 
 private const val HOME = "home"
-private const val BUY = "buy"
+private const val BUY_ONE = "buy_one"
+private const val BUY_BOX = "buy_box"
 private const val SELL = "sell"
 
 @Composable
@@ -33,7 +35,7 @@ fun App() {
     val auth: AuthRepository = remember { FirebaseAuthRepository(scope = authScope) }
     val user by auth.user.collectAsState()
 
-    MaterialTheme {
+    AppTheme {
         Surface {
             val signedIn = user
             if (signedIn == null) {
@@ -58,11 +60,13 @@ private fun MainNavigation() {
     NavHost(navController = navController, startDestination = HOME) {
         composable(HOME) {
             HomeScreen(
-                onBuy = { navController.navigate(BUY) },
+                onBuyOne = { navController.navigate(BUY_ONE) },
+                onBuyBox = { navController.navigate(BUY_BOX) },
                 onSell = { navController.navigate(SELL) },
             )
         }
-        composable(BUY) { BuyScreen(onDone = { navController.popBackStack() }) }
+        composable(BUY_ONE) { BuyOneScreen(onDone = { navController.popBackStack() }) }
+        composable(BUY_BOX) { BuyBoxScreen(onDone = { navController.popBackStack() }) }
         composable(SELL) { SellScreen(onDone = { navController.popBackStack() }) }
     }
 }
