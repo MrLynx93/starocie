@@ -1,15 +1,19 @@
-import org.jetbrains.compose.ExperimentalComposeLibrary
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
-    androidTarget()
+    androidLibrary {
+        namespace = "pl.starocie.shared"
+        compileSdk = libs.versions.compileSdk.get().toInt()
+        minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTestBuilder {}.configure {}
+    }
 
     // No iosX64: Intel simulators cannot run on an Apple Silicon host anyway.
     listOf(
@@ -17,7 +21,7 @@ kotlin {
         iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "ComposeApp"
+            baseName = "Shared"
             isStatic = true
         }
     }
@@ -46,34 +50,6 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
-        }
-
-        androidMain.dependencies {
-            implementation(compose.uiTooling)
-            implementation(libs.androidx.activity.compose)
-        }
-    }
-}
-
-android {
-    namespace = "pl.starocie"
-    compileSdk = libs.versions.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "pl.starocie"
-        minSdk = libs.versions.minSdk.get().toInt()
-        targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
-    }
-
-    packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
-
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
         }
     }
 }

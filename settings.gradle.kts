@@ -13,6 +13,9 @@ dependencyResolutionManagement {
     }
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "starocie"
 
-include(":composeApp")
+include(":shared")
+include(":androidApp")
