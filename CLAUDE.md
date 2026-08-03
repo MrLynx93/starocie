@@ -233,7 +233,11 @@ returns. Android and iOS only; no desktop target.
 
 Neither secrets file is committed — each machine needs its own:
 
-- `composeApp/google-services.json` (Android)
+- `androidApp/google-services.json` (Android)
 - `iosApp/GoogleService-Info.plist` (iOS)
 
 Both are gitignored. A second developer needs copies from the Firebase console.
+
+The `com.google.gms.google-services` plugin is applied only when the JSON is
+present, so a fresh clone still builds and runs — Firebase is inert until the
+config arrives, rather than the build failing on a missing secret.
