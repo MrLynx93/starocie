@@ -21,6 +21,9 @@ koin = "4.2.2"
 coil = "3.5.0"
 gitliveFirebase = "2.5.0"
 googleServices = "4.5.0"
+# GitLive's Android artifacts declare their Firebase dependencies without versions,
+# expecting this BOM to supply them. Without it they resolve to a blank version.
+firebaseBom = "34.17.0"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -40,6 +43,7 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", ver
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "gitliveFirebase" }
 firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
 firebase-storage = { module = "dev.gitlive:firebase-storage", version.ref = "gitliveFirebase" }

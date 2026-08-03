@@ -42,7 +42,7 @@ data class EventStats(
  * The whole dataset in memory, which is what makes computed statistics, name joins
  * and instant offline search all viable at two users' scale.
  */
-class Ledger(
+data class Ledger(
     val events: List<Event> = emptyList(),
     val buys: List<Buy> = emptyList(),
     val items: List<Item> = emptyList(),

@@ -45,6 +45,15 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+
+            implementation(libs.firebase.firestore)
+            implementation(libs.firebase.auth)
+            implementation(libs.firebase.storage)
+        }
+
+        androidMain.dependencies {
+            // Supplies the versions GitLive's Android artifacts leave unspecified.
+            implementation(project.dependencies.platform(libs.firebase.bom))
         }
 
         commonTest.dependencies {

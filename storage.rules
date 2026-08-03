@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Photos are uploaded under workspaces/{wsId}/{itemId}/{n}.jpg by the background
+// upload worker. Storage rules can reach across to Firestore, so the membership
+// predicate is the same one firestore.rules uses.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /workspaces/{wsId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid in
+             firestore.get(/databases/(default)/documents/workspaces/$(wsId)).data.members;
+    }
+  }
+}
