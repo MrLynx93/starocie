@@ -3,11 +3,13 @@ package pl.starocie.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -62,7 +64,11 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
 
     Scaffold(
         floatingActionButton = {
+            // IntrinsicSize.Max sizes the column to its widest child, so all three
+            // buttons match without a hard-coded width that would break if a label
+            // changed.
             Column(
+                modifier = Modifier.width(IntrinsicSize.Max),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -74,6 +80,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(2.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 ExtendedFloatingActionButton(
                     text = { Text("Rzecz") },
@@ -83,6 +90,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(2.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 ExtendedFloatingActionButton(
                     text = { Text("Sprzedaję", fontWeight = FontWeight.Medium) },
@@ -91,6 +99,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                     shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
