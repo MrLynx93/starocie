@@ -105,15 +105,6 @@ fun BuyOneScreen(onDone: () -> Unit) {
 
             Spacer(Modifier.height(20.dp))
 
-            Button(
-                onClick = viewModel::save,
-                enabled = state.canSave,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) { Text("Zapisz i następna", fontWeight = FontWeight.Medium) }
-
-            Spacer(Modifier.height(20.dp))
-
             if (state.recorded.isNotEmpty()) {
                 Text(
                     "Zapisane teraz (${state.recorded.size})",
@@ -139,6 +130,18 @@ fun BuyOneScreen(onDone: () -> Unit) {
             } else {
                 Spacer(Modifier.weight(1f))
             }
+
+            // Both actions sit together at the bottom, within thumb reach.
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = viewModel::save,
+                enabled = state.canSave,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) { Text("Zapisz i następna", fontWeight = FontWeight.Medium) }
+
+            Spacer(Modifier.height(10.dp))
 
             OutlinedButton(
                 onClick = onDone,
