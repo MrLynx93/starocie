@@ -46,17 +46,26 @@ class FirestoreLedgerRepository(
     private val sellsRef = workspace.collection(SELLS)
 
     init {
-        // Without a workspace document the security rules deny every read, so a
-        // fresh project would show an empty app with no visible reason. Create it
-        // on first run with this user as its only member; the second person is
-        // added to `members` from the Firebase console.
-        scope.launch {
-            runCatching {
-                if (!workspace.get().exists) {
-                    workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true)
-                }
-            }
-        }
+        // Without a workspace document the rules deny every read and write, so a
+        // fresh project would look like an app that simply does not save.
+        scope.launch { ensureWorkspace() }
+    }
+
+    /**
+     * Creates the workspace on first run, with this user as its only member. The
+     * second person is added to `members` from the Firebase console.
+     *
+     * The read here is *denied* rather than empty when the workspace is absent,
+     * because `isMember()` resolves membership by reading that very document. A
+     * failed read is therefore indistinguishable from "not there yet" — so attempt
+     * the create either way and let the rules reject it if this user is not
+     * entitled. Treating the failure as fatal would leave the app permanently
+     * unable to bootstrap itself.
+     */
+    private suspend fun ensureWorkspace() {
+        val exists = runCatching { workspace.get().exists }.getOrDefault(false)
+        if (exists) return
+        runCatching { workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true) }
     }
 
     /**
