@@ -250,9 +250,20 @@ returns. Android and iOS only; no desktop target.
   item. One photo → sole item, exact cost. Several → box total, allocated. Never
   asks for a per-item cost.
 - **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
-  enter the final price, done. "Add new" creates an item with no buy, leaving its
-  cost unknown. Splittables show a note field and a "fully sold" tick setting
-  `soldCompletely`. The dialog also offers "remove".
+  enter the final price, done. Splittables show a note field and a "fully sold"
+  tick setting `soldCompletely`. The dialog also offers "remove".
+- **Selling a thing that was never recorded is a first-class path**, not a fallback:
+  nothing is in the app to begin with, and requiring everything to be entered before
+  it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
+  offers the whole buy form — name, what was paid, pieces, note, photo — alongside
+  the final price, and `recordBuyAndSell` writes the buy, the item and the sale in
+  one batch. It gets **a screen of its own rather than a dialog**, sharing
+  `SellViewModel` with the list behind it so the typed search seeds the name: it
+  carries as many fields as the buy screen, and a dialog held them against the
+  keyboard with the photo pushed off-screen. **What was paid is optional and empty is a real answer**: it leaves the
+  item with no buy, so the cost stays unknown rather than becoming zero. A stated
+  price opens a buy holding only that item, so its cost is exact and the allocator
+  is never involved.
 - **Buying splits in two, but there is only one item form.** "Rzecz" records one
   thing at one price and clears for the next, so its cost is exact and the
   allocator is not involved. "Pudło" is a two-step wizard: the price first, which

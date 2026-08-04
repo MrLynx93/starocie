@@ -15,12 +15,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.compose.KoinApplication
+import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.data.FirebaseAuthRepository
 import pl.starocie.di.appModule
 import pl.starocie.domain.AuthRepository
 import pl.starocie.ui.BuyBoxScreen
 import pl.starocie.ui.BuyOneScreen
 import pl.starocie.ui.HomeScreen
+import pl.starocie.ui.SellNewItemScreen
 import pl.starocie.ui.SellScreen
 import pl.starocie.ui.SignInScreen
 import pl.starocie.ui.theme.AppTheme
@@ -32,6 +34,7 @@ import pl.starocie.ui.theme.AppTheme
 @Serializable private data object BuyBoxRoute
 @Serializable private data class BuyBoxItems(val buyId: String)
 @Serializable private data object SellRoute
+@Serializable private data object SellNewRoute
 
 @Composable
 fun App() {
@@ -93,6 +96,23 @@ private fun MainNavigation() {
             )
         }
 
-        composable<SellRoute> { SellScreen(onDone = { navController.popBackStack() }) }
+        composable<SellRoute> {
+            SellScreen(
+                onDone = { navController.popBackStack() },
+                onAddNew = { navController.navigate(SellNewRoute) },
+            )
+        }
+
+        // The form shares the sell screen's view model rather than owning one:
+        // the search box that opened it seeds the name, and a completed sale has
+        // to clear both. Resolving it against the sell entry is what makes the
+        // two screens one flow instead of two.
+        composable<SellNewRoute> {
+            val sellEntry = remember(it) { navController.getBackStackEntry(SellRoute) }
+            SellNewItemScreen(
+                viewModel = koinViewModel(viewModelStoreOwner = sellEntry),
+                onDone = { navController.popBackStack() },
+            )
+        }
     }
 }
