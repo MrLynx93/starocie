@@ -150,11 +150,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
     /**
      * Records the purchase and the sale together, so a thing that was never entered
      * can still be sold without leaving the screen.
-     *
-     * A stated price opens a buy of its own, which makes this item the sole item of
-     * that buy and therefore its cost exact — no allocation involved. Left blank,
-     * the item gets no buy at all and its cost stays genuinely unknown rather than
-     * being quietly recorded as zero.
      */
     fun confirmNewItem() {
         val form = local.value.newItem ?: return
@@ -163,10 +158,9 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
 
         viewModelScope.launch {
             runCatching {
-                val buyId = form.paid?.let { repository.createBuy(price = it, name = null) }
-                val itemId = repository.addItem(
-                    buyId,
-                    DraftItem(
+                repository.recordBuyAndSell(
+                    paid = form.paid,
+                    draft = DraftItem(
                         name = form.name.trim(),
                         // The ask is what it went for — but only when the whole thing
                         // went. Part of a lot says nothing about the rest of it.
@@ -175,9 +169,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                         note = form.note.takeIf { it.isNotBlank() },
                         photo = form.photo,
                     ),
-                )
-                repository.recordSell(
-                    itemId = itemId,
                     price = price,
                     soldCompletely = form.closesTheItem,
                 )

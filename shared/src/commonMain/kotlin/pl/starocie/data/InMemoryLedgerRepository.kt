@@ -123,6 +123,53 @@ class InMemoryLedgerRepository(
         }
     }
 
+    override suspend fun recordBuyAndSell(
+        paid: Money?,
+        draft: DraftItem,
+        price: Money,
+        soldCompletely: Boolean,
+    ): String {
+        val at = now()
+        val eventId = ensureEvent(at)
+
+        // A stated price gets a buy of its own, holding only this item, so its cost
+        // is exact. No price means no buy at all, which keeps the cost unknown.
+        val buy = paid?.let {
+            Buy(
+                id = newId(),
+                eventId = eventId,
+                date = events.dateOf(at),
+                price = it,
+                createdBy = userId,
+                createdAt = at,
+                updatedAt = at,
+            )
+        }
+        val item = draft.toItem(buyId = buy?.id, at = at).copy(
+            status = if (soldCompletely) ItemStatus.SOLD else ItemStatus.IN_STOCK,
+        )
+        val sell = Sell(
+            id = newId(),
+            itemId = item.id,
+            eventId = eventId,
+            date = events.dateOf(at),
+            price = price,
+            soldCompletely = soldCompletely,
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+
+        state.update {
+            it.copy(
+                buys = if (buy == null) it.buys else it.buys + buy,
+                items = it.items + item,
+                sells = it.sells + sell,
+            )
+        }
+        return item.id
+    }
+
     override suspend fun removeItem(itemId: String) {
         val at = now()
         state.update { current ->

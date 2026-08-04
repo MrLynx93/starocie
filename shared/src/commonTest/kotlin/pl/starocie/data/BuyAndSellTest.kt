@@ -1,0 +1,93 @@
+package pl.starocie.data
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import kotlinx.coroutines.test.runTest
+import pl.starocie.domain.DraftItem
+import pl.starocie.domain.ItemStatus
+import pl.starocie.domain.Money
+
+/**
+ * Selling a thing that was never recorded — the shortcut the app exists to
+ * tolerate, and the one most likely to make the numbers lie if it is careless.
+ */
+class BuyAndSellTest {
+
+    @Test
+    fun a_stated_cost_is_exact_because_the_item_is_alone_in_its_buy() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.recordBuyAndSell(
+            paid = Money(2000),
+            draft = DraftItem(name = "lampa"),
+            price = Money(5000),
+        )
+
+        val ledger = repository.ledger.value
+        val stats = ledger.itemStats(ledger.itemById(itemId)!!)
+
+        assertEquals(Money(2000), stats.cost)
+        assertFalse(stats.costIsEstimated, "its own buy is measured, not allocated")
+        assertEquals(Money(3000), stats.profit)
+        assertEquals(ItemStatus.SOLD, ledger.itemById(itemId)!!.status)
+    }
+
+    /** Unknown must stay unknown, or every shortcut reads as pure profit. */
+    @Test
+    fun no_stated_cost_leaves_the_cost_unknown_rather_than_zero() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.recordBuyAndSell(
+            paid = null,
+            draft = DraftItem(name = "wazon"),
+            price = Money(3000),
+        )
+
+        val ledger = repository.ledger.value
+        val stats = ledger.itemStats(ledger.itemById(itemId)!!)
+
+        assertTrue(ledger.buys.isEmpty(), "no price paid means there is no buy to record")
+        assertEquals(Money(3000), stats.proceeds)
+        assertNull(stats.cost)
+        assertNull(stats.profit, "profit is unknown, not equal to the proceeds")
+    }
+
+    @Test
+    fun a_lot_sold_in_part_stays_in_stock() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.recordBuyAndSell(
+            paid = Money(6000),
+            draft = DraftItem(name = "talerze", quantity = 12),
+            price = Money(2500),
+            soldCompletely = false,
+        )
+
+        val ledger = repository.ledger.value
+
+        assertEquals(ItemStatus.IN_STOCK, ledger.itemById(itemId)!!.status)
+        assertEquals(listOf(itemId), ledger.itemsInStock().map { it.id })
+        assertEquals(Money(2500), ledger.itemStats(ledger.itemById(itemId)!!).proceeds)
+    }
+
+    /** Grouping is the event's job, and both sides of the motion belong to today's. */
+    @Test
+    fun the_buy_and_the_sell_land_on_the_same_current_event() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        repository.recordBuyAndSell(
+            paid = Money(1000),
+            draft = DraftItem(name = "kubek"),
+            price = Money(1500),
+        )
+
+        val ledger = repository.ledger.value
+        val eventId = ledger.events.single().id
+
+        assertEquals(eventId, ledger.buys.single().eventId)
+        assertEquals(eventId, ledger.sells.single().eventId)
+    }
+}

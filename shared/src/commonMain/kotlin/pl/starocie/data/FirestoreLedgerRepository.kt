@@ -211,6 +211,58 @@ class FirestoreLedgerRepository(
         }.commitDetached()
     }
 
+    /**
+     * The buy, the item and the sale in a single batch — the thing existed for the
+     * length of one transaction, so recording it in three would let a half-entered
+     * sale survive. The item is written already resolved rather than written and
+     * then updated, for the same reason.
+     */
+    override suspend fun recordBuyAndSell(
+        paid: Money?,
+        draft: DraftItem,
+        price: Money,
+        soldCompletely: Boolean,
+    ): String {
+        val at = now()
+        val eventId = events.eventIdFor(at)
+        val buyId = paid?.let { newId() }
+
+        val item = draft.toItem(buyId = buyId, at = at).copy(
+            status = if (soldCompletely) ItemStatus.SOLD else ItemStatus.IN_STOCK,
+        )
+        val sell = Sell(
+            id = newId(),
+            itemId = item.id,
+            eventId = eventId,
+            date = events.dateOf(at),
+            price = price,
+            soldCompletely = soldCompletely,
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+
+        firestore.batch().apply {
+            setEvent(this, at)
+            if (buyId != null) {
+                val buy = Buy(
+                    id = buyId,
+                    eventId = eventId,
+                    date = events.dateOf(at),
+                    price = paid,
+                    createdBy = userId,
+                    createdAt = at,
+                    updatedAt = at,
+                )
+                set(buysRef.document(buyId), buy.toDoc())
+            }
+            set(itemsRef.document(item.id), item.toDoc())
+            set(sellsRef.document(sell.id), sell.toDoc())
+        }.commitDetached()
+
+        return item.id
+    }
+
     override suspend fun removeItem(itemId: String) {
         val at = now()
         detached {

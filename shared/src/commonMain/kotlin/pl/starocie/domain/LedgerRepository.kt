@@ -53,6 +53,24 @@ interface LedgerRepository {
         soldCompletely: Boolean = true,
     )
 
+    /**
+     * One thing bought and sold in the same motion, having never been in stock —
+     * the common case while nothing has been recorded yet, and at a stall where
+     * there was no time to enter it beforehand.
+     *
+     * [paid] is optional and null is a real answer: the item then gets no buy and
+     * its cost stays honestly unknown. A stated price opens a buy holding only this
+     * item, which makes its cost exact rather than an allocated share.
+     *
+     * Returns the new item's id.
+     */
+    suspend fun recordBuyAndSell(
+        paid: Money?,
+        draft: DraftItem,
+        price: Money,
+        soldCompletely: Boolean = true,
+    ): String
+
     /** Broken, lost, given away or kept. Resolves the item without proceeds. */
     suspend fun removeItem(itemId: String)
 
