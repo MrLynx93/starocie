@@ -1,0 +1,58 @@
+# Builds an installable debug APK on a runner that has the Android SDK.
+#
+# The debug build type is deliberate: it is signed with the auto-generated debug
+# keystore, so the result can be sideloaded straight onto a phone. An unsigned
+# release APK cannot be installed at all, and a signed one would need a keystore
+# committed or held as a secret — not worth it for two people's phones.
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # google-services.json is gitignored, so CI has to supply its own copy.
+      # Without it androidApp/build.gradle.kts skips the plugin and the app still
+      # builds — it just has no Firebase config and dies reaching for auth on
+      # launch. Store the file base64-encoded as the GOOGLE_SERVICES_JSON secret
+      # to get an APK that actually runs.
+      - name: Restore google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > androidApp/google-services.json
+            echo "google-services.json restored from secret"
+          else
+            echo "::warning::No GOOGLE_SERVICES_JSON secret — the APK will build but crash on launch without Firebase config"
+          fi
+
+      - name: Build debug APK
+        run: ./gradlew :androidApp:assembleDebug --stacktrace
+
+      - name: Name the APK after the commit
+        run: |
+          mkdir -p artifacts
+          cp androidApp/build/outputs/apk/debug/androidApp-debug.apk \
+             "artifacts/starocie-${GITHUB_SHA::7}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: starocie-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
