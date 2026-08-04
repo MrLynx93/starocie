@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,11 +25,13 @@ import pl.starocie.ui.SellScreen
 import pl.starocie.ui.SignInScreen
 import pl.starocie.ui.theme.AppTheme
 
-private const val HOME = "home"
-private const val BUY_ONE = "buy_one"
-private const val BUY_BOX = "buy_box"
-private const val BUY_BOX_ITEMS = "buy_box_items"
-private const val SELL = "sell"
+// Type-safe routes: string routes would need Bundle access to read the buy id,
+// and Bundle is Android-only — it compiles there and breaks the iOS build.
+@Serializable private data object Home
+@Serializable private data object BuyOneRoute
+@Serializable private data object BuyBoxRoute
+@Serializable private data class BuyBoxItems(val buyId: String)
+@Serializable private data object SellRoute
 
 @Composable
 fun App() {
@@ -58,35 +62,37 @@ fun App() {
 private fun MainNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = HOME) {
-        composable(HOME) {
+    NavHost(navController = navController, startDestination = Home) {
+        composable<Home> {
             HomeScreen(
-                onBuyOne = { navController.navigate(BUY_ONE) },
-                onBuyBox = { navController.navigate(BUY_BOX) },
-                onSell = { navController.navigate(SELL) },
+                onBuyOne = { navController.navigate(BuyOneRoute) },
+                onBuyBox = { navController.navigate(BuyBoxRoute) },
+                onSell = { navController.navigate(SellRoute) },
             )
         }
-        composable(BUY_ONE) { BuyOneScreen(onDone = { navController.popBackStack() }) }
 
-        composable(BUY_BOX) {
+        composable<BuyOneRoute> { BuyOneScreen(onDone = { navController.popBackStack() }) }
+
+        composable<BuyBoxRoute> {
             BuyBoxScreen(
                 // Replace the price step so "Gotowe" returns home rather than
                 // stepping back into a box that has already been created.
                 onOpened = { buyId ->
-                    navController.navigate("$BUY_BOX_ITEMS/$buyId") {
-                        popUpTo(BUY_BOX) { inclusive = true }
+                    navController.navigate(BuyBoxItems(buyId)) {
+                        popUpTo(BuyBoxRoute) { inclusive = true }
                     }
                 },
                 onCancel = { navController.popBackStack() },
             )
         }
 
-        composable("$BUY_BOX_ITEMS/{buyId}") { entry ->
+        composable<BuyBoxItems> { entry ->
             BuyOneScreen(
-                buyId = entry.arguments?.getString("buyId"),
+                buyId = entry.toRoute<BuyBoxItems>().buyId,
                 onDone = { navController.popBackStack() },
             )
         }
-        composable(SELL) { SellScreen(onDone = { navController.popBackStack() }) }
+
+        composable<SellRoute> { SellScreen(onDone = { navController.popBackStack() }) }
     }
 }
