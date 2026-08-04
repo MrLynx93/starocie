@@ -11,6 +11,10 @@ on:
   push:
     branches:
       - main
+      # Feature branches build too: an APK per branch is the only way to try a
+      # change on a phone, and workflow_dispatch cannot reach a workflow that is
+      # not yet on the default branch.
+      - 'claude/**'
 
 jobs:
   build:
