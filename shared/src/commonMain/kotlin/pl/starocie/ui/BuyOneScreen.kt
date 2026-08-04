@@ -36,11 +36,13 @@ import org.koin.compose.viewmodel.koinViewModel
  * field, so a run of purchases is a run of typing rather than a run of navigation.
  */
 @Composable
-fun BuyOneScreen(onDone: () -> Unit) {
+fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
     val viewModel: BuyOneViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val nameFocus = remember { FocusRequester() }
     val takePhoto = rememberPhotoCapture(viewModel::onPhotoCaptured)
+
+    LaunchedEffect(buyId) { viewModel.attachTo(buyId) }
 
     // Refocus after each save so the next thing can be typed immediately.
     LaunchedEffect(state.recordedCount) { runCatching { nameFocus.requestFocus() } }
@@ -49,12 +51,15 @@ fun BuyOneScreen(onDone: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
         ) {
-            Text("Kupuję rzecz", style = MaterialTheme.typography.headlineSmall)
             Text(
-                text = if (state.recordedCount == 0) {
-                    "Zapisz i od razu wpisuj następną."
-                } else {
-                    "Zapisano w tej serii: ${state.recordedCount}"
+                text = if (state.buyId == null) "Kupuję rzecz" else "Co było w pudle",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = when {
+                    state.recordedCount > 0 -> "Zapisano w tej serii: ${state.recordedCount}"
+                    state.buyId != null -> "Wpisuj po kolei — same trafiają do pudła."
+                    else -> "Zapisz i od razu wpisuj następną."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -74,15 +79,17 @@ fun BuyOneScreen(onDone: () -> Unit) {
             Spacer(Modifier.height(10.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = state.paidText,
-                    onValueChange = viewModel::onPaidChange,
-                    singleLine = true,
-                    label = { Text("Zapłacono") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
-                )
+                if (state.showPaid) {
+                    OutlinedTextField(
+                        value = state.paidText,
+                        onValueChange = viewModel::onPaidChange,
+                        singleLine = true,
+                        label = { Text("Zapłacono") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 OutlinedTextField(
                     value = state.askingText,
                     onValueChange = viewModel::onAskingChange,

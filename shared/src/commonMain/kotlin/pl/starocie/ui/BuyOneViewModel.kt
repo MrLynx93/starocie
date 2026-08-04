@@ -21,22 +21,41 @@ data class BuyOneUiState(
     val photo: String? = null,
     /** How many recorded in this sitting. */
     val recordedCount: Int = 0,
+    /**
+     * Set while filling a box: items attach to that buy and the price field is
+     * hidden, because the price was paid once for the whole lot.
+     */
+    val buyId: String? = null,
     val error: String? = null,
 ) {
     val paid: Money? get() = parseMoney(paidText)
+
     /** Blank or nonsense means one, so a stray edit cannot lose the record. */
     val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
+
+    /** Only a standalone purchase asks what was paid; a box already knows. */
+    val showPaid: Boolean get() = buyId == null
+
     val canSave: Boolean get() = name.isNotBlank()
 }
 
 /**
- * One thing, one price, then straight into the next. Because each item is the sole
- * item of its own buy, its cost is exact — no allocation is involved in this flow.
+ * One thing, then straight into the next.
+ *
+ * Standalone, each item is the sole item of its own buy, so its cost is exact.
+ * Attached to a box, items accumulate against that buy and the allocator splits
+ * its price across them — the screen is identical either way, which is the point:
+ * unpacking a box is the same motion as buying things one at a time.
  */
 class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(BuyOneUiState())
     val state: StateFlow<BuyOneUiState> = _state.asStateFlow()
+
+    /** Null for standalone purchases; a buy id when filling a box. */
+    fun attachTo(buyId: String?) {
+        if (_state.value.buyId != buyId) _state.update { it.copy(buyId = buyId) }
+    }
 
     fun onNameChange(value: String) = _state.update { it.copy(name = value, error = null) }
 
@@ -57,22 +76,26 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
         val current = _state.value
         if (!current.canSave) return
 
+        val draft = DraftItem(
+            name = current.name.trim(),
+            price = parseMoney(current.askingText),
+            quantity = current.quantity,
+            photo = current.photo,
+        )
+
         viewModelScope.launch {
             runCatching {
-                repository.recordBuy(
-                    price = current.paid,
-                    name = null,
-                    items = listOf(
-                        DraftItem(
-                            name = current.name.trim(),
-                            price = parseMoney(current.askingText),
-                            quantity = current.quantity,
-                            photo = current.photo,
-                        ),
-                    ),
-                )
+                val buyId = current.buyId
+                if (buyId == null) {
+                    repository.recordBuy(current.paid, name = null, items = listOf(draft))
+                } else {
+                    repository.addItem(buyId, draft)
+                }
             }.onSuccess {
-                _state.update { BuyOneUiState(recordedCount = it.recordedCount + 1) }
+                // Keep the box attachment and the tally; clear only the entry.
+                _state.update {
+                    BuyOneUiState(buyId = it.buyId, recordedCount = it.recordedCount + 1)
+                }
             }.onFailure { e ->
                 _state.update { it.copy(error = e.message ?: "Nie zapisano") }
             }

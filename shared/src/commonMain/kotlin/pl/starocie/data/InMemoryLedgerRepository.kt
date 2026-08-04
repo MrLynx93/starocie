@@ -60,10 +60,27 @@ class InMemoryLedgerRepository(
         return buyId
     }
 
-    override suspend fun createLooseItem(draft: DraftItem): String {
+    override suspend fun createBuy(price: Money?, name: String?): String {
+        val at = now()
+        val eventId = ensureEvent(at)
+        val buy = Buy(
+            id = newId(),
+            eventId = eventId,
+            date = events.dateOf(at),
+            price = price,
+            name = name?.takeIf { it.isNotBlank() },
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+        state.update { it.copy(buys = it.buys + buy) }
+        return buy.id
+    }
+
+    override suspend fun addItem(buyId: String?, draft: DraftItem): String {
         val at = now()
         ensureEvent(at)
-        val item = draft.toItem(buyId = null, at = at)
+        val item = draft.toItem(buyId = buyId, at = at)
         state.update { it.copy(items = it.items + item) }
         return item.id
     }

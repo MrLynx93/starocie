@@ -96,7 +96,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         if (name.isEmpty()) return
 
         viewModelScope.launch {
-            runCatching { repository.createLooseItem(DraftItem(name = name)) }
+            runCatching { repository.addItem(null, DraftItem(name = name)) }
                 .onSuccess { id ->
                     repository.ledger.value.itemById(id)?.let { created ->
                         local.update {

@@ -34,8 +34,17 @@ interface LedgerRepository {
      */
     suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String
 
-    /** Creates an item with no buy — invented at point of sale, so cost is unknown. */
-    suspend fun createLooseItem(draft: DraftItem): String
+    /**
+     * Opens a buy with no contents yet. Used by the box flow: the price is known
+     * before the contents are, and items are appended as they come out of the box.
+     */
+    suspend fun createBuy(price: Money?, name: String?): String
+
+    /**
+     * Adds one item, optionally to an existing buy. A null [buyId] means the item
+     * was invented at point of sale, so its cost is unknown.
+     */
+    suspend fun addItem(buyId: String?, draft: DraftItem): String
 
     suspend fun recordSell(
         itemId: String,

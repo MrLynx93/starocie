@@ -246,9 +246,15 @@ returns. Android and iOS only; no desktop target.
   enter the final price, done. "Add new" creates an item with no buy, leaving its
   cost unknown. Splittables show a note field and a "fully sold" tick setting
   `soldCompletely`. The dialog also offers "remove".
-- **Buying splits in two.** "Rzecz" records one thing at one price and then clears
-  for the next, so its cost is exact and the allocator is not involved. "Pudło"
-  records one payment across several items and allocates.
+- **Buying splits in two, but there is only one item form.** "Rzecz" records one
+  thing at one price and clears for the next, so its cost is exact and the
+  allocator is not involved. "Pudło" is a two-step wizard: the price first, which
+  opens the buy, then *the same item screen* with the price field hidden and items
+  appended to that buy. Unpacking a box is deliberately the same motion as buying
+  things one at a time.
+- The box's buy is created **before** its contents are known, so each item is saved
+  as it is unpacked. Accumulating drafts and writing them at the end would lose the
+  lot if the user backed out.
 
 ## Setup
 

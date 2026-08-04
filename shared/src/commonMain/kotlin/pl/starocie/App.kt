@@ -26,6 +26,7 @@ import pl.starocie.ui.theme.AppTheme
 private const val HOME = "home"
 private const val BUY_ONE = "buy_one"
 private const val BUY_BOX = "buy_box"
+private const val BUY_BOX_ITEMS = "buy_box_items"
 private const val SELL = "sell"
 
 @Composable
@@ -66,7 +67,26 @@ private fun MainNavigation() {
             )
         }
         composable(BUY_ONE) { BuyOneScreen(onDone = { navController.popBackStack() }) }
-        composable(BUY_BOX) { BuyBoxScreen(onDone = { navController.popBackStack() }) }
+
+        composable(BUY_BOX) {
+            BuyBoxScreen(
+                // Replace the price step so "Gotowe" returns home rather than
+                // stepping back into a box that has already been created.
+                onOpened = { buyId ->
+                    navController.navigate("$BUY_BOX_ITEMS/$buyId") {
+                        popUpTo(BUY_BOX) { inclusive = true }
+                    }
+                },
+                onCancel = { navController.popBackStack() },
+            )
+        }
+
+        composable("$BUY_BOX_ITEMS/{buyId}") { entry ->
+            BuyOneScreen(
+                buyId = entry.arguments?.getString("buyId"),
+                onDone = { navController.popBackStack() },
+            )
+        }
         composable(SELL) { SellScreen(onDone = { navController.popBackStack() }) }
     }
 }

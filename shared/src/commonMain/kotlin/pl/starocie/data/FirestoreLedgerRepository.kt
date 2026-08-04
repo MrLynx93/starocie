@@ -145,9 +145,30 @@ class FirestoreLedgerRepository(
         return buyId
     }
 
-    override suspend fun createLooseItem(draft: DraftItem): String {
+    override suspend fun createBuy(price: Money?, name: String?): String {
         val at = now()
-        val item = draft.toItem(buyId = null, at = at)
+        val buy = Buy(
+            id = newId(),
+            eventId = events.eventIdFor(at),
+            date = events.dateOf(at),
+            price = price,
+            name = name?.takeIf { it.isNotBlank() },
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+
+        firestore.batch().apply {
+            setEvent(this, at)
+            set(buysRef.document(buy.id), buy.toDoc())
+        }.commitDetached()
+
+        return buy.id
+    }
+
+    override suspend fun addItem(buyId: String?, draft: DraftItem): String {
+        val at = now()
+        val item = draft.toItem(buyId = buyId, at = at)
 
         firestore.batch().apply {
             setEvent(this, at)

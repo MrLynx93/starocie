@@ -2,32 +2,23 @@ package pl.starocie.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -36,175 +27,77 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
-import pl.starocie.domain.format
 
 /**
- * One payment covering several things. The price is split across the contents by
- * asking price, and the split is shown live so it is never a surprise afterwards.
+ * Step one of two: what was paid for the box. Its contents are entered afterwards
+ * on the ordinary item screen, so there is only one form to learn.
  */
 @Composable
-fun BuyBoxScreen(onDone: () -> Unit) {
+fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
     val viewModel: BuyBoxViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val totalFocus = remember { FocusRequester() }
 
-    LaunchedEffect(state.saved) { if (state.saved) onDone() }
-
-    var itemName by remember { mutableStateOf("") }
-    var itemPrice by remember { mutableStateOf("") }
-    var itemQuantity by remember { mutableStateOf("1") }
-    val nameFocus = remember { FocusRequester() }
-
-    // Adding clears the row and returns the cursor to the name, so the contents of
-    // a box go in as one run of typing.
-    LaunchedEffect(state.drafts.size) {
-        if (state.drafts.isNotEmpty()) runCatching { nameFocus.requestFocus() }
-    }
+    LaunchedEffect(Unit) { runCatching { totalFocus.requestFocus() } }
+    LaunchedEffect(state.openedBuyId) { state.openedBuyId?.let(onOpened) }
 
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
 
             Text("Kupuję pudło", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Jedna cena za całość, potem co w tym było.",
-                style = MaterialTheme.typography.bodySmall,
+                "Najpierw cena za całość. Potem wpisujesz rzeczy po kolei — same trafią do tego pudła.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = state.totalText,
-                    onValueChange = viewModel::onTotalChange,
-                    singleLine = true,
-                    label = { Text("Zapłacono") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = viewModel::onNameChange,
-                    singleLine = true,
-                    label = { Text("Skąd (opcj.)") },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            OutlinedTextField(
+                value = state.totalText,
+                onValueChange = viewModel::onTotalChange,
+                singleLine = true,
+                label = { Text("Zapłacono za całość") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().focusRequester(totalFocus),
+            )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = itemName,
-                    onValueChange = { itemName = it },
-                    singleLine = true,
-                    label = { Text("Co w tym było") },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(2f).focusRequester(nameFocus),
-                )
-                OutlinedTextField(
-                    value = itemPrice,
-                    onValueChange = { itemPrice = it },
-                    singleLine = true,
-                    label = { Text("Cena wyw.") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = itemQuantity,
-                    onValueChange = { itemQuantity = it },
-                    singleLine = true,
-                    label = { Text("Sztuki") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(0.7f),
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            ) {
-                TextButton(
-                    enabled = itemName.isNotBlank(),
-                    onClick = {
-                        viewModel.addDraft(itemName, itemPrice, itemQuantity)
-                        itemName = ""
-                        itemPrice = ""
-                        itemQuantity = "1"
-                    },
-                ) { Text("Dodaj i następna") }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                itemsIndexed(state.preview) { index, (draft, share) ->
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(draft.name, fontWeight = FontWeight.Medium)
-                                val asking = draft.price?.format()?.let { "wyw. $it" }
-                                val split = if (draft.quantity > 1) " · ${draft.quantity} szt." else ""
-                                if (asking != null || split.isNotEmpty()) {
-                                    Text(
-                                        (asking ?: "") + split,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                            if (share != null) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(share.format(), fontWeight = FontWeight.Medium)
-                                    Text(
-                                        if (state.previewIsEstimated) "koszt szacowany" else "koszt",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                            TextButton(onClick = { viewModel.removeDraft(index) }) { Text("×") }
-                        }
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = state.name,
+                onValueChange = viewModel::onNameChange,
+                singleLine = true,
+                label = { Text("Skąd / co to (opcjonalnie)") },
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             state.error?.let {
+                Spacer(Modifier.height(10.dp))
                 Text(
                     it,
-                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = onDone,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.weight(1f).height(52.dp),
-                ) { Text("Anuluj") }
+            Spacer(Modifier.weight(1f))
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
-                    onClick = viewModel::save,
-                    enabled = state.canSave,
+                    onClick = viewModel::open,
+                    enabled = state.canOpen,
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.weight(2f).height(52.dp),
-                ) { Text("Zapisz pudło", fontWeight = FontWeight.Medium) }
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) { Text("Dalej — co było w środku", fontWeight = FontWeight.Medium) }
+
+                OutlinedButton(
+                    onClick = onCancel,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                ) { Text("Anuluj") }
             }
         }
     }
