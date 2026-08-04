@@ -190,8 +190,15 @@ this scale — so the picture rides in the document instead:
 
 - capture is handed to the platform camera app, so no CAMERA permission is
   declared and none has to be requested
-- the result is scaled to 320px on its long edge and compressed at JPEG 70,
-  roughly 15 kB against Firestore's 1 MiB document limit
+- it captures to a file via `TakePicture`, not `TakePicturePreview` — the latter
+  needs no FileProvider but returns the camera's ~150px thumbnail, which is fine
+  in a list and useless full-screen
+- the result is scaled to 640px on its long edge and compressed at JPEG 75,
+  roughly 45 kB against Firestore's 1 MiB document limit
+- **that size is a footprint multiplier**, because every item is held in memory:
+  comfortable for a few hundred photographed items, not for a few thousand. Past
+  that, photos belong in Cloud Storage with only URLs in the document
+- tapping a photo opens it full-screen; overlay buttons retake or remove it
 - being part of the document, it syncs like everything else, so both phones see
   it — which local-only files would not have achieved
 

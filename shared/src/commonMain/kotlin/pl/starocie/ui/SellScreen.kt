@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -55,15 +57,18 @@ fun SellScreen(onDone: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        if (state.canCreateFromQuery) {
-            TextButton(onClick = viewModel::createFromQuery) {
-                Text("Dodaj \"${state.query}\" i sprzedaj")
+        // The thing may never have been recorded — most of the time, at the start,
+        // it has not been. Adding it here is the same motion as buying it.
+        if (state.canAddNew) {
+            TextButton(onClick = viewModel::startNewItem) {
+                Text(
+                    if (state.query.isBlank()) {
+                        "Dodaj nową rzecz i sprzedaj"
+                    } else {
+                        "Dodaj \"${state.query}\" i sprzedaj"
+                    },
+                )
             }
-            Text(
-                "Bez zakupu — koszt zostanie nieznany.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         Spacer(Modifier.height(12.dp))
@@ -85,6 +90,18 @@ fun SellScreen(onDone: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Gotowe") }
+    }
+
+    state.newItem?.let { form ->
+        NewItemDialog(
+            form = form,
+            error = state.error,
+            onChange = viewModel::onNewItemChange,
+            onPhotoCaptured = viewModel::onNewPhotoCaptured,
+            onClearPhoto = viewModel::clearNewPhoto,
+            onConfirm = viewModel::confirmNewItem,
+            onDismiss = viewModel::cancelNewItem,
+        )
     }
 
     state.selected?.let { item ->
@@ -140,6 +157,119 @@ private fun StockRow(item: Item, onClick: () -> Unit) {
             )
         }
     }
+}
+
+/**
+ * Buying and selling in one sitting, for a thing that was never entered.
+ *
+ * Only the name and the final price are asked for. "Zapłacono" left empty is a
+ * real answer — the cost is then unknown and stays unknown, which is the whole
+ * point of tolerating a shortcut rather than demanding tidy books.
+ */
+@Composable
+private fun NewItemDialog(
+    form: NewItemForm,
+    error: String?,
+    onChange: (NewItemForm) -> Unit,
+    onPhotoCaptured: (String?) -> Unit,
+    onClearPhoto: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val takePhoto = rememberPhotoCapture(onPhotoCaptured)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nowa rzecz") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = form.name,
+                    onValueChange = { onChange(form.copy(name = it)) },
+                    singleLine = true,
+                    label = { Text("Co to jest") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = form.paidText,
+                        onValueChange = { onChange(form.copy(paidText = it)) },
+                        singleLine = true,
+                        label = { Text("Zapłacono") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = form.priceText,
+                        onValueChange = { onChange(form.copy(priceText = it)) },
+                        singleLine = true,
+                        label = { Text("Cena końcowa") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = form.quantityText,
+                        onValueChange = { onChange(form.copy(quantityText = it)) },
+                        singleLine = true,
+                        label = { Text("Szt.") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(0.7f),
+                    )
+                }
+
+                Text(
+                    "Nie wiesz, za ile kupione? Zostaw puste — koszt będzie nieznany.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = form.note,
+                    onValueChange = { onChange(form.copy(note = it)) },
+                    singleLine = true,
+                    label = { Text("Notatka (opcjonalnie)") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (form.splittable) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = form.soldCompletely,
+                            onCheckedChange = { onChange(form.copy(soldCompletely = it)) },
+                        )
+                        Text("Sprzedane w całości")
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                PhotoArea(
+                    photo = form.photo,
+                    onCapture = takePhoto,
+                    onClear = onClearPhoto,
+                    modifier = Modifier.height(160.dp),
+                )
+
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm, enabled = form.canConfirm) { Text("Sprzedane") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+    )
 }
 
 @Composable

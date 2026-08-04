@@ -12,8 +12,43 @@ import kotlinx.coroutines.launch
 import pl.starocie.domain.DraftItem
 import pl.starocie.domain.Item
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
+
+/**
+ * A thing that was never recorded, being bought and sold in one motion.
+ *
+ * Everything except the name and the final price is optional: this exists because
+ * a stall does not wait for bookkeeping. A blank [paidText] means the cost really
+ * is unknown and must stay that way.
+ */
+data class NewItemForm(
+    val name: String = "",
+    val paidText: String = "",
+    val priceText: String = "",
+    val quantityText: String = "1",
+    val note: String = "",
+    val photo: String? = null,
+    /** Only meaningful for a lot; a single thing is always sold in full. */
+    val soldCompletely: Boolean = false,
+) {
+    /** What was paid for it, if that is known at all. */
+    val paid: Money? get() = parseMoney(paidText)
+
+    /** What it went for. Required — this is a sale. */
+    val price: Money? get() = parseMoney(priceText)
+
+    /** Blank or nonsense means one, so a stray edit cannot lose the record. */
+    val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
+
+    val splittable: Boolean get() = quantity > 1
+
+    /** A lot only closes when ticked; anything else is closed by its only sale. */
+    val closesTheItem: Boolean get() = !splittable || soldCompletely
+
+    val canConfirm: Boolean get() = name.isNotBlank() && price != null
+}
 
 data class SellUiState(
     val query: String = "",
@@ -22,13 +57,19 @@ data class SellUiState(
     val priceText: String = "",
     val note: String = "",
     val soldCompletely: Boolean = true,
+    /** Non-null while the "never recorded" form is open. */
+    val newItem: NewItemForm? = null,
     val error: String? = null,
 ) {
     val canConfirm: Boolean get() = selected != null && parseMoney(priceText) != null
 
-    /** Offered when nothing matches — the on-the-fly path, cost left unknown. */
-    val canCreateFromQuery: Boolean
-        get() = query.isNotBlank() && inStock.none { it.matches(query) }
+    /**
+     * Offered whenever the typed name is not already in stock — including with an
+     * empty search, because at the start nothing is recorded and the on-the-fly
+     * path is then the *only* path.
+     */
+    val canAddNew: Boolean
+        get() = inStock.none { it.name.equals(query.trim(), ignoreCase = true) }
 }
 
 private fun Item.matches(query: String): Boolean =
@@ -90,25 +131,58 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         }
     }
 
-    /** Creates the item and immediately selects it, so selling continues in one go. */
-    fun createFromQuery() {
-        val name = local.value.query.trim()
-        if (name.isEmpty()) return
+    /** Opens the "never recorded" form, seeded with whatever was typed to find it. */
+    fun startNewItem() = local.update {
+        it.copy(newItem = NewItemForm(name = it.query.trim()), error = null)
+    }
+
+    fun onNewItemChange(form: NewItemForm) = local.update { it.copy(newItem = form, error = null) }
+
+    fun onNewPhotoCaptured(base64: String?) {
+        if (base64 == null) return
+        local.update { it.copy(newItem = it.newItem?.copy(photo = base64)) }
+    }
+
+    fun clearNewPhoto() = local.update { it.copy(newItem = it.newItem?.copy(photo = null)) }
+
+    fun cancelNewItem() = local.update { it.copy(newItem = null, error = null) }
+
+    /**
+     * Records the purchase and the sale together, so a thing that was never entered
+     * can still be sold without leaving the screen.
+     *
+     * A stated price opens a buy of its own, which makes this item the sole item of
+     * that buy and therefore its cost exact — no allocation involved. Left blank,
+     * the item gets no buy at all and its cost stays genuinely unknown rather than
+     * being quietly recorded as zero.
+     */
+    fun confirmNewItem() {
+        val form = local.value.newItem ?: return
+        if (!form.canConfirm) return
+        val price = form.price ?: return
 
         viewModelScope.launch {
-            runCatching { repository.addItem(null, DraftItem(name = name)) }
-                .onSuccess { id ->
-                    repository.ledger.value.itemById(id)?.let { created ->
-                        local.update {
-                            it.copy(
-                                query = "",
-                                selected = created,
-                                priceText = "",
-                                soldCompletely = true,
-                            )
-                        }
-                    }
-                }
+            runCatching {
+                val buyId = form.paid?.let { repository.createBuy(price = it, name = null) }
+                val itemId = repository.addItem(
+                    buyId,
+                    DraftItem(
+                        name = form.name.trim(),
+                        // The ask is what it went for — but only when the whole thing
+                        // went. Part of a lot says nothing about the rest of it.
+                        price = price.takeIf { form.closesTheItem },
+                        quantity = form.quantity,
+                        note = form.note.takeIf { it.isNotBlank() },
+                        photo = form.photo,
+                    ),
+                )
+                repository.recordSell(
+                    itemId = itemId,
+                    price = price,
+                    soldCompletely = form.closesTheItem,
+                )
+            }
+                .onSuccess { local.update { it.copy(newItem = null, query = "") } }
                 .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie zapisano") } }
         }
     }

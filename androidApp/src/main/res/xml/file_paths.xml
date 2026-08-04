@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Capture targets live in the cache: the photo that matters is the one
+         encoded into the item document, so the original is deleted after. -->
+    <cache-path name="captures" path="." />
+</paths>

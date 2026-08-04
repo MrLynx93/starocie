@@ -1,31 +1,64 @@
 package pl.starocie.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import java.io.ByteArrayOutputStream
-
-private const val MAX_EDGE = 320
-private const val JPEG_QUALITY = 70
+import java.io.File
 
 /**
- * Uses `TakePicturePreview`, which returns the camera's own thumbnail bitmap. That
- * avoids a FileProvider and a declared CAMERA permission entirely — declaring the
- * permission would oblige us to request it, whereas handing the job to the camera
- * app needs neither.
+ * Sized so the photo is worth opening full-screen, but no larger. It lives inside
+ * the item document and every item is held in memory, so this number multiplies
+ * the app's footprint directly: roughly 45 kB each, which is comfortable for a few
+ * hundred photographed items and not for a few thousand. Past that the photos
+ * belong in Cloud Storage with only URLs in the document.
+ */
+private const val MAX_EDGE = 640
+private const val JPEG_QUALITY = 75
+
+/**
+ * Captures to a real file via `TakePicture`.
+ *
+ * `TakePicturePreview` is simpler — no FileProvider — but it returns the camera's
+ * *thumbnail*, around 150px, which is fine in a list and useless full-screen. The
+ * file round-trip is the price of a photo worth enlarging.
+ *
+ * No CAMERA permission is declared or requested: the capture is performed by the
+ * camera app, and declaring the permission would oblige us to ask for it.
  */
 @Composable
 actual fun rememberPhotoCapture(onCaptured: (String?) -> Unit): () -> Unit {
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview(),
-    ) { bitmap -> onCaptured(bitmap?.toBase64Thumbnail()) }
+    val context = LocalContext.current
+    var pending by remember { mutableStateOf<File?>(null) }
 
-    return { launcher.launch(null) }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { saved ->
+        val file = pending
+        onCaptured(if (saved && file != null) file.toBase64Photo() else null)
+        // The full-resolution original is not kept: the document holds the only copy.
+        file?.delete()
+        pending = null
+    }
+
+    return {
+        val file = File(context.cacheDir, "capture_${System.currentTimeMillis()}.jpg")
+        pending = file
+        launcher.launch(context.uriFor(file))
+    }
 }
 
 actual fun decodePhoto(base64: String): ImageBitmap? = runCatching {
@@ -33,12 +66,30 @@ actual fun decodePhoto(base64: String): ImageBitmap? = runCatching {
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
 }.getOrNull()
 
-private fun Bitmap.toBase64Thumbnail(): String? = runCatching {
-    val scale = MAX_EDGE.toFloat() / maxOf(width, height)
+private fun Context.uriFor(file: File): Uri =
+    FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+
+private fun File.toBase64Photo(): String? = runCatching {
+    // Two passes: measure first, then decode already subsampled, so a 12 MP
+    // original never has to be held in memory at full size.
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(absolutePath, bounds)
+
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sampleSizeFor(maxOf(bounds.outWidth, bounds.outHeight))
+    }
+    val decoded = BitmapFactory.decodeFile(absolutePath, options) ?: return null
+
+    val scale = MAX_EDGE.toFloat() / maxOf(decoded.width, decoded.height)
     val scaled = if (scale < 1f) {
-        Bitmap.createScaledBitmap(this, (width * scale).toInt(), (height * scale).toInt(), true)
+        Bitmap.createScaledBitmap(
+            decoded,
+            (decoded.width * scale).toInt(),
+            (decoded.height * scale).toInt(),
+            true,
+        )
     } else {
-        this
+        decoded
     }
 
     ByteArrayOutputStream().use { out ->
@@ -46,3 +97,9 @@ private fun Bitmap.toBase64Thumbnail(): String? = runCatching {
         Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
 }.getOrNull()
+
+private fun sampleSizeFor(longestEdge: Int): Int {
+    var sample = 1
+    while (longestEdge / (sample * 2) >= MAX_EDGE) sample *= 2
+    return sample
+}

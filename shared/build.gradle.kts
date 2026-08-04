@@ -57,6 +57,8 @@ kotlin {
             implementation(project.dependencies.platform(libs.firebase.bom))
             // rememberLauncherForActivityResult, for handing capture to the camera app.
             implementation(libs.androidx.activity.compose)
+            // FileProvider, so the camera app can write into our cache dir.
+            implementation(libs.androidx.core.ktx)
         }
 
         commonTest.dependencies {
