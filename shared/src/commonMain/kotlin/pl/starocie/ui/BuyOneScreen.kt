@@ -94,6 +94,20 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
 
+            // Date, then what it cost, then what it should fetch — the order the
+            // purchase actually happens in. A box already has both a date and a
+            // price of its own, so neither is asked again here.
+            if (state.showPaid) {
+                DateField(
+                    date = state.date,
+                    onDateChange = viewModel::onDateChange,
+                    label = "Kiedy kupiliśmy",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(10.dp))
+            }
+
             // One below the other rather than side by side: at half width the two
             // labels truncate, and these are the two numbers that must not be
             // mistaken for each other.
