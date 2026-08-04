@@ -67,14 +67,27 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
             Spacer(Modifier.height(20.dp))
 
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = viewModel::onNameChange,
-                singleLine = true,
-                label = { Text("Co to jest") },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
-            )
+            // The count belongs with the name: both describe the thing itself,
+            // while the row below is only about money.
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = state.name,
+                    onValueChange = viewModel::onNameChange,
+                    singleLine = true,
+                    label = { Text("Co to jest") },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).focusRequester(nameFocus),
+                )
+                OutlinedTextField(
+                    value = state.quantityText,
+                    onValueChange = viewModel::onQuantityChange,
+                    singleLine = true,
+                    label = { Text("Sztuki") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(0.4f),
+                )
+            }
 
             Spacer(Modifier.height(10.dp))
 
@@ -84,7 +97,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         value = state.paidText,
                         onValueChange = viewModel::onPaidChange,
                         singleLine = true,
-                        label = { Text("Zapłacono") },
+                        label = { Text("Kupiliśmy za") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(1f),
@@ -94,19 +107,10 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     value = state.askingText,
                     onValueChange = viewModel::onAskingChange,
                     singleLine = true,
-                    label = { Text("Cena wyw.") },
+                    label = { Text("Chcemy sprzedać za") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = state.quantityText,
-                    onValueChange = viewModel::onQuantityChange,
-                    singleLine = true,
-                    label = { Text("Sztuki") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(0.7f),
                 )
             }
 

@@ -1,8 +1,10 @@
 package pl.starocie.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,10 +20,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -128,7 +133,9 @@ private fun StockRow(item: Item, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         // A photo helps you spot the thing among similarly named ones; the name
-        // still does the finding, so a missing photo costs nothing.
+        // still does the finding, so a missing photo costs nothing. An empty
+        // square stands in for it anyway, so the names stay on one line down the
+        // list instead of stepping in and out.
         if (thumb != null) {
             Image(
                 bitmap = thumb,
@@ -136,8 +143,22 @@ private fun StockRow(item: Item, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)),
             )
-            Spacer(Modifier.width(12.dp))
+        } else {
+            Box(
+                modifier = Modifier.size(52.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.PhotoCamera,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
+        Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
             Text(item.name, fontWeight = FontWeight.Medium)
@@ -162,7 +183,7 @@ private fun StockRow(item: Item, onClick: () -> Unit) {
 /**
  * Buying and selling in one sitting, for a thing that was never entered.
  *
- * Only the name and the final price are asked for. "Zapłacono" left empty is a
+ * Only the name and the final price are asked for. "Kupiliśmy za" left empty is a
  * real answer — the cost is then unknown and stays unknown, which is the whole
  * point of tolerating a shortcut rather than demanding tidy books.
  */
@@ -183,13 +204,23 @@ private fun NewItemDialog(
         title = { Text("Nowa rzecz") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(
-                    value = form.name,
-                    onValueChange = { onChange(form.copy(name = it)) },
-                    singleLine = true,
-                    label = { Text("Co to jest") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = form.name,
+                        onValueChange = { onChange(form.copy(name = it)) },
+                        singleLine = true,
+                        label = { Text("Co to jest") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = form.quantityText,
+                        onValueChange = { onChange(form.copy(quantityText = it)) },
+                        singleLine = true,
+                        label = { Text("Szt.") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(0.4f),
+                    )
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -198,7 +229,7 @@ private fun NewItemDialog(
                         value = form.paidText,
                         onValueChange = { onChange(form.copy(paidText = it)) },
                         singleLine = true,
-                        label = { Text("Zapłacono") },
+                        label = { Text("Kupiliśmy za") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f),
                     )
@@ -209,14 +240,6 @@ private fun NewItemDialog(
                         label = { Text("Cena końcowa") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f),
-                    )
-                    OutlinedTextField(
-                        value = form.quantityText,
-                        onValueChange = { onChange(form.copy(quantityText = it)) },
-                        singleLine = true,
-                        label = { Text("Szt.") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(0.7f),
                     )
                 }
 

@@ -57,7 +57,7 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
                 value = state.totalText,
                 onValueChange = viewModel::onTotalChange,
                 singleLine = true,
-                label = { Text("Zapłacono za całość") },
+                label = { Text("Kupiliśmy za całość") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().focusRequester(totalFocus),
