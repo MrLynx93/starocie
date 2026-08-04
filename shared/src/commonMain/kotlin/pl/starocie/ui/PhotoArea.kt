@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -109,30 +110,80 @@ fun PhotoArea(
     }
 
     if (viewing && bitmap != null) {
-        Dialog(
-            onDismissRequest = { viewing = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable { viewing = false },
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = "Zdjęcie rzeczy",
-                    // Fit, not Crop: full-screen is for seeing the whole thing.
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
+        FullScreenPhoto(bitmap, onDismiss = { viewing = false })
+    }
+}
+
+/**
+ * The same photo with nothing to press.
+ *
+ * For looking at a thing that is already recorded: tapping still enlarges it, but
+ * there is no camera and no bin, because a screen you opened to read should not
+ * put a destructive button under your thumb.
+ */
+@Composable
+fun PhotoView(photo: String?, modifier: Modifier = Modifier) {
+    val bitmap = remember(photo) { photo?.let { decodePhoto(it) } }
+    var viewing by remember { mutableStateOf(false) }
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Zdjęcie rzeczy — dotknij, aby powiększyć",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable { viewing = true },
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Filled.PhotoCamera,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(40.dp),
                 )
-                IconButton(
-                    onClick = { viewing = false },
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                ) { Icon(Icons.Filled.Close, contentDescription = "Zamknij") }
             }
+        }
+    }
+
+    if (viewing && bitmap != null) {
+        FullScreenPhoto(bitmap, onDismiss = { viewing = false })
+    }
+}
+
+@Composable
+private fun FullScreenPhoto(bitmap: ImageBitmap, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Zdjęcie rzeczy",
+                // Fit, not Crop: full-screen is for seeing the whole thing.
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+            IconButton(
+                onClick = onDismiss,
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+            ) { Icon(Icons.Filled.Close, contentDescription = "Zamknij") }
         }
     }
 }

@@ -127,7 +127,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                 )
             }
                 .onSuccess { dismiss() }
-                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie zapisano") } }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
         }
     }
 
@@ -174,7 +174,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                 )
             }
                 .onSuccess { local.update { it.copy(newItem = null, query = "") } }
-                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie zapisano") } }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
         }
     }
 
@@ -182,7 +182,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         viewModelScope.launch {
             runCatching { repository.removeItem(item.id) }
                 .onSuccess { dismiss() }
-                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie usunięto") } }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się usunąć") } }
         }
     }
 }

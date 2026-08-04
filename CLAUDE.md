@@ -241,17 +241,49 @@ returns. Android and iOS only; no desktop target.
 - Ids are generated client-side, so a record exists locally the instant it is made.
 - Prefer `sealed interface` over strings and booleans for status and result types.
 
+## Voice
+
+Polish, and **always the "we" form** — this is two people's shared notebook, so it
+speaks as us, never at the user:
+
+- fields and readouts say what *we* did or want: "Kupiliśmy za", "Chcemy sprzedać
+  za", "Sprzedaliśmy za", "Mamy w magazynie 12 rzeczy"
+- hints keep the same person — "Wpisujemy po kolei", "Nie wiemy, za ile
+  kupiliśmy? Zostawmy puste" — never "Zacznij pisać", "Nie wiesz", "Sprzedasz"
+- **buttons stay imperative** ("Zapisz", "Gotowe", "Anuluj", "Usuń"): a button is
+  an instruction to the app, and "Zapiszmy" reads as a suggestion rather than a
+  control
+- friendly and plain-spoken. Say what happened rather than name a quantity: a loss
+  is "straciliśmy 5,00 zł", not "zysk -5,00 zł". An unknown is "nie wiemy"
+- an estimate always says so — "ok. 12,00 zł", with what makes it a guess spelled
+  out underneath
+- count words agree with the number (`rzeczy(n)`); "1 rzeczy" is the small
+  wrongness that makes an app feel like a machine
+
 ## Screens
 
 - **Home** — big BUY and SELL buttons over recent activity; the current event's
-  name sits at the top, tappable to name it.
+  name sits at the top, tappable to name it. The stock summary card is the way in
+  to the stock list.
 - **Buy** — one flow; buying and unpacking happen in one sitting. Total paid first
   (the number you always know), then photograph the contents. Each photo becomes an
   item. One photo → sole item, exact cost. Several → box total, allocated. Never
   asks for a per-item cost.
 - **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
   enter the final price, done. Splittables show a note field and a "fully sold"
-  tick setting `soldCompletely`. The dialog also offers "remove".
+  tick setting `soldCompletely`. The dialog does only that one thing.
+- **Stock** — the same `IN_STOCK` list, newest first, reached from the home
+  summary card and browsed rather than searched: the sell screen answers "what am
+  I holding", this one answers "what have we still got". A row opens the item,
+  which shows what it cost — marked as a guess when it is a share of a box — what
+  it has already taken, and offers **sell or remove**.
+  **Removing lives here and nowhere else.** It used to sit inside the sell dialog,
+  a thumb-width from the price field, where the one screen you reach by hunting
+  for something to sell also offered the button that resolves an item with no
+  proceeds. Selling stays one tap; taking a thing out of stock now costs a
+  deliberate detour and a confirmation. The detail screen leaves by itself the
+  moment its item stops being `IN_STOCK`, so a completed sale or a removal lands
+  back in the list; a lot sold in part stays put and shows the extra sale.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
@@ -266,7 +298,7 @@ returns. Android and iOS only; no desktop target.
   is never involved.
 - **Buying splits in two, but there is only one item form.** "Rzecz" records one
   thing at one price and clears for the next, so its cost is exact and the
-  allocator is not involved. "Pudło" is a two-step wizard: the price first, which
+  allocator is not involved. "Paczka" is a two-step wizard: the price first, which
   opens the buy, then *the same item screen* with the price field hidden and items
   appended to that buy. Unpacking a box is deliberately the same motion as buying
   things one at a time.

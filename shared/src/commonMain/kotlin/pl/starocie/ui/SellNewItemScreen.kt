@@ -60,7 +60,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
             Text("Nowa rzecz", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Nigdzie jej nie ma — zapisz i sprzedaj za jednym razem.",
+                "Nigdzie jej nie mamy — zapisujemy i sprzedajemy za jednym razem.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -89,6 +89,8 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                 )
             }
 
+            SplittableHint(visible = form.splittable)
+
             Spacer(Modifier.height(10.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -105,7 +107,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                     value = form.priceText,
                     onValueChange = { viewModel.onNewItemChange(form.copy(priceText = it)) },
                     singleLine = true,
-                    label = { Text("Cena końcowa") },
+                    label = { Text("Sprzedaliśmy za") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
@@ -115,7 +117,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
             Spacer(Modifier.height(6.dp))
 
             Text(
-                "Nie wiesz, za ile kupione? Zostaw puste — koszt będzie nieznany.",
+                "Nie wiemy, za ile kupiliśmy? Zostawmy puste — koszt zostanie nieznany.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

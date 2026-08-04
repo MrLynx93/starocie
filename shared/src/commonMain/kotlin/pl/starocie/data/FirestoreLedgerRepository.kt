@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.LocalDate
 import pl.starocie.domain.Buy
 import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.DraftItem
@@ -76,7 +77,7 @@ class FirestoreLedgerRepository(
             val exists = runCatching { workspace.get().exists }.getOrDefault(false)
             if (!exists) {
                 runCatching { workspace.set(WorkspaceDoc(members = listOf(userId)), merge = true) }
-                    .onFailure { _syncError.value = "Nie można utworzyć magazynu: ${it.message}" }
+                    .onFailure { _syncError.value = "Nie udało się otworzyć magazynu: ${it.message}" }
             }
         }
     }
@@ -108,7 +109,7 @@ class FirestoreLedgerRepository(
             // A listen can still be rejected — the workspace create may have raced,
             // or this account may genuinely not be a member. Never let that reach
             // the dispatcher: back off, surface it, and keep trying.
-            _syncError.value = cause.message ?: "Błąd synchronizacji"
+            _syncError.value = cause.message ?: "Nie udało się zsynchronizować"
             delay(minOf(500L shl attempt.coerceAtMost(4).toInt(), 10_000L))
             true
         }
@@ -116,13 +117,15 @@ class FirestoreLedgerRepository(
 
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()
+        // The buy inherits the item's date, so the two can never disagree.
+        val date = items.firstOrNull()?.date
         val eventId = events.eventIdFor(at)
         val buyId = newId()
 
         val buy = Buy(
             id = buyId,
             eventId = eventId,
-            date = events.dateOf(at),
+            date = date ?: events.dateOf(at),
             price = price,
             name = name?.takeIf { it.isNotBlank() },
             createdBy = userId,
@@ -145,12 +148,12 @@ class FirestoreLedgerRepository(
         return buyId
     }
 
-    override suspend fun createBuy(price: Money?, name: String?): String {
+    override suspend fun createBuy(price: Money?, name: String?, date: LocalDate?): String {
         val at = now()
         val buy = Buy(
             id = newId(),
             eventId = events.eventIdFor(at),
-            date = events.dateOf(at),
+            date = date ?: events.dateOf(at),
             price = price,
             name = name?.takeIf { it.isNotBlank() },
             createdBy = userId,
@@ -314,21 +317,21 @@ class FirestoreLedgerRepository(
     private fun WriteBatch.commitDetached() {
         scope.launch {
             runCatching { commit() }
-                .onFailure { _syncError.value = it.message ?: "Nie zapisano" }
+                .onFailure { _syncError.value = it.message ?: "Nie udało się zapisać" }
         }
     }
 
     private fun detached(block: suspend () -> Unit) {
         scope.launch {
             runCatching { block() }
-                .onFailure { _syncError.value = it.message ?: "Nie zapisano" }
+                .onFailure { _syncError.value = it.message ?: "Nie udało się zapisać" }
         }
     }
 
     private fun DraftItem.toItem(buyId: String?, at: Instant) = Item(
         id = newId(),
         buyId = buyId,
-        date = events.dateOf(at),
+        date = date ?: events.dateOf(at),
         name = name.trim(),
         note = note?.takeIf { it.isNotBlank() },
         photo = photo,

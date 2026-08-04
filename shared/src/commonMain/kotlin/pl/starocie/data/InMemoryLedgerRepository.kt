@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.datetime.LocalDate
 import pl.starocie.domain.Buy
 import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.DraftItem
@@ -41,13 +42,15 @@ class InMemoryLedgerRepository(
 
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()
+        // The buy inherits the item's date, so the two can never disagree.
+        val date = items.firstOrNull()?.date
         val eventId = ensureEvent(at)
         val buyId = newId()
 
         val buy = Buy(
             id = buyId,
             eventId = eventId,
-            date = events.dateOf(at),
+            date = date ?: events.dateOf(at),
             price = price,
             name = name?.takeIf { it.isNotBlank() },
             createdBy = userId,
@@ -60,13 +63,13 @@ class InMemoryLedgerRepository(
         return buyId
     }
 
-    override suspend fun createBuy(price: Money?, name: String?): String {
+    override suspend fun createBuy(price: Money?, name: String?, date: LocalDate?): String {
         val at = now()
         val eventId = ensureEvent(at)
         val buy = Buy(
             id = newId(),
             eventId = eventId,
-            date = events.dateOf(at),
+            date = date ?: events.dateOf(at),
             price = price,
             name = name?.takeIf { it.isNotBlank() },
             createdBy = userId,
@@ -222,7 +225,7 @@ class InMemoryLedgerRepository(
     private fun DraftItem.toItem(buyId: String?, at: Instant) = Item(
         id = newId(),
         buyId = buyId,
-        date = events.dateOf(at),
+        date = date ?: events.dateOf(at),
         name = name.trim(),
         note = note?.takeIf { it.isNotBlank() },
         photo = photo,

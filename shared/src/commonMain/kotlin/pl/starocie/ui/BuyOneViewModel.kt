@@ -7,13 +7,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import pl.starocie.domain.DraftItem
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
 
+@OptIn(ExperimentalTime::class)
+internal fun today(): LocalDate =
+    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
 data class BuyOneUiState(
     val name: String = "",
+    /** Almost always today; editable for a box unpacked days later. */
+    val date: LocalDate = today(),
     val paidText: String = "",
     val askingText: String = "",
     val quantityText: String = "1",
@@ -32,6 +43,9 @@ data class BuyOneUiState(
 
     /** Blank or nonsense means one, so a stray edit cannot lose the record. */
     val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
+
+    /** More than one is a lot that sells in parts — mirrors `Item.splittable`. */
+    val splittable: Boolean get() = quantity > 1
 
     /** Only a standalone purchase asks what was paid; a box already knows. */
     val showPaid: Boolean get() = buyId == null
@@ -57,6 +71,8 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
         if (_state.value.buyId != buyId) _state.update { it.copy(buyId = buyId) }
     }
 
+    fun onDateChange(value: LocalDate) = _state.update { it.copy(date = value) }
+
     fun onNameChange(value: String) = _state.update { it.copy(name = value, error = null) }
 
     fun onPaidChange(value: String) = _state.update { it.copy(paidText = value) }
@@ -81,6 +97,7 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
             price = parseMoney(current.askingText),
             quantity = current.quantity,
             photo = current.photo,
+            date = current.date,
         )
 
         viewModelScope.launch {
@@ -94,10 +111,14 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
             }.onSuccess {
                 // Keep the box attachment and the tally; clear only the entry.
                 _state.update {
-                    BuyOneUiState(buyId = it.buyId, recordedCount = it.recordedCount + 1)
+                    BuyOneUiState(
+                        buyId = it.buyId,
+                        date = it.date,
+                        recordedCount = it.recordedCount + 1,
+                    )
                 }
             }.onFailure { e ->
-                _state.update { it.copy(error = e.message ?: "Nie zapisano") }
+                _state.update { it.copy(error = e.message ?: "Nie udało się zapisać") }
             }
         }
     }

@@ -44,9 +44,9 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
 
-            Text("Kupuję pudło", style = MaterialTheme.typography.headlineSmall)
+            Text("Kupujemy paczkę", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Najpierw cena za całość. Potem wpisujesz rzeczy po kolei — same trafią do tego pudła.",
+                "Najpierw cena za całość. Potem wpisujemy rzeczy po kolei — same trafią do tej paczki.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -57,7 +57,7 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
                 value = state.totalText,
                 onValueChange = viewModel::onTotalChange,
                 singleLine = true,
-                label = { Text("Kupiliśmy za całość") },
+                label = { Text("Całą paczkę kupiliśmy za") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().focusRequester(totalFocus),
@@ -84,6 +84,19 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
             }
 
             Spacer(Modifier.weight(1f))
+
+            // The last cheap moment to notice the wrong choice: once the buy is
+            // opened its contents are written one by one, whereas a lot entered as
+            // a single thing can never be broken back apart. So the alternative is
+            // named here, pointing at the button that actually leads to it.
+            Text(
+                "Sprzedajemy to jako jedną pozycję? Anulujmy i wybierzmy «Rzecz» — " +
+                    "tam wpisujemy sztuki.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(

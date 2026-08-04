@@ -52,14 +52,15 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
         ) {
             Text(
-                text = if (state.buyId == null) "Kupuję rzecz" else "Co było w pudle",
+                text = if (state.buyId == null) "Kupujemy rzecz" else "Co było w paczce",
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
                 text = when {
-                    state.recordedCount > 0 -> "Zapisano w tej serii: ${state.recordedCount}"
-                    state.buyId != null -> "Wpisuj po kolei — same trafiają do pudła."
-                    else -> "Zapisz i od razu wpisuj następną."
+                    state.recordedCount > 0 ->
+                        "Zapisaliśmy w tej serii: ${state.recordedCount}"
+                    state.buyId != null -> "Wpisujemy po kolei — same trafiają do paczki."
+                    else -> "Zapisujemy i od razu wpisujemy następną."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -89,30 +90,36 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 )
             }
 
+            SplittableHint(visible = state.splittable)
+
             Spacer(Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (state.showPaid) {
-                    OutlinedTextField(
-                        value = state.paidText,
-                        onValueChange = viewModel::onPaidChange,
-                        singleLine = true,
-                        label = { Text("Kupiliśmy za") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+            // One below the other rather than side by side: at half width the two
+            // labels truncate, and these are the two numbers that must not be
+            // mistaken for each other.
+            if (state.showPaid) {
                 OutlinedTextField(
-                    value = state.askingText,
-                    onValueChange = viewModel::onAskingChange,
+                    value = state.paidText,
+                    onValueChange = viewModel::onPaidChange,
                     singleLine = true,
-                    label = { Text("Chcemy sprzedać za") },
+                    label = { Text("Kupiliśmy za") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
+
+                Spacer(Modifier.height(10.dp))
             }
+
+            OutlinedTextField(
+                value = state.askingText,
+                onValueChange = viewModel::onAskingChange,
+                singleLine = true,
+                label = { Text("Chcemy sprzedać za") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             state.error?.let {
                 Spacer(Modifier.height(10.dp))

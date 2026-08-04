@@ -1,6 +1,7 @@
 package pl.starocie.domain
 
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.datetime.LocalDate
 
 /** An item as the user drafts it while unpacking, before it becomes an [Item]. */
 data class DraftItem(
@@ -9,6 +10,8 @@ data class DraftItem(
     val quantity: Int = 1,
     val note: String? = null,
     val photo: String? = null,
+    /** When it was actually bought. Null means today. */
+    val date: LocalDate? = null,
 )
 
 /**
@@ -38,7 +41,7 @@ interface LedgerRepository {
      * Opens a buy with no contents yet. Used by the box flow: the price is known
      * before the contents are, and items are appended as they come out of the box.
      */
-    suspend fun createBuy(price: Money?, name: String?): String
+    suspend fun createBuy(price: Money?, name: String?, date: LocalDate? = null): String
 
     /**
      * Adds one item, optionally to an existing buy. A null [buyId] means the item

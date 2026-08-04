@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Icon
@@ -44,11 +45,17 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Money
 import pl.starocie.domain.format
 import pl.starocie.domain.sum
 
 @Composable
-fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
+fun HomeScreen(
+    onBuyOne: () -> Unit,
+    onBuyBox: () -> Unit,
+    onSell: () -> Unit,
+    onStock: () -> Unit,
+) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
     val syncError by repository.syncError.collectAsState()
@@ -73,7 +80,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ExtendedFloatingActionButton(
-                    text = { Text("Pudło") },
+                    text = { Text("Paczka") },
                     icon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
                     onClick = onBuyBox,
                     shape = CircleShape,
@@ -93,7 +100,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 ExtendedFloatingActionButton(
-                    text = { Text("Sprzedaję", fontWeight = FontWeight.Medium) },
+                    text = { Text("Sprzedajemy", fontWeight = FontWeight.Medium) },
                     icon = { Icon(Icons.Filled.Sell, contentDescription = null) },
                     onClick = onSell,
                     shape = CircleShape,
@@ -116,7 +123,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        "Brak synchronizacji: $it",
+                        "Nie synchronizujemy się: $it",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
@@ -138,7 +145,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
             today?.let {
                 val stats = ledger.eventStats(it)
                 Text(
-                    "wydane ${stats.spent.format()} · zarobione ${stats.earned.format()}",
+                    "wydaliśmy ${stats.spent.format()} · zarobiliśmy ${stats.earned.format()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -151,17 +158,30 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 ),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onStock),
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "${stock.size} rzeczy w magazynie",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        "warte ${stockValue.format()} wg cen wywoławczych",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Mamy w magazynie ${rzeczy(stock.size)}",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            "chcemy za nie ${stockValue.format()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    // The card was a read-out for long enough that nothing about it
+                    // suggests it opens anything; the chevron is the only cue that
+                    // the list is behind it.
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        contentDescription = "Pokaż magazyn",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -170,12 +190,12 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
 
             if (recentSells.isEmpty()) {
                 Text(
-                    "Nic jeszcze nie sprzedano.",
+                    "Jeszcze nic nie sprzedaliśmy.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                Text("Ostatnio sprzedane", style = MaterialTheme.typography.titleSmall)
+                Text("Co ostatnio sprzedaliśmy", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(8.dp))
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -183,6 +203,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                         val item = ledger.itemById(sell.itemId)
                         val stats = item?.let { ledger.itemStats(it) }
                         val profit = stats?.profit
+                        val approx = if (stats?.profitIsEstimated == true) "ok. " else ""
 
                         Card(
                             shape = RoundedCornerShape(14.dp),
@@ -199,10 +220,14 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
                                 Column(Modifier.weight(1f)) {
                                     Text(item?.name ?: "—", fontWeight = FontWeight.Medium)
                                     Text(
+                                        // A loss written as a negative gain is a
+                                        // small puzzle every time; said as a loss it
+                                        // is just what happened.
                                         text = when {
-                                            profit == null -> "zysk nieznany"
-                                            stats.profitIsEstimated -> "zysk ok. ${profit.format()}"
-                                            else -> "zysk ${profit.format()}"
+                                            profit == null -> "nie wiemy, ile zarobiliśmy"
+                                            profit.minor < 0 ->
+                                                "straciliśmy $approx${Money(-profit.minor).format()}"
+                                            else -> "zarobiliśmy $approx${profit.format()}"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (profit != null && profit.minor < 0) {
@@ -227,7 +252,7 @@ fun HomeScreen(onBuyOne: () -> Unit, onBuyBox: () -> Unit, onSell: () -> Unit) {
     if (renaming && today != null) {
         AlertDialog(
             onDismissRequest = { renaming = false },
-            title = { Text("Nazwa dnia") },
+            title = { Text("Jak nazwiemy ten dzień?") },
             text = {
                 OutlinedTextField(
                     value = draftName,
