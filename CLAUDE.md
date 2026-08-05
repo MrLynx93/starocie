@@ -318,3 +318,25 @@ Both are gitignored. A second developer needs copies from the Firebase console.
 The `com.google.gms.google-services` plugin is applied only when the JSON is
 present, so a fresh clone still builds and runs — Firebase is inert until the
 config arrives, rather than the build failing on a missing secret.
+
+### Getting an APK onto a phone
+
+`.github/workflows/android-apk.yml` builds `:androidApp:assembleDebug` and
+attaches the APK to a rolling `latest-apk` prerelease, so installing is opening
+one URL on the phone rather than plugging it into a laptop:
+
+    https://github.com/MrLynx93/starocie/releases/tag/latest-apk
+
+**Debug, not release**, because the debug keystore is generated and an unsigned
+release APK will not install at all. Every push to `main` or a `claude/**`
+branch rebuilds it.
+
+Firebase is inert without config, and `App()` reaches for `Firebase.auth` on its
+first frame — so an APK built without it installs and then dies on launch. CI
+gets its copy from a repository secret, base64 so it survives as one line:
+
+    base64 -w0 androidApp/google-services.json
+
+Paste that as the `GOOGLE_SERVICES_JSON` secret under Settings → Secrets and
+variables → Actions. The file itself stays out of git; only Actions ever holds
+it. Without the secret the build still succeeds and warns.
