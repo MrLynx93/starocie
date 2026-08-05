@@ -7,7 +7,15 @@
 name: Android APK
 
 on:
+  # A hand-started run is usually "does this still build", not "ship it", so it
+  # leaves the release alone and drops the APK as a run artifact instead. Tick
+  # the box when you do want the phone-facing download moved on.
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Also move the latest-apk release onto this build'
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -114,6 +122,10 @@ jobs:
       # browser can take straight to the installer, so the APK is published to a
       # rolling "latest-apk" prerelease that each build overwrites.
       - name: Publish the APK where a phone can reach it
+        # Pushes always move the download on. A manual run only does so on
+        # request — the point of starting one by hand is usually to check a
+        # build without disturbing what the phones are pointed at.
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

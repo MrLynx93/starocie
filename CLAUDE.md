@@ -329,7 +329,18 @@ one URL on the phone rather than plugging it into a laptop:
 
 **Debug, not release**, because the debug keystore is generated and an unsigned
 release APK will not install at all. Every push to `main` or a `claude/**`
-branch rebuilds it.
+branch rebuilds it and moves that download on.
+
+To rebuild by hand, use **Actions → Android APK → Run workflow**. It leaves the
+release alone by default and attaches the APK to the run instead, because a
+hand-started run is usually a question about the build rather than something to
+put on a phone; tick *publish* to move the download too. Re-running an existing
+run is not the same thing — it replays the original push event and so does
+republish.
+
+That button only appears once this workflow is on the **default branch**:
+`workflow_dispatch` is invisible, from the UI and the API alike, while the file
+lives only on a feature branch.
 
 Firebase is inert without config, and `App()` reaches for `Firebase.auth` on its
 first frame — so an APK built without it installs and then dies on launch. CI
