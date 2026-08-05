@@ -33,14 +33,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * One thing at a time. Saving clears the form and puts the cursor back in the price
+ * One thing at a time. Saving clears the form and puts the cursor back in the name
  * field, so a run of purchases is a run of typing rather than a run of navigation.
  */
 @Composable
 fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
     val viewModel: BuyOneViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val paidFocus = remember { FocusRequester() }
     val nameFocus = remember { FocusRequester() }
     val takePhoto = rememberPhotoCapture(viewModel::onPhotoCaptured)
 
@@ -129,7 +128,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                             label = { Text("Kupiliśmy za") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.weight(1f).focusRequester(paidFocus),
+                            modifier = Modifier.weight(1f),
                         )
                     } else {
                         Spacer(Modifier.weight(1f))

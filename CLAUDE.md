@@ -289,10 +289,10 @@ speaks as us, never at the user:
   which is nearly always the day it happened; the field earned a tap on every
   purchase to correct the rare one. `Buy.date` and `Item.date` stay editable in the
   model for a later edit screen — the entry forms simply do not ask.
-  The **price takes focus on arrival**, so the screen opens with a number pad: at a
-  stall the price is what you are told first. The count sits beside it — one lot,
-  one price, so many things. Unpacking a box has no price to type, and there the
-  name leads instead.
+  The **name takes focus on arrival** and again after each save — it is the one
+  required field, and the one the item is later found by. The count sits beside
+  what was paid: one lot, one price, so many things. A box was paid for once, so
+  there the count stands alone.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
   root column, "Zapisz" is exactly what ends up underneath it.
