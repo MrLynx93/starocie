@@ -53,16 +53,6 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
 
             Spacer(Modifier.height(24.dp))
 
-            // Date first, then the price — the order the purchase happens in.
-            DateField(
-                date = state.date,
-                onDateChange = viewModel::onDateChange,
-                label = "Kiedy kupiliśmy",
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(10.dp))
-
             OutlinedTextField(
                 value = state.totalText,
                 onValueChange = viewModel::onTotalChange,

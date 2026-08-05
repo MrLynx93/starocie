@@ -7,24 +7,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import pl.starocie.domain.DraftItem
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
 
-@OptIn(ExperimentalTime::class)
-internal fun today(): LocalDate =
-    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-
 data class BuyOneUiState(
     val name: String = "",
-    /** Almost always today; editable for a box unpacked days later. */
-    val date: LocalDate = today(),
     val paidText: String = "",
     val askingText: String = "",
     val quantityText: String = "1",
@@ -71,8 +60,6 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
         if (_state.value.buyId != buyId) _state.update { it.copy(buyId = buyId) }
     }
 
-    fun onDateChange(value: LocalDate) = _state.update { it.copy(date = value) }
-
     fun onNameChange(value: String) = _state.update { it.copy(name = value, error = null) }
 
     fun onPaidChange(value: String) = _state.update { it.copy(paidText = value) }
@@ -97,7 +84,6 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
             price = parseMoney(current.askingText),
             quantity = current.quantity,
             photo = current.photo,
-            date = current.date,
         )
 
         viewModelScope.launch {
@@ -113,7 +99,6 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
                 _state.update {
                     BuyOneUiState(
                         buyId = it.buyId,
-                        date = it.date,
                         recordedCount = it.recordedCount + 1,
                     )
                 }

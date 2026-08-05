@@ -265,10 +265,21 @@ speaks as us, never at the user:
 - **Home** — big BUY and SELL buttons over recent activity; the current event's
   name sits at the top, tappable to name it. The stock summary card is the way in
   to the stock list.
-- **Buy** — one flow; buying and unpacking happen in one sitting. Total paid first
-  (the number you always know), then photograph the contents. Each photo becomes an
-  item. One photo → sole item, exact cost. Several → box total, allocated. Never
-  asks for a per-item cost.
+- **Buy** — two ways in, "Rzecz" and "Paczka", over a single item form. The form
+  **opens with the photo**, in the order it actually happens: the thing is in your
+  hand, so it is photographed and then described. One item of its own buy → exact
+  cost. Several in a box → the box total, allocated. Never asks for a per-item cost.
+  **Neither path asks when it was bought.** A buy is dated the day it is entered,
+  which is nearly always the day it happened; the field earned a tap on every
+  purchase to correct the rare one. `Buy.date` and `Item.date` stay editable in the
+  model for a later edit screen — the entry forms simply do not ask.
+  The **price takes focus on arrival**, so the screen opens with a number pad: at a
+  stall the price is what you are told first. The count sits beside it — one lot,
+  one price, so many things. Unpacking a box has no price to type, and there the
+  name leads instead.
+  The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
+  keyboard covers the window rather than shrinking it; without `imePadding` on the
+  root column, "Zapisz" is exactly what ends up underneath it.
 - **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
   enter the final price, done. Splittables show a note field and a "fully sold"
   tick setting `soldCompletely`. The dialog does only that one thing.
