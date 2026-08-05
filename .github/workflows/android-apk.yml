@@ -43,21 +43,59 @@ jobs:
       # google-services.json is gitignored, so CI has to supply its own copy.
       # Without it androidApp/build.gradle.kts skips the plugin and the app still
       # builds — it just has no Firebase config and dies reaching for auth on
-      # launch. Store the file base64-encoded as the GOOGLE_SERVICES_JSON secret
-      # to get an APK that actually runs.
+      # launch. Store the file as the GOOGLE_SERVICES_JSON secret to get an APK
+      # that actually runs.
       - name: Restore google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > androidApp/google-services.json
-            echo "google-services.json restored from secret"
-          else
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
             echo "::warning::No GOOGLE_SERVICES_JSON secret — the APK will build but crash on launch without Firebase config"
+            exit 0
           fi
+
+          # Take the secret either way round. base64 is what the setup notes ask
+          # for, but pasting the file itself is the obvious slip and costs one
+          # branch to honour — the alternative is a decode failure that reads as
+          # a broken build rather than a mistyped secret.
+          if [ "$(printf '%s' "$GOOGLE_SERVICES_JSON" | tr -d '[:space:]' | cut -c1)" = '{' ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > androidApp/google-services.json
+            echo "secret held raw JSON"
+          elif printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > androidApp/google-services.json 2>/dev/null; then
+            echo "secret decoded from base64"
+          else
+            echo "::error::GOOGLE_SERVICES_JSON is neither JSON nor valid base64. Re-add it with: base64 -w0 androidApp/google-services.json"
+            exit 1
+          fi
+
+          # A malformed config is worse than an absent one: the build still goes
+          # green and the failure only surfaces on the phone. Reject it here.
+          if ! jq -e '.project_info.project_id and (.client | length > 0)' \
+                 androidApp/google-services.json > /dev/null 2>&1; then
+            echo "::error::google-services.json is not a usable Firebase config (needs project_info.project_id and a non-empty client array)"
+            exit 1
+          fi
+
+          echo "FIREBASE_CONFIGURED=1" >> "$GITHUB_ENV"
+          echo "Firebase project: $(jq -r .project_info.project_id androidApp/google-services.json)"
 
       - name: Build debug APK
         run: ./gradlew :androidApp:assembleDebug --stacktrace
+
+      # The plugin is applied conditionally, so "the secret was set" and "the app
+      # can reach Firebase" are two different claims. Proving the generated string
+      # resources exist is what makes the second one true.
+      - name: Check the config reached the build
+        if: env.FIREBASE_CONFIGURED == '1'
+        run: |
+          set -euo pipefail
+          if ! grep -rl google_app_id androidApp/build/generated > /dev/null 2>&1; then
+            echo "::error::google-services plugin did not generate Firebase resources — the APK would crash on launch"
+            exit 1
+          fi
+          echo "Firebase resources generated; this APK can sign in."
 
       - name: Name the APK after the commit
         run: |
@@ -79,9 +117,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
+          # Whether Firebase made it in decides if the app opens at all, so it
+          # belongs on the page you download from, not just in a build log.
+          if [ "${FIREBASE_CONFIGURED:-}" = "1" ]; then
+            firebase="Firebase skonfigurowany — logowanie i synchronizacja działają."
+          else
+            firebase="**Bez konfiguracji Firebase — aplikacja zgaśnie zaraz po otwarciu.** Trzeba dodać sekret \`GOOGLE_SERVICES_JSON\`."
+          fi
+
+          notes=$(printf '%s\n\n%s\n' \
+            "Debug build of \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA::7}\`. Tap the .apk below on the phone to install." \
+            "$firebase")
+
           gh release delete latest-apk --yes --cleanup-tag || true
           gh release create latest-apk artifacts/*.apk \
             --title "starocie — najnowszy APK" \
-            --notes "Debug build of \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA::7}\`. Tap the .apk below on the phone to install." \
+            --notes "$notes" \
             --prerelease \
             --target "$GITHUB_SHA"
