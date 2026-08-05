@@ -339,4 +339,12 @@ gets its copy from a repository secret, base64 so it survives as one line:
 
 Paste that as the `GOOGLE_SERVICES_JSON` secret under Settings → Secrets and
 variables → Actions. The file itself stays out of git; only Actions ever holds
-it. Without the secret the build still succeeds and warns.
+it. Pasting the raw JSON works too — the workflow takes either form.
+
+Without the secret the build still succeeds and warns, because an APK is still
+worth having. A secret that is present but unusable fails the build instead: a
+bad config produces a green build and an app that dies on the phone, which is
+the one outcome worth spending a red build to prevent. The workflow then checks
+that the plugin really generated the Firebase resources, since applying it is
+conditional and "the secret was set" does not prove "the app can reach
+Firebase".
