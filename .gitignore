@@ -29,6 +29,14 @@ render.experimental.xml
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
+GoogleService-Info.plist
+
+# Xcode. Package.resolved is deliberately NOT ignored: it pins the Firebase iOS
+# SDK to the version the app was last built against, on both machines.
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.swiftpm/
 
 # Android Profiling
 *.hprof

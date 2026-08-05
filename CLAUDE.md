@@ -206,16 +206,30 @@ this scale — so the picture rides in the document instead:
 happens, the inline photo becomes the thumbnail and the URL the full-resolution
 original.
 
-**iOS capture is not implemented.** The `expect`/`actual` seam exists and
-compiles, but there is no Xcode on the development machine, so shipping untested
-`UIImagePickerController` interop would be guesswork. Capture yields nothing on
-iOS until that is done.
+On iOS the same 640px / JPEG 75 pipeline runs through `UIImagePickerController`,
+and the picker owns the camera UI exactly as the camera app does on Android — so
+again no permission is requested, only the `NSCameraUsageDescription` string iOS
+shows when the picker opens.
+
+- **the source falls back to the photo library when no camera exists**, which is
+  every simulator. Without that, the feature could not be exercised at all without
+  a physical phone
+- there is no Exif dance: `drawInRect` already honours `imageOrientation`, so
+  redrawing at the smaller size uprights the photo as a side effect. Android has to
+  read the tag and rotate the pixels itself
+- decoding goes straight from JPEG bytes to `ImageBitmap` through Skia, which
+  Compose has already linked in, so the photo never becomes a `UIImage` to be shown
 
 ## Architecture
 
-Single `composeApp` module — `commonMain` / `androidMain` / `iosMain`, packaged by
-layer. Splitting into several Gradle modules at this size costs more than it
-returns. Android and iOS only; no desktop target.
+Single `shared` module — `commonMain` / `androidMain` / `iosMain`, packaged by
+layer, with `androidApp` and `iosApp` as thin hosts around it. Splitting the shared
+code into several Gradle modules at this size costs more than it returns. Android
+and iOS only; no desktop target.
+
+`iosApp` is an Xcode project, not a Gradle module: two Swift files, one of which
+presents `MainViewController()` and the other calls `FirebaseApp.configure()`. All
+the screens live in `commonMain`, so there is nothing else for Swift to do.
 
 - Compose Multiplatform UI, `androidx.lifecycle` ViewModel (KMP)
 - `androidx.navigation` multiplatform
@@ -329,6 +343,41 @@ Both are gitignored. A second developer needs copies from the Firebase console.
 The `com.google.gms.google-services` plugin is applied only when the JSON is
 present, so a fresh clone still builds and runs — Firebase is inert until the
 config arrives, rather than the build failing on a missing secret.
+
+**iOS is deliberately the opposite: no plist, no build.** The Android leniency
+buys something real — an APK worth having even without Firebase. On iOS there is
+no equivalent prize, and `FirebaseApp.configure()` traps at launch without the
+file, so `GoogleService-Info.plist` is a member of the Resources phase and its
+absence is a build error rather than a crash on the phone.
+
+### Running on iOS
+
+`iosApp/iosApp.xcodeproj` — open it, pick a simulator, run. From the terminal:
+
+    xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
+      -destination 'platform=iOS Simulator,name=iPhone 17' build
+
+The Kotlin side is a **static** `Shared.framework`. A "Build Kotlin framework" run
+script phase runs `:shared:embedAndSignAppleFrameworkForXcode` ahead of the Swift
+compile, so Xcode is always linking a framework built from the current sources —
+there is no separate Gradle step to remember, and no stale framework to be
+confused by.
+
+The **Firebase iOS SDK comes in over Swift Package Manager**, pinned in
+`Package.resolved`. GitLive's iOS artifacts are cinterop bindings *over* Apple's
+Firebase SDK rather than a reimplementation of it, so without those packages the
+Kotlin framework has nothing to resolve its `FIR*` symbols against and the app
+fails at link time, not at runtime. `Package.resolved` is therefore committed,
+unlike the rest of Xcode's droppings.
+
+Two things Xcode does not come with:
+
+- **the iOS simulator runtime**, a separate multi-gigabyte download since Xcode 16.
+  Without it `xcodebuild` reports "Unable to find a destination", which reads like
+  a project fault and is not one: `xcodebuild -downloadPlatform iOS`
+- **the right `xcode-select`.** A machine that had the Command Line Tools first
+  keeps pointing at them, and then there is no `xcodebuild` at all:
+  `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
 
 ### Getting an APK onto a phone
 
