@@ -34,15 +34,20 @@ import pl.starocie.domain.format
  *
  * Shared by the sell search and the stock list so a thing looks the same wherever
  * it is met — the two screens differ in what tapping does, not in what a row is.
+ *
+ * The photo is its own target, because the two screens want different things of it:
+ * on the sell list the row sells and the picture opens the thing to look at
+ * properly, which is the only way to reach that from the middle of a sale. Where
+ * the row already opens the item, [onPhotoClick] simply follows it.
  */
 @Composable
-internal fun StockRow(item: Item, onClick: () -> Unit) {
+internal fun StockRow(item: Item, onClick: () -> Unit, onPhotoClick: () -> Unit = onClick) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        ItemThumb(item.photo)
+        ItemThumb(item.photo, onClick = onPhotoClick)
         Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
@@ -75,21 +80,25 @@ internal fun StockRow(item: Item, onClick: () -> Unit) {
  * out.
  */
 @Composable
-internal fun ItemThumb(photo: String?) {
+internal fun ItemThumb(photo: String?, onClick: (() -> Unit)? = null) {
     val thumb = remember(photo) { photo?.let { decodePhoto(it) } }
+    // Clipped before the click so the ripple stays inside the rounded square, and
+    // the click last of all so nothing is painted over the ripple afterwards.
+    val square = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp))
+    val tap = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)
 
     if (thumb != null) {
         Image(
             bitmap = thumb,
-            contentDescription = null,
+            contentDescription = onClick?.let { "Pokaż przedmiot" },
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = square.then(tap),
         )
     } else {
         Box(
-            modifier = Modifier.size(52.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = square
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .then(tap),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

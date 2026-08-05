@@ -330,6 +330,11 @@ write nothing until their main button is pressed.
 - **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
   enter the final price, done. Splittables show a note field and a "fully sold"
   tick setting `soldCompletely`. The dialog does only that one thing.
+  **The photo in a row is its own target**, opening the item screen rather than the
+  sell dialog: from the middle of a search it is the only way through to the thing
+  itself, and a picture is what you press when you are not sure the row is the one
+  you meant. Where the row already opens the item — the stock list — the photo just
+  follows it.
 - **Stock** — the same `IN_STOCK` list, newest first, reached from the home
   summary card and browsed rather than searched: the sell screen answers "what am
   I holding", this one answers "what have we still got". A row opens the item.

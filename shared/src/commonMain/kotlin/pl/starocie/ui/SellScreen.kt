@@ -1,11 +1,8 @@
 package pl.starocie.ui
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
@@ -21,12 +18,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SellScreen(onDone: () -> Unit, onAddNew: () -> Unit) {
+fun SellScreen(onDone: () -> Unit, onAddNew: () -> Unit, onOpenItem: (String) -> Unit) {
     val viewModel: SellViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-
+    ScreenColumn {
         OutlinedTextField(
             value = state.query,
             onValueChange = viewModel::onQueryChange,
@@ -60,11 +56,18 @@ fun SellScreen(onDone: () -> Unit, onAddNew: () -> Unit) {
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
             )
         } else {
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(state.inStock, key = { it.id }) { item ->
-                    StockRow(item, onClick = { viewModel.select(item) })
+                    // The row sells; the photo opens the thing instead, which is
+                    // the only way through to it without abandoning the search.
+                    StockRow(
+                        item,
+                        onClick = { viewModel.select(item) },
+                        onPhotoClick = { onOpenItem(item.id) },
+                    )
                     HorizontalDivider()
                 }
             }

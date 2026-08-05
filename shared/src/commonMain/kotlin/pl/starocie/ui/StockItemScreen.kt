@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -110,11 +108,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
     var askingText by remember(item.id) { mutableStateOf(item.price?.toInputText() ?: "") }
     val asking = parseMoney(askingText)
 
-    Column(
-        // The screen draws edge to edge, so the keyboard covers the window rather
-        // than shrinking it — without imePadding the price field ends up under it.
-        modifier = Modifier.fillMaxSize().imePadding().padding(20.dp),
-    ) {
+    ScreenColumn {
         // What the item is scrolls; what you can do about it stays put at the
         // bottom, so the three buttons are always in the same place under the thumb.
         Column(

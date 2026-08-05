@@ -127,6 +127,7 @@ private fun MainNavigation() {
             SellScreen(
                 onDone = { navController.popBackStack() },
                 onAddNew = { navController.navigate(SellNewRoute) },
+                onOpenItem = { itemId -> navController.navigate(StockItemRoute(itemId)) },
             )
         }
 

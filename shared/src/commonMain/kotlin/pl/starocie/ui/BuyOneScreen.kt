@@ -116,27 +116,13 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(16.dp))
 
-                // Two lines, because a name typed to be found again later is rarely
-                // one word — "filiżanka Ćmielów, złoty rant" has to be readable
-                // whole, not scrolled sideways through a one-line field.
-                // Enter moves on to the price rather than opening a third line: the
-                // two lines are there so a long name reads whole, not so it can be
-                // written as a paragraph.
+                // One line: a long name scrolls sideways within it rather than
+                // giving the form a field twice the height of every other one. Enter
+                // moves on to the price — there is no second line to open.
                 OutlinedTextField(
                     value = state.name,
-                    onValueChange = { typed ->
-                        // A newline can still arrive from a hardware key or an IME
-                        // that sends one instead of the action — it means the same
-                        // thing here, so it moves on rather than breaking the line.
-                        if (typed.contains('\n')) {
-                            viewModel.onNameChange(typed.replace("\n", ""))
-                            moveOnFromName()
-                        } else {
-                            viewModel.onNameChange(typed)
-                        }
-                    },
-                    minLines = 2,
-                    maxLines = 2,
+                    onValueChange = viewModel::onNameChange,
+                    singleLine = true,
                     label = { Text("Nazwa") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(onNext = { moveOnFromName() }),

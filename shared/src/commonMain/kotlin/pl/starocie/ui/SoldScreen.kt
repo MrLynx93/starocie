@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -58,7 +57,7 @@ fun SoldScreen(onDone: () -> Unit) {
     }
     val proceeds = remember(sold) { sold.map { (_, stats) -> stats.proceeds }.sum() }
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+    ScreenColumn {
         Text("Co sprzedaliśmy", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Poszło ${przedmioty(sold.size)} · wzięliśmy za nie ${proceeds.format()}",
