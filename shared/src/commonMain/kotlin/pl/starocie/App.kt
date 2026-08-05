@@ -25,6 +25,7 @@ import pl.starocie.ui.HomeScreen
 import pl.starocie.ui.SellNewItemScreen
 import pl.starocie.ui.SellScreen
 import pl.starocie.ui.SignInScreen
+import pl.starocie.ui.SoldScreen
 import pl.starocie.ui.StockItemScreen
 import pl.starocie.ui.StockScreen
 import pl.starocie.ui.theme.AppTheme
@@ -38,6 +39,7 @@ import pl.starocie.ui.theme.AppTheme
 @Serializable private data object SellRoute
 @Serializable private data object SellNewRoute
 @Serializable private data object StockRoute
+@Serializable private data object SoldRoute
 @Serializable private data class StockItemRoute(val itemId: String)
 
 @Composable
@@ -76,6 +78,7 @@ private fun MainNavigation() {
                 onBuyBox = { navController.navigate(BuyBoxRoute) },
                 onSell = { navController.navigate(SellRoute) },
                 onStock = { navController.navigate(StockRoute) },
+                onSold = { navController.navigate(SoldRoute) },
             )
         }
 
@@ -85,6 +88,8 @@ private fun MainNavigation() {
                 onDone = { navController.popBackStack() },
             )
         }
+
+        composable<SoldRoute> { SoldScreen(onDone = { navController.popBackStack() }) }
 
         // Only the id travels: the item itself is read from the ledger, so the
         // screen follows every edit and every sale rather than showing a snapshot

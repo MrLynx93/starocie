@@ -21,29 +21,25 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Icon
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.format
@@ -55,18 +51,17 @@ fun HomeScreen(
     onBuyBox: () -> Unit,
     onSell: () -> Unit,
     onStock: () -> Unit,
+    onSold: () -> Unit,
 ) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
     val syncError by repository.syncError.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    var renaming by remember { mutableStateOf(false) }
-    var draftName by remember { mutableStateOf("") }
 
     val today = ledger.events.maxByOrNull { it.date }
     val stock = ledger.itemsInStock()
     val stockValue = stock.mapNotNull { it.price }.sum()
+    val sold = ledger.items.filter { it.status == ItemStatus.SOLD }
+    val soldProceeds = sold.map { ledger.itemStats(it).proceeds }.sum()
     val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(30)
 
     Scaffold(
@@ -79,34 +74,28 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ExtendedFloatingActionButton(
-                    text = { Text("Kup paczkę") },
-                    icon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
+                HomeAction(
+                    label = "Kup paczkę",
+                    icon = Icons.Filled.Inventory2,
                     onClick = onBuyBox,
-                    shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(2.dp),
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                ExtendedFloatingActionButton(
-                    text = { Text("Kup") },
-                    icon = { Icon(Icons.Filled.AddShoppingCart, contentDescription = null) },
+                HomeAction(
+                    label = "Kup",
+                    icon = Icons.Filled.AddShoppingCart,
                     onClick = onBuyOne,
-                    shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(2.dp),
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                ExtendedFloatingActionButton(
-                    text = { Text("Sprzedaj", fontWeight = FontWeight.Medium) },
-                    icon = { Icon(Icons.Filled.Sell, contentDescription = null) },
+                HomeAction(
+                    label = "Sprzedaj",
+                    icon = Icons.Filled.Sell,
                     onClick = onSell,
-                    shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
@@ -133,13 +122,15 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            Text("Nasze starocie", style = MaterialTheme.typography.headlineMedium)
+
+            Spacer(Modifier.height(12.dp))
+
+            // The day is a caption under the title now, not a heading of its own —
+            // it says which day the figures below belong to and nothing more.
             Text(
-                text = today?.name ?: today?.date?.toString() ?: "starocie",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.clickable(enabled = today != null) {
-                    draftName = today?.name.orEmpty()
-                    renaming = true
-                },
+                text = today?.name ?: today?.date?.toString() ?: "jeszcze nic dziś nie robiliśmy",
+                style = MaterialTheme.typography.titleSmall,
             )
 
             today?.let {
@@ -153,38 +144,21 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onStock),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Mamy ${przedmioty(stock.size)}",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            "chcemy za nie ${stockValue.format()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    // The card was a read-out for long enough that nothing about it
-                    // suggests it opens anything; the chevron is the only cue that
-                    // the list is behind it.
-                    Icon(
-                        Icons.Filled.ChevronRight,
-                        contentDescription = "Pokaż magazyn",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            SummaryCard(
+                title = "Mamy ${przedmioty(stock.size)}",
+                subtitle = "chcemy za nie ${stockValue.format()}",
+                openLabel = "Pokaż magazyn",
+                onClick = onStock,
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            SummaryCard(
+                title = "Sprzedaliśmy ${przedmioty(sold.size)}",
+                subtitle = "wzięliśmy za nie ${soldProceeds.format()}",
+                openLabel = "Pokaż, co sprzedaliśmy",
+                onClick = onSold,
+            )
 
             Spacer(Modifier.height(20.dp))
 
@@ -249,25 +223,75 @@ fun HomeScreen(
         }
     }
 
-    if (renaming && today != null) {
-        AlertDialog(
-            onDismissRequest = { renaming = false },
-            title = { Text("Jak nazwiemy ten dzień?") },
-            text = {
-                OutlinedTextField(
-                    value = draftName,
-                    onValueChange = { draftName = it },
-                    singleLine = true,
-                    placeholder = { Text("np. Hala Mirowska") },
+}
+
+/**
+ * One of the round buttons.
+ *
+ * The label carries the weight rather than the icon, so both start at the same left
+ * edge down the stack: three centred labels of different lengths read as three
+ * unrelated buttons, and the eye has to find each one afresh.
+ */
+@Composable
+private fun HomeAction(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    elevation: FloatingActionButtonElevation = FloatingActionButtonDefaults.elevation(),
+) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        shape = CircleShape,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        elevation = elevation,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(icon, contentDescription = null)
+        Spacer(Modifier.width(12.dp))
+        // The weight is what pushes the pair left: the row would otherwise centre
+        // them in a button that is as wide as the widest label.
+        Text(label, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+    }
+}
+
+/** A read-out with a list behind it. */
+@Composable
+private fun SummaryCard(
+    title: String,
+    subtitle: String,
+    openLabel: String,
+    onClick: () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    scope.launch { repository.nameEvent(today.id, draftName) }
-                    renaming = false
-                }) { Text("Zapisz") }
-            },
-            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Anuluj") } },
-        )
+            }
+            // The card was a read-out for long enough that nothing about it
+            // suggests it opens anything; the chevron is the only cue that the
+            // list is behind it.
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = openLabel,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

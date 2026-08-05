@@ -281,9 +281,12 @@ speaks as us, never at the user:
 
 ## Screens
 
-- **Home** — big BUY and SELL buttons over recent activity; the current event's
-  name sits at the top, tappable to name it. The stock summary card is the way in
-  to the stock list.
+- **Home** — "Nasze starocie" at the top, the current event's name or date under it
+  as a caption: it says which day the figures belong to and is not a control. The
+  round buttons align their icon and label to the left edge, so three labels of
+  different lengths read as one stack rather than three unrelated buttons. Two
+  summary cards sit under the day — stock and sold — each a read-out with its list
+  behind it, then recent activity.
 - **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact
@@ -322,6 +325,12 @@ speaks as us, never at the user:
   deliberate detour and a confirmation. The detail screen leaves by itself the
   moment its item stops being `IN_STOCK`, so a completed sale or a removal lands
   back in the list; a lot sold in part stays put and shows the extra sale.
+- **Sold** — the mirror of the stock list, reached from the second home card:
+  everything `SOLD`, newest sale first. Each row carries the pair of numbers that
+  answers "was it worth it" without a tap — what we paid and what we took, with the
+  share of a box marked "ok." so a guess never looks like a measured price. A lot
+  sold in part is still `IN_STOCK` and stays in the magazyn list; removed things
+  never sold and appear in neither.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"

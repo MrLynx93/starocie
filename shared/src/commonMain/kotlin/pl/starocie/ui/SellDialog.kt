@@ -50,7 +50,7 @@ internal fun SellDialog(
                     value = state.priceText,
                     onValueChange = onPriceChange,
                     singleLine = true,
-                    label = { Text("Sprzedaliśmy za") },
+                    label = { Text("Sprzedajemy za") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -84,7 +84,7 @@ internal fun SellDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm, enabled = state.canConfirm) { Text("Sprzedane") }
+            Button(onClick = onConfirm, enabled = state.canConfirm) { Text("Sprzedaj") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
     )

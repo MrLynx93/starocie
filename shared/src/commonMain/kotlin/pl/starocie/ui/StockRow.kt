@@ -37,39 +37,12 @@ import pl.starocie.domain.format
  */
 @Composable
 internal fun StockRow(item: Item, onClick: () -> Unit) {
-    val thumb = remember(item.photo) { item.photo?.let { decodePhoto(it) } }
-
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // A photo helps you spot the thing among similarly named ones; the name
-        // still does the finding, so a missing photo costs nothing. An empty
-        // square stands in for it anyway, so the names stay on one line down the
-        // list instead of stepping in and out.
-        if (thumb != null) {
-            Image(
-                bitmap = thumb,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)),
-            )
-        } else {
-            Box(
-                modifier = Modifier.size(52.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.PhotoCamera,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
+        ItemThumb(item.photo)
         Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
@@ -90,6 +63,40 @@ internal fun StockRow(item: Item, onClick: () -> Unit) {
                 it.format(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * A photo helps you spot the thing among similarly named ones; the name still does
+ * the finding, so a missing photo costs nothing. An empty square stands in for it
+ * anyway, so the names stay on one line down the list instead of stepping in and
+ * out.
+ */
+@Composable
+internal fun ItemThumb(photo: String?) {
+    val thumb = remember(photo) { photo?.let { decodePhoto(it) } }
+
+    if (thumb != null) {
+        Image(
+            bitmap = thumb,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)),
+        )
+    } else {
+        Box(
+            modifier = Modifier.size(52.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.PhotoCamera,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(22.dp),
             )
         }
     }
