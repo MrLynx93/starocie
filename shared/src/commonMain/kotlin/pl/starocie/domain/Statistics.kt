@@ -126,4 +126,9 @@ data class Ledger(
     fun itemsInStock(): List<Item> = items.filter { it.status == ItemStatus.IN_STOCK }
 
     fun itemById(id: String): Item? = itemsById[id]
+
+    fun buyById(id: String): Buy? = buysById[id]
+
+    /** How many things that buy covers — one means its price is that item's cost. */
+    fun itemCountOfBuy(id: String): Int = itemsByBuy[id]?.size ?: 0
 }

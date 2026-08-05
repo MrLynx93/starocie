@@ -1,0 +1,162 @@
+package pl.starocie.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
+import pl.starocie.domain.Item
+import pl.starocie.domain.ItemStats
+import pl.starocie.domain.ItemStatus
+import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Money
+import pl.starocie.domain.format
+import pl.starocie.domain.sum
+
+/**
+ * Everything that has already left as a sale, the counterpart to the magazyn list.
+ *
+ * The magazyn answers "what have we still got"; this one answers "what went, and
+ * did it go for more than we paid". Each row carries the pair of numbers that makes
+ * that judgement — what we gave and what we took — so the answer needs no tap.
+ *
+ * Only [ItemStatus.SOLD] things are here. A lot sold in part is still in stock and
+ * stays in the other list, which is the same rule that keeps it out of the stats.
+ * Removed things never sold, so they are in neither.
+ */
+@Composable
+fun SoldScreen(onDone: () -> Unit) {
+    val repository: LedgerRepository = koinInject()
+    val ledger by repository.ledger.collectAsState()
+
+    // Newest sale first: the thing you are least sure about is the thing that went
+    // last. Items with no completed sale left by some other route, so they fall
+    // back to when the record was last touched.
+    val sold = remember(ledger) {
+        ledger.items
+            .filter { it.status == ItemStatus.SOLD }
+            .map { it to ledger.itemStats(it) }
+            .sortedByDescending { (item, stats) -> stats.soldAt ?: item.updatedAt }
+    }
+    val proceeds = remember(sold) { sold.map { (_, stats) -> stats.proceeds }.sum() }
+
+    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Text("Co sprzedaliśmy", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Poszło ${przedmioty(sold.size)} · wzięliśmy za nie ${proceeds.format()}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        if (sold.isEmpty()) {
+            Text(
+                "Jeszcze nic nie sprzedaliśmy.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(sold, key = { (item, _) -> item.id }) { (item, stats) ->
+                    SoldRow(item, stats)
+                    HorizontalDivider()
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        BackButton(onDone)
+    }
+}
+
+@Composable
+private fun SoldRow(item: Item, stats: ItemStats) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        ItemThumb(item.photo)
+        Spacer(Modifier.width(12.dp))
+
+        // What we gave and what we took, in the order they happened and one under
+        // the other, so the two are read as a pair. A share of a box says "ok." —
+        // a guess must never look like a measured price.
+        Column(Modifier.weight(1f)) {
+            Text(item.name, fontWeight = FontWeight.Medium)
+            Text(
+                text = when {
+                    stats.cost == null -> "nie wiemy, za ile kupiliśmy"
+                    stats.costIsEstimated -> "kupiliśmy za ok. ${stats.cost.format()}"
+                    else -> "kupiliśmy za ${stats.cost.format()}"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "sprzedaliśmy za ${stats.proceeds.format()}" +
+                    if (stats.sellCount > 1) " · w ${stats.sellCount} kawałkach" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // The answer the list exists for, kept out of the pair it is drawn from: a
+        // loss said as a loss rather than written as a negative gain.
+        Column(horizontalAlignment = Alignment.End) {
+            val profit = stats.profit
+            val lost = profit != null && profit.minor < 0
+
+            Text(
+                text = when {
+                    profit == null -> "nie wiemy"
+                    lost -> "${approx(stats)}${Money(-profit.minor).format()}"
+                    else -> "${approx(stats)}${profit.format()}"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = if (lost) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            Text(
+                text = when {
+                    profit == null -> "ile zarobiliśmy"
+                    lost -> "straciliśmy"
+                    else -> "zarobiliśmy"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (lost) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+    }
+}
+
+private fun approx(stats: ItemStats) = if (stats.profitIsEstimated) "ok. " else ""

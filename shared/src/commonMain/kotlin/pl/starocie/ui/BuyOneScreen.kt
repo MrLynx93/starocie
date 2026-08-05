@@ -9,12 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -201,19 +206,34 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 enabled = state.canSave,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) { Text("Kup i kupuj dalej", fontWeight = FontWeight.Medium) }
+            ) {
+                Text("Kup i kupuj dalej", fontWeight = FontWeight.Medium)
+                Spacer(Modifier.width(8.dp))
+                // The arrow trails the label and points the other way from
+                // "Wstecz": that one leaves, this one carries on to the next thing.
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
 
             Spacer(Modifier.height(10.dp))
 
-            // Buys what is on screen and leaves. On an untouched form it is just the
-            // way back, so it stays enabled there — but a half-filled one disables
-            // it rather than leaving quietly with the entry thrown away.
+            // Buys what is on screen and leaves — and does nothing else. It used to
+            // stay enabled on an untouched form because it was also the only way
+            // out; "Wstecz" is that now, so it can hold out for the name and the
+            // price like the button above it.
             OutlinedButton(
                 onClick = { viewModel.saveAndLeave(onDone) },
-                enabled = state.canSave || state.isEmpty,
+                enabled = state.canSave,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text("Kup") }
+
+            Spacer(Modifier.height(10.dp))
+
+            BackButton(onDone)
         }
     }
 }

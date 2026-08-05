@@ -178,6 +178,58 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         }
     }
 
+    /**
+     * The asking price, edited on the item screen. There is no save button — the
+     * screen writes what has been typed once the typing stops, because a price
+     * marked down at a stall must not depend on remembering to confirm it.
+     */
+    fun setAskingPrice(itemId: String, text: String) {
+        viewModelScope.launch {
+            runCatching { repository.setAskingPrice(itemId, parseMoney(text)) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
+    /**
+     * Sells in one tap, at the price the item screen already has on show.
+     *
+     * No dialog: that screen carries the asking price as an editable field, so a
+     * dialog would only be a second place to type the same number. A lot is not
+     * closed by this — it takes one sale and stays in stock, which is still the sell
+     * screen's tick to decide.
+     */
+    fun sell(item: Item, price: Money) {
+        viewModelScope.launch {
+            runCatching {
+                repository.recordSell(
+                    itemId = item.id,
+                    price = price,
+                    soldCompletely = !item.splittable,
+                )
+            }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
+    /**
+     * A new photo for a thing already in stock, or none. Written straight through:
+     * there is nothing to confirm about a picture that was just taken.
+     */
+    fun setPhoto(itemId: String, photo: String?) {
+        viewModelScope.launch {
+            runCatching { repository.setPhoto(itemId, photo) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
+    /** What was paid, corrected the same way — it is the item's buy that changes. */
+    fun setPaidPrice(itemId: String, text: String) {
+        viewModelScope.launch {
+            runCatching { repository.setPaidPrice(itemId, parseMoney(text)) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
     fun remove(item: Item) {
         viewModelScope.launch {
             runCatching { repository.removeItem(item.id) }

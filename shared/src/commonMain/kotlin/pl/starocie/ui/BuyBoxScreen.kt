@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -90,7 +89,7 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
             // a single thing can never be broken back apart. So the alternative is
             // named here, pointing at the button that actually leads to it.
             Text(
-                "Sprzedajemy to jako jedną pozycję? Anulujmy i wybierzmy «Kup» — " +
+                "Sprzedajemy to jako jedną pozycję? Wróćmy i wybierzmy «Kup» — " +
                     "tam wpisujemy sztuki.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -106,11 +105,9 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) { Text("Dalej — co było w środku", fontWeight = FontWeight.Medium) }
 
-                OutlinedButton(
-                    onClick = onCancel,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                ) { Text("Anuluj") }
+                // Nothing is written until "Dalej", so leaving here throws away
+                // only what is on screen — the same thing "Anuluj" used to say.
+                BackButton(onCancel)
             }
         }
     }

@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -224,13 +223,9 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedButton(
-                // Emptying the form is what leaves — the effect above does the
-                // popping, so cancelling and selling cannot pop twice between them.
-                onClick = viewModel::cancelNewItem,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Anuluj") }
+            // Emptying the form is what leaves — the effect above does the popping,
+            // so going back and selling cannot pop twice between them.
+            BackButton(viewModel::cancelNewItem)
         }
     }
 }

@@ -173,13 +173,79 @@ class InMemoryLedgerRepository(
         return item.id
     }
 
-    override suspend fun removeItem(itemId: String) {
+    override suspend fun setAskingPrice(itemId: String, price: Money?) {
         val at = now()
         state.update { current ->
             current.copy(
                 items = current.items.map {
-                    if (it.id == itemId) it.copy(status = ItemStatus.REMOVED, updatedAt = at) else it
+                    if (it.id == itemId) it.copy(price = price, updatedAt = at) else it
                 },
+            )
+        }
+    }
+
+    override suspend fun setPhoto(itemId: String, photo: String?) {
+        val at = now()
+        state.update { current ->
+            current.copy(
+                items = current.items.map {
+                    if (it.id == itemId) it.copy(photo = photo, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
+    override suspend fun setPaidPrice(itemId: String, price: Money?) {
+        val at = now()
+        val item = state.value.items.firstOrNull { it.id == itemId } ?: return
+        val buyId = item.buyId
+
+        if (buyId != null) {
+            state.update { current ->
+                current.copy(
+                    buys = current.buys.map {
+                        if (it.id == buyId) it.copy(price = price, updatedAt = at) else it
+                    },
+                )
+            }
+            return
+        }
+
+        // Nothing paid and no buy to correct — leave the cost honestly unknown.
+        if (price == null) return
+
+        val eventId = ensureEvent(at)
+        val buy = Buy(
+            id = newId(),
+            eventId = eventId,
+            date = item.date,
+            price = price,
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+
+        state.update { current ->
+            current.copy(
+                buys = current.buys + buy,
+                items = current.items.map {
+                    if (it.id == itemId) it.copy(buyId = buy.id, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
+    override suspend fun removeItem(itemId: String) {
+        state.update { current ->
+            val item = current.items.firstOrNull { it.id == itemId } ?: return@update current
+            val remaining = current.items.filterNot { it.id == itemId }
+            // The buy outlives its contents only while it still has some: an empty
+            // one is a price with nothing left to be the cost of.
+            val buyIsEmpty = item.buyId != null && remaining.none { it.buyId == item.buyId }
+
+            current.copy(
+                items = remaining,
+                buys = if (buyIsEmpty) current.buys.filterNot { it.id == item.buyId } else current.buys,
             )
         }
     }

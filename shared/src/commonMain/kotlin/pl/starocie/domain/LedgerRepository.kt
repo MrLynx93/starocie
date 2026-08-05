@@ -74,7 +74,43 @@ interface LedgerRepository {
         soldCompletely: Boolean = true,
     ): String
 
-    /** Broken, lost, given away or kept. Resolves the item without proceeds. */
+    /**
+     * The asking price, changed after the fact — a thing that has sat around gets
+     * marked down. Null puts it back to "we do not know yet".
+     */
+    suspend fun setAskingPrice(itemId: String, price: Money?)
+
+    /**
+     * A Base64 JPEG replacing whatever the item had, or null to drop it.
+     *
+     * The photo is the picture itself, not a path to one, so this is the whole of
+     * the change: it syncs like every other field and both phones see it.
+     */
+    suspend fun setPhoto(itemId: String, photo: String?)
+
+    /**
+     * What was paid, corrected after the fact — it is the item's buy that changes,
+     * so a box's price changes for everything in it at once.
+     *
+     * An item with no buy gets one holding only itself, which is how a cost that
+     * was unknown at the point of sale becomes exact later. Null on such an item
+     * does nothing: there is no buy to blank, and inventing an empty one would turn
+     * an honest unknown into a record saying we paid nothing.
+     */
+    suspend fun setPaidPrice(itemId: String, price: Money?)
+
+    /**
+     * Broken, lost, given away or kept — and deleted outright, not flagged.
+     *
+     * Its buy goes with it once the buy has nothing left in it: a buy exists to say
+     * what was paid for its contents, so an empty one is only a number with nothing
+     * to be the cost of. A box therefore survives until the last thing out of it is
+     * deleted too.
+     *
+     * Note this really does erase the record: proceeds already taken against the
+     * item stay in [Ledger.sells] with nothing left to resolve to, which the
+     * screens show as an unknown rather than a crash.
+     */
     suspend fun removeItem(itemId: String)
 
     suspend fun nameEvent(eventId: String, name: String)

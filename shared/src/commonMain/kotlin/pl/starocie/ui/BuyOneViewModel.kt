@@ -46,10 +46,6 @@ data class BuyOneUiState(
      * which is where a genuinely unknown cost comes from.
      */
     val canSave: Boolean get() = name.isNotBlank() && (!showPaid || paid != null)
-
-    /** Nothing typed at all — so leaving discards nothing. */
-    val isEmpty: Boolean
-        get() = name.isBlank() && paidText.isBlank() && askingText.isBlank() && photo == null
 }
 
 /**
@@ -85,12 +81,10 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
     fun clearPhoto() = _state.update { it.copy(photo = null) }
 
     /**
-     * Buys and leaves. Nothing typed means nothing to buy, so it is simply the way
-     * out — the screen must never trap you behind a form you did not fill in.
+     * Buys and leaves. It no longer doubles as the way out of an empty form — the
+     * back button is that — so it does nothing at all when there is nothing to buy.
      */
-    fun saveAndLeave(onLeave: () -> Unit) {
-        if (_state.value.canSave) save(onSaved = onLeave) else onLeave()
-    }
+    fun saveAndLeave(onLeave: () -> Unit) = save(onSaved = onLeave)
 
     /** Saves, then clears the form so the next thing can be typed straight away. */
     fun save(onSaved: () -> Unit = {}) {

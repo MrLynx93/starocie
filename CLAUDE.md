@@ -50,8 +50,10 @@ sold at a different event from the one where they were bought.
 
 All four also carry `createdBy`, `createdAt`, `updatedAt`.
 
-`status` is `IN_STOCK | REMOVED | SOLD`. `REMOVED` covers broken, lost, given away
-or kept — without it such an item never leaves stock and its buy never resolves.
+`status` is `IN_STOCK | REMOVED | SOLD`. `REMOVED` covered broken, lost, given away
+or kept; **nothing writes it any more** — removing now deletes the item outright.
+The value stays in the enum, and `ItemDoc` still parses it, because records written
+before that change are still in Firestore and must keep loading.
 
 ### Invariants — break these and the numbers lie
 
@@ -62,8 +64,13 @@ or kept — without it such an item never leaves stock and its buy never resolve
    sale; its cost and profit are `null`, never zero. Reporting such a sale as pure
    profit would inflate margins every time a shortcut is taken — exactly the
    behaviour this app exists to tolerate.
-3. **Items are never hard-deleted.** `REMOVED` is the exit. Every `Sell.itemId`
-   must stay resolvable.
+3. **Removing an item deletes it, and takes its buy with it once that buy is
+   empty.** A buy exists to say what was paid for its contents, so one with nothing
+   left in it is a price with nothing to be the cost of; a box therefore survives
+   until the last thing out of it is deleted too. The cost of this is real and
+   accepted: a `Sell` against a deleted item is left unresolvable, so its row reads
+   "—" and its profit "nie wiemy" while its proceeds still count toward the event.
+   Screens must degrade to an unknown here, never assume `itemById` resolves.
 4. **Nothing derivable is stored** — no denormalised names, no device paths, no
    cached statistics. The inline photo is an exception only in appearance: it is
    original data, not a copy of something held elsewhere.
@@ -112,7 +119,9 @@ one at a time, largest fractional remainder first. Shares must sum to *exactly* 
 buy price, so a buy's profit always equals the sum of its items' profits. Naive
 rounding drops a grosz and the two figures silently disagree.
 
-Removed items still take an allocation — their share is a loss, not a gap.
+A `REMOVED` item — only ever one written before removing became a delete — still
+takes an allocation: its share is a loss, not a gap. A deleted one takes none, and
+the box price simply redistributes across whatever is left of it.
 
 Every estimated figure must be visibly marked. An exact cost and a guess must never
 look alike.
@@ -267,7 +276,7 @@ speaks as us, never at the user:
   za", "Sprzedaliśmy za", "Mamy 12 przedmiotów"
 - hints keep the same person — "Wpisujemy po kolei", "Nie wiemy, za ile
   kupiliśmy? Zostawmy puste" — never "Zacznij pisać", "Nie wiesz", "Sprzedasz"
-- **buttons stay imperative** ("Zapisz", "Gotowe", "Anuluj", "Usuń"): a button is
+- **buttons stay imperative** ("Zapisz", "Wstecz", "Anuluj", "Usuń"): a button is
   an instruction to the app, and "Zapiszmy" reads as a suggestion rather than a
   control
 - friendly and plain-spoken. Say what happened rather than name a quantity: a loss
@@ -280,6 +289,13 @@ speaks as us, never at the user:
   wrongness that makes an app feel like a machine
 
 ## Screens
+
+**Every screen but Home ends in the same "Wstecz" button** — bottom of the screen,
+outlined, arrow and word, always doing exactly one thing. That is where the thumb
+already is, and having one guaranteed exit is what lets the primary button be
+strict about its required fields instead of quietly doubling as the way out. It
+replaced a "Gotowe" here, a "Wróć" there and an "Anuluj" on the two forms that
+write nothing until their main button is pressed.
 
 - **Home** — "Nasze starocie" at the top, the current event's name or date under it
   as a caption: it says which day the figures belong to and is not a control. The
@@ -297,8 +313,9 @@ speaks as us, never at the user:
   model for a later edit screen — the entry forms simply do not ask.
   **A name and a price are both required**, and "Kup" is disabled without them:
   the price is the one number you cannot fail to know while buying, and a blank
-  there would be a skipped field rather than an honest unknown. An untouched form
-  keeps "Kup" enabled, because there it is only the way back out.
+  there would be a skipped field rather than an honest unknown. It stays disabled
+  on an untouched form too — it used to be the only way back out, and "Wstecz" is
+  that now, so it no longer has to double as an exit.
   The count sits beside what was paid: one lot, one price, so many things. A box
   was paid for once, so there the count stands alone.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
@@ -315,22 +332,55 @@ speaks as us, never at the user:
   tick setting `soldCompletely`. The dialog does only that one thing.
 - **Stock** — the same `IN_STOCK` list, newest first, reached from the home
   summary card and browsed rather than searched: the sell screen answers "what am
-  I holding", this one answers "what have we still got". A row opens the item,
-  which shows what it cost — marked as a guess when it is a share of a box — what
-  it has already taken, and offers **sell or remove**.
+  I holding", this one answers "what have we still got". A row opens the item.
+  **The item screen puts the facts above and the three buttons below** — Sprzedaj,
+  Usuń, Wstecz — pinned, so what you can do about a thing is always in the same
+  place under the thumb while what it is scrolls past.
+  **The photo is the same camera target as on the buy form**, not a read-only view:
+  a thing shot in a hurry at a stall is exactly the thing worth shooting again in
+  better light. Retaking writes straight to the item — there is no draft here to
+  hold it in — so backing out of the camera is the only way not to change it, and
+  the bin drops the picture in one tap without a confirmation, a photo being
+  supplementary rather than a number anything depends on.
+  The read-outs come next, **the date at the top** — the one fact here that was
+  never a choice — then what it has already taken, then the note. **Both prices are
+  editable fields** below them, because both are still decisions: one gets mistyped
+  or skipped in a hurry, the other changes every time a thing sits unsold. They
+  **save half a second after the typing stops**, with no confirm button: Firestore
+  takes the write locally anyway, and a price change that depends on remembering to
+  press something is a price change that gets lost.
+  **"Sprzedaj" here sells in one tap**, at whatever stands in the asking-price
+  field, and asks nothing in between — the number is already on screen and already
+  editable, so a dialog would only be a second place to type it. The button waits
+  for a price, since without one there is nothing to sell at. The field's text is
+  held by the screen rather than the field, so a price typed and sold on in the same
+  motion goes out at the new number instead of racing the half-second save. A lot is
+  not closed this way: it takes the sale and stays in stock, and the "sprzedane w
+  całości" tick is still the sell screen's dialog to offer.
+  What was paid is the **buy's** price, not the item's, and the field says which it
+  is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
+  "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a
+  guess. Typing a price into an item that had no buy **opens one holding only that
+  item**, which is how a cost unknown at the point of sale becomes exact later;
+  clearing that same field records nothing, because inventing an empty buy would
+  turn an honest unknown into a claim that we paid zero.
   **Removing lives here and nowhere else.** It used to sit inside the sell dialog,
   a thumb-width from the price field, where the one screen you reach by hunting
   for something to sell also offered the button that resolves an item with no
-  proceeds. Selling stays one tap; taking a thing out of stock now costs a
-  deliberate detour and a confirmation. The detail screen leaves by itself the
-  moment its item stops being `IN_STOCK`, so a completed sale or a removal lands
-  back in the list; a lot sold in part stays put and shows the extra sale.
+  proceeds. Selling stays one tap; deleting a thing costs a deliberate detour and a
+  confirmation, and its button is **red and says only "Usuń"** — it destroys a
+  record now, so it must not read like the neutral way out directly beneath it.
+  The detail screen leaves by itself the moment its item stops being `IN_STOCK` or
+  stops existing, so a completed sale or a deletion lands back in the list; a lot
+  sold in part stays put and shows the extra sale.
 - **Sold** — the mirror of the stock list, reached from the second home card:
-  everything `SOLD`, newest sale first. Each row carries the pair of numbers that
-  answers "was it worth it" without a tap — what we paid and what we took, with the
-  share of a box marked "ok." so a guess never looks like a measured price. A lot
-  sold in part is still `IN_STOCK` and stays in the magazyn list; removed things
-  never sold and appear in neither.
+  everything `SOLD`, newest sale first. Each row answers "was it worth it" without
+  a tap: **the pair it is drawn from on the left**, what we paid above what we took,
+  and **the profit alone on the right**, said as a loss rather than written as a
+  negative gain when it is one. A share of a box is marked "ok." on both, so a guess
+  never looks like a measured price. A lot
+  sold in part is still `IN_STOCK` and stays in the magazyn list; a deleted thing
+  is in neither, having stopped existing.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"

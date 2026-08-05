@@ -266,14 +266,79 @@ class FirestoreLedgerRepository(
         return item.id
     }
 
-    override suspend fun removeItem(itemId: String) {
+    override suspend fun setAskingPrice(itemId: String, price: Money?) {
         val at = now()
         detached {
+            // The raw grosz rather than the value class: `Money` reaches the wire as
+            // a plain integer through its serializer, and a field-wise update does
+            // not go through that serializer at all.
             itemsRef.document(itemId).update(
-                "status" to ItemStatus.REMOVED.name,
+                "price" to price?.minor,
                 "updatedAt" to at.toEpochMilliseconds(),
             )
         }
+    }
+
+    override suspend fun setPhoto(itemId: String, photo: String?) {
+        val at = now()
+        detached {
+            itemsRef.document(itemId).update(
+                "photo" to photo,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
+    }
+
+    override suspend fun setPaidPrice(itemId: String, price: Money?) {
+        val at = now()
+        val item = ledger.value.itemById(itemId) ?: return
+        val buyId = item.buyId
+
+        if (buyId != null) {
+            detached {
+                buysRef.document(buyId).update(
+                    "price" to price?.minor,
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+            }
+            return
+        }
+
+        // Nothing paid and no buy to correct — leave the cost honestly unknown.
+        if (price == null) return
+
+        // The buy takes the item's date, so the two can never disagree, and holds
+        // only this item, which makes the cost exact rather than an allocated share.
+        val buy = Buy(
+            id = newId(),
+            eventId = events.eventIdFor(at),
+            date = item.date,
+            price = price,
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+
+        firestore.batch().apply {
+            setEvent(this, at)
+            set(buysRef.document(buy.id), buy.toDoc())
+            update(
+                itemsRef.document(itemId),
+                "buyId" to buy.id,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }.commitDetached()
+    }
+
+    override suspend fun removeItem(itemId: String) {
+        val item = ledger.value.itemById(itemId) ?: return
+        // Counted before the delete, so "the last one" means the one being deleted.
+        val siblings = item.buyId?.let { id -> ledger.value.items.count { it.buyId == id } } ?: 0
+
+        firestore.batch().apply {
+            delete(itemsRef.document(itemId))
+            if (item.buyId != null && siblings <= 1) delete(buysRef.document(item.buyId))
+        }.commitDetached()
     }
 
     override suspend fun nameEvent(eventId: String, name: String) {

@@ -114,51 +114,6 @@ fun PhotoArea(
     }
 }
 
-/**
- * The same photo with nothing to press.
- *
- * For looking at a thing that is already recorded: tapping still enlarges it, but
- * there is no camera and no bin, because a screen you opened to read should not
- * put a destructive button under your thumb.
- */
-@Composable
-fun PhotoView(photo: String?, modifier: Modifier = Modifier) {
-    val bitmap = remember(photo) { photo?.let { decodePhoto(it) } }
-    var viewing by remember { mutableStateOf(false) }
-
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = "Zdjęcie przedmiotu — dotknij, aby powiększyć",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable { viewing = true },
-            )
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Filled.PhotoCamera,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-        }
-    }
-
-    if (viewing && bitmap != null) {
-        FullScreenPhoto(bitmap, onDismiss = { viewing = false })
-    }
-}
-
 @Composable
 private fun FullScreenPhoto(bitmap: ImageBitmap, onDismiss: () -> Unit) {
     Dialog(
