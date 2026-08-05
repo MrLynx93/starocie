@@ -19,6 +19,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The release step attaches the APK to a tag.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -60,3 +63,18 @@ jobs:
           name: starocie-apk
           path: artifacts/*.apk
           if-no-files-found: error
+
+      # Downloading an Actions artifact means signing in to GitHub and unzipping,
+      # which is miserable on a phone. A release asset is a plain URL the phone's
+      # browser can take straight to the installer, so the APK is published to a
+      # rolling "latest-apk" prerelease that each build overwrites.
+      - name: Publish the APK where a phone can reach it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest-apk --yes --cleanup-tag || true
+          gh release create latest-apk artifacts/*.apk \
+            --title "starocie — najnowszy APK" \
+            --notes "Debug build of \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA::7}\`. Tap the .apk below on the phone to install." \
+            --prerelease \
+            --target "$GITHUB_SHA"
