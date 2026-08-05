@@ -74,7 +74,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                     value = form.name,
                     onValueChange = { viewModel.onNewItemChange(form.copy(name = it)) },
                     singleLine = true,
-                    label = { Text("Co to jest") },
+                    label = { Text("Nazwa") },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
                 )

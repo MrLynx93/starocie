@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,14 +43,31 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
     val viewModel: BuyOneViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val nameFocus = remember { FocusRequester() }
+    val paidFocus = remember { FocusRequester() }
+    val askingFocus = remember { FocusRequester() }
     val takePhoto = rememberPhotoCapture(viewModel::onPhotoCaptured)
 
     LaunchedEffect(buyId) { viewModel.attachTo(buyId) }
 
-    // The name leads, on arrival and again after each save: it is the one required
-    // field and the one the item is found by later, so a run of purchases is a run
-    // of typing rather than a run of navigation.
-    LaunchedEffect(state.recordedCount) { runCatching { nameFocus.requestFocus() } }
+    // Nothing is focused on arrival, so the screen opens whole and the keyboard
+    // stays down: the first move here is as often the camera as the name. Focusing
+    // a text field *is* the request for the keyboard on both platforms — asking for
+    // one without the other means hiding it again a frame later, which flickers and
+    // depends on winning a race with the IME.
+    //
+    // After a save it is the opposite: the name takes focus and the keyboard comes
+    // with it, because a run of purchases is a run of typing.
+    LaunchedEffect(state.recordedCount) {
+        if (state.recordedCount > 0) runCatching { nameFocus.requestFocus() }
+    }
+
+    // A box has no price of its own, so there "next" is the asking price instead.
+    val moveOnFromName = {
+        runCatching {
+            if (state.showPaid) paidFocus.requestFocus() else askingFocus.requestFocus()
+        }
+        Unit
+    }
 
     Scaffold { padding ->
         // The app draws edge to edge, so the keyboard covers the window instead of
@@ -95,12 +114,27 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 // Two lines, because a name typed to be found again later is rarely
                 // one word — "filiżanka Ćmielów, złoty rant" has to be readable
                 // whole, not scrolled sideways through a one-line field.
+                // Enter moves on to the price rather than opening a third line: the
+                // two lines are there so a long name reads whole, not so it can be
+                // written as a paragraph.
                 OutlinedTextField(
                     value = state.name,
-                    onValueChange = viewModel::onNameChange,
+                    onValueChange = { typed ->
+                        // A newline can still arrive from a hardware key or an IME
+                        // that sends one instead of the action — it means the same
+                        // thing here, so it moves on rather than breaking the line.
+                        if (typed.contains('\n')) {
+                            viewModel.onNameChange(typed.replace("\n", ""))
+                            moveOnFromName()
+                        } else {
+                            viewModel.onNameChange(typed)
+                        }
+                    },
                     minLines = 2,
                     maxLines = 2,
-                    label = { Text("Co to jest") },
+                    label = { Text("Nazwa") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { moveOnFromName() }),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
                 )
@@ -128,7 +162,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                             label = { Text("Kupiliśmy za") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).focusRequester(paidFocus),
                         )
                     } else {
                         Spacer(Modifier.weight(1f))
@@ -146,7 +180,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     label = { Text("Chcemy sprzedać za") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(askingFocus),
                 )
 
                 state.error?.let {
@@ -171,10 +205,12 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
 
-            // Buys what is on screen and leaves; on an empty form it is just the
-            // way back, so it stays enabled either way.
+            // Buys what is on screen and leaves. On an untouched form it is just the
+            // way back, so it stays enabled there — but a half-filled one disables
+            // it rather than leaving quietly with the entry thrown away.
             OutlinedButton(
                 onClick = { viewModel.saveAndLeave(onDone) },
+                enabled = state.canSave || state.isEmpty,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text("Kup") }

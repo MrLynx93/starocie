@@ -11,7 +11,10 @@ abandoned at the market stall. Partial records are first-class:
 
 - an item's **name is required** — it is how the item is found when selling, by
   typing. Photos are optional and supplementary; they never carry identity
-- costs may be unknown, and unknown must stay unknown rather than being guessed
+- costs may be unknown, and unknown must stay unknown rather than being guessed —
+  an unknown cost comes from the shortcut sale, where there may genuinely have been
+  no purchase to record; the buy form itself asks for the price, because at the
+  moment of buying you know it
 - adding must never block on the network
 - the buy and sell paths are a handful of taps each
 
@@ -289,10 +292,18 @@ speaks as us, never at the user:
   which is nearly always the day it happened; the field earned a tap on every
   purchase to correct the rare one. `Buy.date` and `Item.date` stay editable in the
   model for a later edit screen — the entry forms simply do not ask.
-  The **name takes focus on arrival** and again after each save — it is the one
-  required field, and the one the item is later found by. The count sits beside
-  what was paid: one lot, one price, so many things. A box was paid for once, so
-  there the count stands alone.
+  **A name and a price are both required**, and "Kup" is disabled without them:
+  the price is the one number you cannot fail to know while buying, and a blank
+  there would be a skipped field rather than an honest unknown. An untouched form
+  keeps "Kup" enabled, because there it is only the way back out.
+  The count sits beside what was paid: one lot, one price, so many things. A box
+  was paid for once, so there the count stands alone.
+  **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
+  the first move is as often the camera as the name. Focusing a text field *is* the
+  request for the keyboard, so the two cannot be separated without hiding it again
+  a frame later and losing the race half the time. Enter in the name moves to the
+  price rather than opening a third line, and after a save the name takes focus
+  with the keyboard, because a run of purchases is a run of typing.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
   root column, "Zapisz" is exactly what ends up underneath it.

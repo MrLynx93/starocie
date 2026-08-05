@@ -39,7 +39,17 @@ data class BuyOneUiState(
     /** Only a standalone purchase asks what was paid; a box already knows. */
     val showPaid: Boolean get() = buyId == null
 
-    val canSave: Boolean get() = name.isNotBlank()
+    /**
+     * A name and, when one is asked for, what was paid. The price is required here
+     * because at the moment of buying you know it — a blank would not be an honest
+     * unknown, just a field skipped. The shortcut sale still takes an empty price,
+     * which is where a genuinely unknown cost comes from.
+     */
+    val canSave: Boolean get() = name.isNotBlank() && (!showPaid || paid != null)
+
+    /** Nothing typed at all — so leaving discards nothing. */
+    val isEmpty: Boolean
+        get() = name.isBlank() && paidText.isBlank() && askingText.isBlank() && photo == null
 }
 
 /**
