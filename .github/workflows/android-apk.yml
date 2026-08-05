@@ -16,6 +16,13 @@ on:
       # not yet on the default branch.
       - 'claude/**'
 
+# Every run republishes the same "latest-apk" tag, so two overlapping runs would
+# race to delete and recreate it. One at a time, newest wins — an APK from a
+# superseded commit is not worth waiting for anyway.
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
