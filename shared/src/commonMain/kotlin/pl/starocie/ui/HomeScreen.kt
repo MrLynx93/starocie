@@ -80,7 +80,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ExtendedFloatingActionButton(
-                    text = { Text("Paczka") },
+                    text = { Text("Kup paczkę") },
                     icon = { Icon(Icons.Filled.Inventory2, contentDescription = null) },
                     onClick = onBuyBox,
                     shape = CircleShape,
@@ -90,7 +90,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 ExtendedFloatingActionButton(
-                    text = { Text("Rzecz") },
+                    text = { Text("Kup") },
                     icon = { Icon(Icons.Filled.AddShoppingCart, contentDescription = null) },
                     onClick = onBuyOne,
                     shape = CircleShape,
@@ -100,7 +100,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 ExtendedFloatingActionButton(
-                    text = { Text("Sprzedajemy", fontWeight = FontWeight.Medium) },
+                    text = { Text("Sprzedaj", fontWeight = FontWeight.Medium) },
                     icon = { Icon(Icons.Filled.Sell, contentDescription = null) },
                     onClick = onSell,
                     shape = CircleShape,
@@ -145,7 +145,7 @@ fun HomeScreen(
             today?.let {
                 val stats = ledger.eventStats(it)
                 Text(
-                    "wydaliśmy ${stats.spent.format()} · zarobiliśmy ${stats.earned.format()}",
+                    "Wydaliśmy ${stats.spent.format()} · Zarobiliśmy ${stats.earned.format()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -166,7 +166,7 @@ fun HomeScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "Mamy w magazynie ${rzeczy(stock.size)}",
+                            "Mamy ${przedmioty(stock.size)}",
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(

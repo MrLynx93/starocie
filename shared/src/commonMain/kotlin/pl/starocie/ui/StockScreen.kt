@@ -80,3 +80,19 @@ fun StockScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
  * the singular differs in this word, so counting them out is one comparison.
  */
 internal fun rzeczy(count: Int): String = if (count == 1) "1 rzecz" else "$count rzeczy"
+
+/**
+ * The same, for "przedmiot", which needs the full Polish rule: one takes the bare
+ * word, a tail of 2–4 takes "przedmioty", and everything else "przedmiotów" — with
+ * the teens carved out, because 12 counts like 5 and not like 2.
+ */
+internal fun przedmioty(count: Int): String {
+    val tail = count % 10
+    val teens = count % 100 in 12..14
+    val word = when {
+        count == 1 -> "przedmiot"
+        tail in 2..4 && !teens -> "przedmioty"
+        else -> "przedmiotów"
+    }
+    return "$count $word"
+}

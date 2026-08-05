@@ -74,8 +74,16 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun clearPhoto() = _state.update { it.copy(photo = null) }
 
+    /**
+     * Buys and leaves. Nothing typed means nothing to buy, so it is simply the way
+     * out — the screen must never trap you behind a form you did not fill in.
+     */
+    fun saveAndLeave(onLeave: () -> Unit) {
+        if (_state.value.canSave) save(onSaved = onLeave) else onLeave()
+    }
+
     /** Saves, then clears the form so the next thing can be typed straight away. */
-    fun save() {
+    fun save(onSaved: () -> Unit = {}) {
         val current = _state.value
         if (!current.canSave) return
 
@@ -102,6 +110,7 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
                         recordedCount = it.recordedCount + 1,
                     )
                 }
+                onSaved()
             }.onFailure { e ->
                 _state.update { it.copy(error = e.message ?: "Nie udało się zapisać") }
             }

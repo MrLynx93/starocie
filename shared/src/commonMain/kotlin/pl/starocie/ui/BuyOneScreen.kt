@@ -66,7 +66,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             ) {
                 Text(
-                    text = if (state.buyId == null) "Kupujemy rzecz" else "Co było w paczce",
+                    text = if (state.buyId == null) "Kupujemy" else "Co było w paczce",
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
@@ -74,7 +74,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         state.recordedCount > 0 ->
                             "Zapisaliśmy w tej serii: ${state.recordedCount}"
                         state.buyId != null -> "Wpisujemy po kolei — same trafiają do paczki."
-                        else -> "Zapisujemy i od razu wpisujemy następną."
+                        else -> "Zapisz i od razu kup następną rzecz"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -166,19 +166,21 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = viewModel::save,
+                onClick = { viewModel.save() },
                 enabled = state.canSave,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) { Text("Zapisz i następna", fontWeight = FontWeight.Medium) }
+            ) { Text("Kup i kupuj dalej", fontWeight = FontWeight.Medium) }
 
             Spacer(Modifier.height(10.dp))
 
+            // Buys what is on screen and leaves; on an empty form it is just the
+            // way back, so it stays enabled either way.
             OutlinedButton(
-                onClick = onDone,
+                onClick = { viewModel.saveAndLeave(onDone) },
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Gotowe") }
+            ) { Text("Kup") }
         }
     }
 }
