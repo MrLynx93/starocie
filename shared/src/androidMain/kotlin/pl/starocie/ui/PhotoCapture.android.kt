@@ -3,6 +3,8 @@ package pl.starocie.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -93,10 +95,43 @@ private fun File.toBase64Photo(): String? = runCatching {
     }
 
     ByteArrayOutputStream().use { out ->
-        scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+        scaled.uprighted(exifOrientation()).compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
         Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
 }.getOrNull()
+
+/**
+ * The camera writes the sensor's own landscape frame and records how the phone was
+ * held as an Exif tag; `BitmapFactory` ignores that tag. A photo taken in portrait
+ * therefore arrives lying on its side, and re-encoding drops the tag that would
+ * have explained it — so the rotation is baked into the pixels here, while the
+ * original file is still around to be asked.
+ */
+private fun File.exifOrientation(): Int =
+    runCatching { ExifInterface(absolutePath).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
+        .getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+
+private fun Bitmap.uprighted(orientation: Int): Bitmap {
+    val matrix = Matrix()
+    when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        // Mirrored variants: rare, but a front camera can produce them.
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> {
+            matrix.postRotate(90f)
+            matrix.postScale(-1f, 1f)
+        }
+        ExifInterface.ORIENTATION_TRANSVERSE -> {
+            matrix.postRotate(270f)
+            matrix.postScale(-1f, 1f)
+        }
+        else -> return this
+    }
+    return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
+}
 
 private fun sampleSizeFor(longestEdge: Int): Int {
     var sample = 1
