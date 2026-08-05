@@ -58,9 +58,9 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
-            Text("Nowa rzecz", style = MaterialTheme.typography.headlineSmall)
+            Text("Nowy przedmiot", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Nigdzie jej nie mamy — zapisujemy i sprzedajemy za jednym razem.",
+                "Nigdzie go nie mamy — zapisujemy i sprzedajemy za jednym razem.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

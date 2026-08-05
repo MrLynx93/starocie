@@ -46,12 +46,10 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
     LaunchedEffect(buyId) { viewModel.attachTo(buyId) }
 
-    // Refocus after each save so the next thing can be typed immediately. The
-    // price is what you are told at the stall, so it leads; unpacking a box has no
-    // price to enter, and there the name is the first thing asked for.
-    LaunchedEffect(state.recordedCount, state.showPaid) {
-        runCatching { if (state.showPaid) paidFocus.requestFocus() else nameFocus.requestFocus() }
-    }
+    // The name leads, on arrival and again after each save: it is the one required
+    // field and the one the item is found by later, so a run of purchases is a run
+    // of typing rather than a run of navigation.
+    LaunchedEffect(state.recordedCount) { runCatching { nameFocus.requestFocus() } }
 
     Scaffold { padding ->
         // The app draws edge to edge, so the keyboard covers the window instead of
@@ -74,7 +72,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         state.recordedCount > 0 ->
                             "Zapisaliśmy w tej serii: ${state.recordedCount}"
                         state.buyId != null -> "Wpisujemy po kolei — same trafiają do paczki."
-                        else -> "Zapisz i od razu kup następną rzecz"
+                        else -> "Zapisz i od razu kup następny przedmiot"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -42,7 +42,7 @@ fun SellScreen(onDone: () -> Unit, onAddNew: () -> Unit) {
             TextButton(onClick = { viewModel.startNewItem(); onAddNew() }) {
                 Text(
                     if (state.query.isBlank()) {
-                        "Dodaj nową rzecz i sprzedaj"
+                        "Dodaj nowy przedmiot i sprzedaj"
                     } else {
                         "Dodaj \"${state.query}\" i sprzedaj"
                     },

@@ -47,7 +47,7 @@ fun StockScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text("Nasz magazyn", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Mamy tu ${rzeczy(stock.size)} · chcemy za nie ${stockValue.format()}",
+            "Mamy tu ${przedmioty(stock.size)} · chcemy za nie ${stockValue.format()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -76,15 +76,10 @@ fun StockScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
 }
 
 /**
- * "1 rzeczy" is the kind of small wrongness that makes an app feel automated. Only
- * the singular differs in this word, so counting them out is one comparison.
- */
-internal fun rzeczy(count: Int): String = if (count == 1) "1 rzecz" else "$count rzeczy"
-
-/**
- * The same, for "przedmiot", which needs the full Polish rule: one takes the bare
- * word, a tail of 2–4 takes "przedmioty", and everything else "przedmiotów" — with
- * the teens carved out, because 12 counts like 5 and not like 2.
+ * "1 przedmiotów" is the kind of small wrongness that makes an app feel automated,
+ * so the word follows the full Polish rule: one takes the bare word, a tail of 2–4
+ * takes "przedmioty", and everything else "przedmiotów" — with the teens carved
+ * out, because 12 counts like 5 and not like 2.
  */
 internal fun przedmioty(count: Int): String {
     val tail = count % 10

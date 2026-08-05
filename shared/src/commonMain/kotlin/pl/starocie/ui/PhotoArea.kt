@@ -65,7 +65,7 @@ fun PhotoArea(
             Box(modifier = Modifier.fillMaxSize().clickable { viewing = true }) {
                 Image(
                     bitmap = bitmap,
-                    contentDescription = "Zdjęcie rzeczy — dotknij, aby powiększyć",
+                    contentDescription = "Zdjęcie przedmiotu — dotknij, aby powiększyć",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
                 )
@@ -136,7 +136,7 @@ fun PhotoView(photo: String?, modifier: Modifier = Modifier) {
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
-                contentDescription = "Zdjęcie rzeczy — dotknij, aby powiększyć",
+                contentDescription = "Zdjęcie przedmiotu — dotknij, aby powiększyć",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
                     .clip(RoundedCornerShape(20.dp))
@@ -174,7 +174,7 @@ private fun FullScreenPhoto(bitmap: ImageBitmap, onDismiss: () -> Unit) {
         ) {
             Image(
                 bitmap = bitmap,
-                contentDescription = "Zdjęcie rzeczy",
+                contentDescription = "Zdjęcie przedmiotu",
                 // Fit, not Crop: full-screen is for seeing the whole thing.
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),

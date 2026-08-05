@@ -261,7 +261,7 @@ Polish, and **always the "we" form** — this is two people's shared notebook, s
 speaks as us, never at the user:
 
 - fields and readouts say what *we* did or want: "Kupiliśmy za", "Chcemy sprzedać
-  za", "Sprzedaliśmy za", "Mamy w magazynie 12 rzeczy"
+  za", "Sprzedaliśmy za", "Mamy 12 przedmiotów"
 - hints keep the same person — "Wpisujemy po kolei", "Nie wiemy, za ile
   kupiliśmy? Zostawmy puste" — never "Zacznij pisać", "Nie wiesz", "Sprzedasz"
 - **buttons stay imperative** ("Zapisz", "Gotowe", "Anuluj", "Usuń"): a button is
@@ -271,7 +271,9 @@ speaks as us, never at the user:
   is "straciliśmy 5,00 zł", not "zysk -5,00 zł". An unknown is "nie wiemy"
 - an estimate always says so — "ok. 12,00 zł", with what makes it a guess spelled
   out underneath
-- count words agree with the number (`rzeczy(n)`); "1 rzeczy" is the small
+- a thing in stock is a **przedmiot**, never a "rzecz" — one word for it everywhere
+- count words agree with the number (`przedmioty(n)`, which carries the full
+  1 / 2–4 / rest rule and the teens exception); "1 przedmiotów" is the small
   wrongness that makes an app feel like a machine
 
 ## Screens
@@ -279,7 +281,7 @@ speaks as us, never at the user:
 - **Home** — big BUY and SELL buttons over recent activity; the current event's
   name sits at the top, tappable to name it. The stock summary card is the way in
   to the stock list.
-- **Buy** — two ways in, "Rzecz" and "Paczka", over a single item form. The form
+- **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact
   cost. Several in a box → the box total, allocated. Never asks for a per-item cost.
@@ -321,9 +323,9 @@ speaks as us, never at the user:
   item with no buy, so the cost stays unknown rather than becoming zero. A stated
   price opens a buy holding only that item, so its cost is exact and the allocator
   is never involved.
-- **Buying splits in two, but there is only one item form.** "Rzecz" records one
+- **Buying splits in two, but there is only one item form.** "Kup" records one
   thing at one price and clears for the next, so its cost is exact and the
-  allocator is not involved. "Paczka" is a two-step wizard: the price first, which
+  allocator is not involved. "Kup paczkę" is a two-step wizard: the price first, which
   opens the buy, then *the same item screen* with the price field hidden and items
   appended to that buy. Unpacking a box is deliberately the same motion as buying
   things one at a time.
