@@ -49,8 +49,13 @@ import pl.starocie.ui.theme.rememberThemeChoice
 @Serializable private data class StockItemRoute(val itemId: String)
 @Serializable private data class SoldItemRoute(val itemId: String)
 
+/**
+ * @param workspaceId which books this build keeps — the real ones or the test
+ *   ones. It has no default on purpose: the host decides, and a build that forgot
+ *   to say would otherwise quietly join the workspace we rely on.
+ */
 @Composable
-fun App() {
+fun App(workspaceId: String) {
     // Auth bootstraps the graph, so it is created before Koin rather than by it.
     val authScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     val auth: AuthRepository = remember { FirebaseAuthRepository(scope = authScope) }
@@ -67,7 +72,7 @@ fun App() {
                 // Keyed on uid so signing in as the other person rebuilds the graph
                 // rather than leaving repositories pointed at the previous user.
                 key(signedIn.uid) {
-                    KoinApplication(application = { modules(appModule(signedIn.uid)) }) {
+                    KoinApplication(application = { modules(appModule(signedIn.uid, workspaceId)) }) {
                         MainNavigation(theme)
                     }
                 }

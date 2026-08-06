@@ -22,11 +22,14 @@ service cloud.firestore {
 
       // Everything beneath the workspace, at any depth.
       match /{document=**} {
-        allow read, create, update: if isMember(wsId);
-
-        // Items are never hard-deleted — REMOVED is the exit, and every
-        // Sell.itemId must stay resolvable or old sells lose their name.
-        allow delete: if false;
+        // Removing an item deletes it now, and takes its buy with it once that
+        // buy is empty — REMOVED was the old exit and nothing writes it any
+        // more. Refusing the delete here does not prevent it, it only makes it
+        // fail late: Firestore takes the write into the local cache, the item
+        // vanishes from the screen, and the phone puts it back on the next sync.
+        // A sell whose item has gone is left unresolvable by design; the screens
+        // read it as an unknown rather than assuming it is still there.
+        allow read, create, update, delete: if isMember(wsId);
       }
     }
   }

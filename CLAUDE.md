@@ -609,6 +609,64 @@ write nothing until their main button is pressed.
   as it is unpacked. Accumulating drafts and writing them at the end would lose the
   lot if the user backed out.
 
+## Two builds
+
+The real books are kept by two people who are using this at a stall, and a change
+worth trying is a change that might be wrong. So there are two Android builds, and
+**a workspace each**:
+
+| Build | applicationId | Label | Workspace |
+|---|---|---|---|
+| prod | `pl.starocie` | starocie | `starocie-prod` |
+| test | `pl.starocie.test` | starocie (test) | `starocie` |
+
+The test build inherits the original `starocie` workspace, everything entered
+while the app was being built being exactly what a test build should have in it,
+and the real one starts empty on `starocie-prod`.
+
+**Separate workspaces, not a separate Firebase project.** The rules are already a
+single per-workspace predicate, so one workspace is one closed set of books; a
+second project would mean a second config file, a second CI secret and two
+accounts per person, all to buy an isolation the workspace already gives.
+
+**Different applicationIds are what make it worth having.** Both sit on the phone
+at once, with their own launcher entries and their own theme preference, so trying
+something out costs nothing and reaching for the real one is never ambiguous.
+
+Which workspace a build talks to is a **parameter, not a default** — `App()` takes
+it, Android hands it `BuildConfig.WORKSPACE_ID` from the flavour, and no screen
+below can tell which it is in. Giving it a default would be giving a test build a
+way to reach the real books by omission.
+
+Two shapes the toolchain forces:
+
+- **the flavour is named `dev`, not `test`** — Gradle reserves that name, it
+  collides with the unit-test source set. Everything a person sees says test: the
+  label, the applicationId, the APK's name
+- **the google-services plugin fails a variant whose package name has no client**
+  in the JSON, so a second applicationId would normally mean registering a second
+  Android app in the console. `androidApp/build.gradle.kts` **derives**
+  `src/dev/google-services.json` from the real client instead — same project, same
+  API key, only the package name changed, which is all Firestore and e-mail
+  sign-in ever read. It is gitignored like the file it comes from, and it deletes
+  itself the moment the real JSON carries a client for `pl.starocie.test`, so
+  registering that app properly — which is what Google sign-in on the test build
+  would need, being keyed to package name and fingerprint together — is an upgrade
+  rather than a conflict
+
+**A new workspace has to be let in on.** The first person to open the prod build
+creates `workspaces/starocie-prod` with themselves as its only member, and the
+second is then locked out — the rules resolve membership by reading that very
+document. Both uids go into `members` from the Firebase console (Authentication →
+Users for the uid), which is the same thing that was done for the original
+workspace and the reason a phone can sit in a retry loop with "nie udało się
+zsynchronizować" until it happens.
+
+**iOS has no split yet.** `MainViewController` names `PROD_WORKSPACE_ID` outright,
+so anything run there, simulator included, writes to the real books. The phones we
+sell from are the Android ones; when that stops being true, the split belongs in
+Xcode's build configurations, not in another parameter.
+
 ## Setup
 
 Neither secrets file is committed — each machine needs its own:
@@ -678,11 +736,18 @@ Two things Xcode does not come with:
 
 ### Getting an APK onto a phone
 
-`.github/workflows/android-apk.yml` builds `:androidApp:assembleDebug` and
-attaches the APK to a rolling `latest-apk` prerelease, so installing is opening
-one URL on the phone rather than plugging it into a laptop:
+`.github/workflows/android-apk.yml` builds `assembleProdDebug` **and**
+`assembleDevDebug` and attaches both APKs to a rolling `latest-apk` prerelease,
+so installing is opening one URL on the phone rather than plugging it into a
+laptop:
 
     https://github.com/MrLynx93/starocie/releases/tag/latest-apk
+
+`starocie-<sha>.apk` is the real one and `starocie-test-<sha>.apk` its neighbour;
+which of the two a file is has to be legible on a phone's download list, where
+the name is the only thing showing. Both are built every time — building one and
+not the other leaves the test APK a commit or two behind the thing it exists to
+test.
 
 **Debug, not release**, because the debug keystore is generated and an unsigned
 release APK will not install at all. Every push to `main` or a `claude/**`

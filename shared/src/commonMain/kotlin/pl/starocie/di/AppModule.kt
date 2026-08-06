@@ -14,21 +14,29 @@ import pl.starocie.ui.BuyBoxViewModel
 import pl.starocie.ui.BuyOneViewModel
 import pl.starocie.ui.SellViewModel
 
-/** Both users share one workspace; there is no multi-tenancy to configure. */
-const val WORKSPACE_ID = "starocie"
+/**
+ * The real books. Both users share one workspace — this is not multi-tenancy, it
+ * is the one place two people's things are kept.
+ *
+ * A second workspace exists beside it so that trying something out cannot land in
+ * the figures we actually rely on. Which one a build talks to is *passed in*, from
+ * `BuildConfig.WORKSPACE_ID` on Android, and never defaulted along the way: a
+ * default is how a test build ends up writing to the real books by omission.
+ */
+const val PROD_WORKSPACE_ID = "starocie-prod"
 
 /**
  * The repository is bound behind its interface, so which implementation is in use
  * is the only thing that changes between running against Firestore and running
  * against memory. No screen knows the difference.
  */
-fun appModule(userId: String) = module {
+fun appModule(userId: String, workspaceId: String) = module {
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
     single<LedgerRepository> {
         FirestoreLedgerRepository(
             firestore = Firebase.firestore,
-            workspaceId = WORKSPACE_ID,
+            workspaceId = workspaceId,
             userId = userId,
             scope = get(),
         )

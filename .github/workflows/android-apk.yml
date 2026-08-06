@@ -89,8 +89,11 @@ jobs:
           echo "FIREBASE_CONFIGURED=1" >> "$GITHUB_ENV"
           echo "Firebase project: $(jq -r .project_info.project_id androidApp/google-services.json)"
 
-      - name: Build debug APK
-        run: ./gradlew :androidApp:assembleDebug --stacktrace
+      # Both builds every time. They differ only in applicationId and which
+      # workspace they read, so building one and not the other would mean the
+      # test APK is always a commit or two behind the thing it exists to test.
+      - name: Build debug APKs
+        run: ./gradlew :androidApp:assembleProdDebug :androidApp:assembleDevDebug --stacktrace
 
       # The plugin is applied conditionally, so "the secret was set" and "the app
       # can reach Firebase" are two different claims. Proving the generated string
@@ -105,11 +108,15 @@ jobs:
           fi
           echo "Firebase resources generated; this APK can sign in."
 
-      - name: Name the APK after the commit
+      # Which of the two a file is has to be legible on a phone's download list,
+      # where the only thing showing is the name.
+      - name: Name the APKs after the commit
         run: |
           mkdir -p artifacts
-          cp androidApp/build/outputs/apk/debug/androidApp-debug.apk \
+          cp androidApp/build/outputs/apk/prod/debug/androidApp-prod-debug.apk \
              "artifacts/starocie-${GITHUB_SHA::7}.apk"
+          cp androidApp/build/outputs/apk/dev/debug/androidApp-dev-debug.apk \
+             "artifacts/starocie-test-${GITHUB_SHA::7}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -139,8 +146,9 @@ jobs:
             firebase="**Bez konfiguracji Firebase — aplikacja zgaśnie zaraz po otwarciu.** Trzeba dodać sekret \`GOOGLE_SERVICES_JSON\`."
           fi
 
-          notes=$(printf '%s\n\n%s\n' \
-            "Debug build of \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA::7}\`. Tap the .apk below on the phone to install." \
+          notes=$(printf '%s\n\n%s\n\n%s\n' \
+            "Debug build of \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA::7}\`. Tap an .apk below on the phone to install." \
+            "\`starocie-*.apk\` to prawdziwe książki. \`starocie-test-*.apk\` to osobna aplikacja obok niej — inny magazyn, inne giełdy, nic z tego nie wchodzi do naszych liczb." \
             "$firebase")
 
           gh release delete latest-apk --yes --cleanup-tag || true
