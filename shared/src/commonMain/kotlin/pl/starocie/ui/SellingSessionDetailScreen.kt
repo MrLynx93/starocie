@@ -25,8 +25,9 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
-import pl.starocie.domain.Ledger
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Money
+import pl.starocie.domain.SellCost
 import pl.starocie.domain.Sell
 import pl.starocie.domain.format
 
@@ -122,7 +123,7 @@ fun SellingSessionDetailScreen(
                         SessionSellRow(
                             sell = sell,
                             item = ledger.itemById(sell.itemId),
-                            costLabel = sellCostLabel(ledger, sell),
+                            cost = ledger.sellCost(sell),
                             onOpen = openItemOrNull(
                                 ledger.itemById(sell.itemId),
                                 onOpenStockItem,
@@ -153,7 +154,7 @@ fun SellingSessionDetailScreen(
 private fun SessionSellRow(
     sell: Sell,
     item: Item?,
-    costLabel: String,
+    cost: SellCost?,
     onOpen: (() -> Unit)?,
 ) {
     Row(
@@ -167,6 +168,8 @@ private fun SessionSellRow(
         ItemThumb(item?.photo)
         Spacer(Modifier.width(12.dp))
 
+        // What we gave and what we took, one under the other so the two are read as
+        // a pair — the same shape the sold list uses, narrowed to this one sale.
         Column(Modifier.weight(1f)) {
             Text(item?.name ?: "—", fontWeight = FontWeight.Medium)
             if (sell.quantity > 1) {
@@ -180,7 +183,12 @@ private fun SessionSellRow(
                 )
             }
             Text(
-                costLabel,
+                text = sellCostLabel(cost),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "sprzedaliśmy za ${sell.price.format()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -188,17 +196,52 @@ private fun SessionSellRow(
 
         Spacer(Modifier.width(12.dp))
 
-        Text(sell.price.format(), style = MaterialTheme.typography.titleMedium)
+        SellProfit(sell = sell, cost = cost)
     }
 }
 
 /**
- * What this sale's pieces had cost, said the same way [boughtForLabel] says it for a
+ * What this one sale made, kept out of the pair it is drawn from — a loss said as a
+ * loss rather than written as a negative gain, and an unknown cost leaving the answer
+ * unknown rather than counting the whole price as profit.
+ */
+@Composable
+private fun SellProfit(sell: Sell, cost: SellCost?) {
+    val profit = cost?.let { sell.price - it.cost }
+    val lost = profit != null && profit.minor < 0
+    val approx = if (cost?.isEstimated == true) "ok. " else ""
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val strong = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = when {
+                profit == null -> "nie wiemy"
+                lost -> "$approx${Money(-profit.minor).format()}"
+                else -> "$approx${profit.format()}"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = if (profit == null) muted else strong,
+        )
+        Text(
+            text = when {
+                profit == null -> "ile zarobiliśmy"
+                lost -> "straciliśmy"
+                else -> "zarobiliśmy"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (lost) MaterialTheme.colorScheme.error else muted,
+        )
+    }
+}
+
+/**
+ * What this sale's pieces had cost, said the same way the sold list says it for a
  * whole thing — a share of a lot or of a box is a guess and says "ok.", and a thing
  * with no buy behind it says we do not know.
  */
-private fun sellCostLabel(ledger: Ledger, sell: Sell): String {
-    val cost = ledger.sellCost(sell) ?: return "nie wiemy, za ile kupiliśmy"
+private fun sellCostLabel(cost: SellCost?): String {
+    if (cost == null) return "nie wiemy, za ile kupiliśmy"
     return if (cost.isEstimated) {
         "kupiliśmy za ok. ${cost.cost.format()}"
     } else {
