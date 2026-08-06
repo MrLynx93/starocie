@@ -90,16 +90,21 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     text = if (state.buyId == null) "Kupujemy" else "Co było w paczce",
                     style = MaterialTheme.typography.headlineSmall,
                 )
-                Text(
-                    text = when {
-                        state.recordedCount > 0 ->
-                            "Zapisaliśmy w tej serii: ${state.recordedCount}"
-                        state.buyId != null -> "Wpisujemy po kolei — same trafiają do paczki."
-                        else -> "Zapisz i od razu kup następny przedmiot"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // A plain buy says nothing under the heading — the form is its own
+                // explanation. Only the box, and a run in progress, have something
+                // to add.
+                val hint = when {
+                    state.recordedCount > 0 -> "Zapisaliśmy w tej serii: ${state.recordedCount}"
+                    state.buyId != null -> "Wpisujemy po kolei — same trafiają do paczki."
+                    else -> null
+                }
+                hint?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
                 Spacer(Modifier.height(16.dp))
 

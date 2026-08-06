@@ -102,24 +102,14 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(16.dp))
 
-                // Two lines, so a name written to be found again later reads whole.
-                // Enter moves on to the sale price — the one field this screen
-                // cannot do without — rather than opening a third line.
+                // One line, as on the buy form — the two are the same form, and a
+                // field twice the height of every other one is what it looked like.
+                // Enter moves on to the sale price, the one field this screen
+                // cannot do without.
                 OutlinedTextField(
                     value = form.name,
-                    onValueChange = { typed ->
-                        // A newline can still arrive from a hardware key or an IME
-                        // that sends one instead of the action; it means the same
-                        // thing here, so it moves on rather than breaking the line.
-                        if (typed.contains('\n')) {
-                            viewModel.onNewItemChange(form.copy(name = typed.replace("\n", "")))
-                            runCatching { priceFocus.requestFocus() }
-                        } else {
-                            viewModel.onNewItemChange(form.copy(name = typed))
-                        }
-                    },
-                    minLines = 2,
-                    maxLines = 2,
+                    onValueChange = { viewModel.onNewItemChange(form.copy(name = it)) },
+                    singleLine = true,
                     label = { Text("Nazwa") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(

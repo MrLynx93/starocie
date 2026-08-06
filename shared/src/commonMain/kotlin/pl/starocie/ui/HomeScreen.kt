@@ -18,9 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -52,6 +55,8 @@ fun HomeScreen(
     onSell: () -> Unit,
     onStock: () -> Unit,
     onSold: () -> Unit,
+    isDark: Boolean,
+    onToggleTheme: () -> Unit,
 ) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
@@ -122,7 +127,25 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Text("Nasze starocie", style = MaterialTheme.typography.headlineMedium)
+            // The switch rides on the title line rather than in a top bar: it is the
+            // only app-wide setting there is, and a whole bar to hold one button
+            // would cost every screen the height it earns nothing with.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Nasze starocie",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onToggleTheme) {
+                    // The icon is what the tap *gives you*, not what you are in:
+                    // a sun to go bright, a moon to go dark.
+                    Icon(
+                        if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = if (isDark) "Rozjaśnij" else "Przyciemnij",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
 

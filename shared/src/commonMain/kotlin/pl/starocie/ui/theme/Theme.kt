@@ -1,6 +1,5 @@
 package pl.starocie.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -56,10 +55,15 @@ private val DarkColors = darkColorScheme(
     error = Color(0xFFFFB4AB),
 )
 
+/**
+ * [dark] comes from the app's own switch, never from `isSystemInDarkTheme()`: a
+ * phone that lives in dark mode still wants this one bright at a stall in daylight.
+ */
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
+fun AppTheme(dark: Boolean, content: @Composable () -> Unit) {
+    SystemBarsAppearance(dark)
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        colorScheme = if (dark) DarkColors else LightColors,
         content = content,
     )
 }

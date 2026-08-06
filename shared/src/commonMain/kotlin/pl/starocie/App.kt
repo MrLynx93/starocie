@@ -29,6 +29,8 @@ import pl.starocie.ui.SoldScreen
 import pl.starocie.ui.StockItemScreen
 import pl.starocie.ui.StockScreen
 import pl.starocie.ui.theme.AppTheme
+import pl.starocie.ui.theme.ThemeChoice
+import pl.starocie.ui.theme.rememberThemeChoice
 
 // Type-safe routes: string routes would need Bundle access to read the buy id,
 // and Bundle is Android-only — it compiles there and breaks the iOS build.
@@ -49,7 +51,9 @@ fun App() {
     val auth: AuthRepository = remember { FirebaseAuthRepository(scope = authScope) }
     val user by auth.user.collectAsState()
 
-    AppTheme {
+    val theme = rememberThemeChoice()
+
+    AppTheme(dark = theme.mode.isDark) {
         Surface {
             val signedIn = user
             if (signedIn == null) {
@@ -59,7 +63,7 @@ fun App() {
                 // rather than leaving repositories pointed at the previous user.
                 key(signedIn.uid) {
                     KoinApplication(application = { modules(appModule(signedIn.uid)) }) {
-                        MainNavigation()
+                        MainNavigation(theme)
                     }
                 }
             }
@@ -68,7 +72,7 @@ fun App() {
 }
 
 @Composable
-private fun MainNavigation() {
+private fun MainNavigation(theme: ThemeChoice) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = Home) {
@@ -79,6 +83,8 @@ private fun MainNavigation() {
                 onSell = { navController.navigate(SellRoute) },
                 onStock = { navController.navigate(StockRoute) },
                 onSold = { navController.navigate(SoldRoute) },
+                isDark = theme.mode.isDark,
+                onToggleTheme = theme.toggle,
             )
         }
 

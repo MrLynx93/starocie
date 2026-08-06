@@ -232,6 +232,103 @@ shows when the picker opens.
 - decoding goes straight from JPEG bytes to `ImageBitmap` through Skia, which
   Compose has already linked in, so the photo never becomes a `UIImage` to be shown
 
+## Theme
+
+Warm brass-and-patina rather than the default purple, in a light and a dark
+variant — and **`isSystemInDarkTheme()` is never consulted.** A phone that lives in
+dark mode all day still wants this one bright, and a stall in daylight is exactly
+where the dark palette reads worst. So the app starts light and stays wherever the
+home-screen switch puts it.
+
+The choice is stored **on the device, not in the workspace**: it is a preference
+about this phone's screen, not a fact about what the two of us bought, and the
+other phone has its own. `SharedPreferences` on Android, `NSUserDefaults` on iOS,
+behind one `expect fun rememberThemeChoice()` — one string does not need a
+database, and Firestore would sync it to the wrong place.
+
+Ignoring the system setting has a tail: the clock and the gesture bar are drawn by
+the system, which colours them from the *phone's* setting, so a bright screen on a
+dark-mode phone meant white icons on white. `SystemBarsAppearance(dark)` passes the
+choice on to the window. It is a no-op on iOS, where the status bar takes its style
+from the hosting view controller rather than a window flag — that would have to be
+done in Swift, and the light palette the app starts in is legible either way.
+
+## Signing in
+
+Two known people, one workspace — sign-in exists so the rules have a uid to check
+against `members`, not to support arbitrary users. Which is exactly why **one
+person must be one account however they sign in**: a second uid for the same human
+would read as a third member, and would sign `createdBy` with a stranger's name.
+
+- **E-mail and password** is the original route and still the primary button.
+- **Google** sits under it, behind a divider. The button **only appears when the
+  build can honour it** — `rememberGoogleSignIn` returns null otherwise, and a
+  button that always fails is worse than one that is not there.
+- **The two meet on one account.** Firebase does not merge them by itself: signing
+  in with Google on an e-mail that already has a password raises a collision. The
+  token is then *held*, `SignInResult.NeedsPassword` comes back, and the screen asks
+  for the password once — the next successful password sign-in links the held
+  credential to that same user, after which either route works. A failure to link
+  is swallowed on purpose: the sign-in worked, and the cost is being asked again.
+
+Android uses **Credential Manager**, not `GoogleSignInClient`, which is deprecated
+and going away; the system account sheet means there is no sign-in UI to design.
+The web client id is read **by resource name at runtime**, not as `R.string`, so a
+project without Google enabled still compiles — the same leniency the missing
+`google-services.json` already gets.
+
+**iOS has no Google button yet.** It needs Apple's `GoogleSignIn` SDK in the Xcode
+project over SPM, a reversed-client-id URL scheme in `Info.plist`, and a Swift
+entry point to present the sheet — none of which can be verified without the
+`GoogleService-Info.plist` this repo does not carry. The e-mail pair works there.
+
+The stall mark on that screen is **drawn, not loaded** — `StallMark` is the icon's
+geometry in Compose, so there is no image resource and no density set to keep in
+step, and it is sharp at 112 dp where a launcher PNG would not be. `GoogleLogo` is
+Google's own asset in the same form: an `ImageVector` carrying their path data and
+their four colours verbatim, because their terms do not allow the mark to be
+redrawn or recoloured.
+
+**Compose resources do not work in this project — do not reach for them.** A
+`composeResources/drawable/*.xml` generates its accessor and compiles, so the
+mistake looks fine right up until the device throws: `:shared` uses AGP's KMP
+library plugin, and nothing wires `prepareComposeResourcesTaskForCommonMain` into
+its asset packaging, so the file never enters the APK — which contains no `assets/`
+entries at all. Vectors therefore live in code as `ImageVector`s, the way Material
+ships its own icons.
+
+## The icon
+
+A market stall's canopy, flat and face-on: the peaked roof with its concave sweeps
+down to the eaves, a scalloped valance, two legs. Four stripes in the same market
+colours on the app's own cream, so the launcher tile matches the screen behind it.
+The scallops are load-bearing — with a straight valance the shape reads as a table,
+which is what every earlier attempt looked like.
+
+**`icon/` holds the masters and everything else is generated from them**, so the
+icon is edited in one place and re-rendered rather than touched up per density:
+
+| Master | Renders to |
+|---|---|
+| `starocie-icon.svg` | legacy `ic_launcher.png` (48–192 dp), Play Store 512 |
+| `starocie-icon-round.svg` | legacy `ic_launcher_round.png` |
+| `starocie-icon-foreground.svg` | adaptive-icon foreground (108 dp, 5 densities) |
+| `starocie-icon-monochrome.svg` | the themed-icon silhouette |
+| `starocie-icon-square.svg` | iOS `AppIcon-1024.png` |
+
+The foreground master is the art at **0.66 scale, centred on its own bounding box
+rather than the canvas** — its centre of mass is above the middle, because the legs
+reach further down than the roof reaches up. That keeps the furthest point (a leg's
+bottom corner) inside the 66 dp keyline, so no launcher mask clips it. Check a
+change against a circle mask before shipping it; the square one forgives anything.
+
+    rsvg-convert -w 432 -h 432 icon/starocie-icon-foreground.svg -o fg.png
+
+`minSdk` is 26, so adaptive icons are always available and the legacy PNGs are only
+a fallback for tooling that asks for one. iOS takes a single 1024 with **no alpha
+channel** — a transparent one is rejected at upload — which is why that master has
+a square background rather than the rounded tile.
+
 ## Architecture
 
 Single `shared` module — `commonMain` / `androidMain` / `iosMain`, packaged by
@@ -297,7 +394,11 @@ strict about its required fields instead of quietly doubling as the way out. It
 replaced a "Gotowe" here, a "Wróć" there and an "Anuluj" on the two forms that
 write nothing until their main button is pressed.
 
-- **Home** — "Nasze starocie" at the top, the current event's name or date under it
+- **Home** — "Nasze starocie" at the top with **the light/dark switch on its line**,
+  right-hand end: it is the only app-wide setting there is, and a top bar to hold
+  one button would cost every screen height it earns nothing with. The icon shows
+  what the tap *gives* you — a sun to go bright, a moon to go dark.
+  The current event's name or date sits under it
   as a caption: it says which day the figures belong to and is not a control. The
   round buttons align their icon and label to the left edge, so three labels of
   different lengths read as one stack rather than three unrelated buttons. Two
@@ -420,6 +521,25 @@ Both are gitignored. A second developer needs copies from the Firebase console.
 The `com.google.gms.google-services` plugin is applied only when the JSON is
 present, so a fresh clone still builds and runs — Firebase is inert until the
 config arrives, rather than the build failing on a missing secret.
+
+### Turning the Google button on
+
+It is hidden until the project can honour it, and three things in the Firebase
+console are what make that true:
+
+1. **Authentication → Sign-in method → enable Google.**
+2. **Add the signing SHA-1** under Project settings → your Android app. The APK is
+   a *debug* build, so it is the debug keystore's fingerprint that matters:
+   `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey
+   -storepass android -keypass android`. CI generates its own debug keystore, so an
+   APK from Actions needs that machine's fingerprint too, or Google sign-in will
+   fail there while working locally.
+3. **Re-download `google-services.json`.** Only then does it carry an `oauth_client`
+   of type 3, from which the plugin generates `default_web_client_id` — the string
+   `rememberGoogleSignIn` looks up. Until it exists, the lookup returns null and the
+   button simply is not drawn.
+
+A quick check that a given JSON will work: `oauth_client` is not `[]`.
 
 **iOS is deliberately the opposite: no plist, no build.** The Android leniency
 buys something real — an APK worth having even without Firebase. On iOS there is

@@ -59,6 +59,12 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             // FileProvider, so the camera app can write into our cache dir.
             implementation(libs.androidx.core.ktx)
+            // The system account picker for Google sign-in. play-services-auth is
+            // the provider behind it; googleid turns what comes back into an ID
+            // token Firebase will accept.
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services)
+            implementation(libs.google.id)
         }
 
         commonTest.dependencies {

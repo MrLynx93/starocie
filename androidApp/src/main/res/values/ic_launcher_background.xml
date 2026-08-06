@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's own light background, so the launcher tile matches the screen
+         behind it rather than sitting on a white square. -->
+    <color name="ic_launcher_background">#FFF8F4</color>
+</resources>
