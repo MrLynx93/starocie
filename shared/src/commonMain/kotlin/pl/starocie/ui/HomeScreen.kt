@@ -55,6 +55,7 @@ fun HomeScreen(
     onSell: () -> Unit,
     onStock: () -> Unit,
     onSold: () -> Unit,
+    onSessions: () -> Unit,
     isDark: Boolean,
     onToggleTheme: () -> Unit,
 ) {
@@ -68,6 +69,9 @@ fun HomeScreen(
     val sold = ledger.items.filter { it.status == ItemStatus.SOLD }
     val soldProceeds = sold.map { ledger.itemStats(it).proceeds }.sum()
     val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(30)
+    // Every giełda's takings, which is the same sum as every sale's — an event is
+    // the sole grouping, so nothing can fall outside one.
+    val sessionsEarned = ledger.sells.map { it.price }.sum()
 
     Scaffold(
         floatingActionButton = {
@@ -181,6 +185,21 @@ fun HomeScreen(
                 subtitle = "wzięliśmy za nie ${soldProceeds.format()}",
                 openLabel = "Pokaż, co sprzedaliśmy",
                 onClick = onSold,
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            // The third card is about days rather than things: how many giełd we have
+            // been to and what they brought in altogether.
+            SummaryCard(
+                title = "Mamy za sobą ${giełdy(ledger.events.size)}",
+                subtitle = if (ledger.events.isEmpty()) {
+                    "jeszcze nigdzie nie byliśmy"
+                } else {
+                    "wzięliśmy na nich ${sessionsEarned.format()}"
+                },
+                openLabel = "Pokaż nasze giełdy",
+                onClick = onSessions,
             )
 
             Spacer(Modifier.height(20.dp))

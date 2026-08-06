@@ -23,6 +23,8 @@ import pl.starocie.ui.BuyBoxScreen
 import pl.starocie.ui.BuyOneScreen
 import pl.starocie.ui.HomeScreen
 import pl.starocie.ui.SellNewItemScreen
+import pl.starocie.ui.SellingSessionDetailScreen
+import pl.starocie.ui.SellingSessionScreen
 import pl.starocie.ui.SignInScreen
 import pl.starocie.ui.SoldItemScreen
 import pl.starocie.ui.SoldScreen
@@ -42,6 +44,8 @@ import pl.starocie.ui.theme.rememberThemeChoice
 @Serializable private data object SellNewRoute
 @Serializable private data object StockRoute
 @Serializable private data object SoldRoute
+@Serializable private data object SellingSessionsRoute
+@Serializable private data class SellingSessionRoute(val eventId: String)
 @Serializable private data class StockItemRoute(val itemId: String)
 @Serializable private data class SoldItemRoute(val itemId: String)
 
@@ -84,6 +88,7 @@ private fun MainNavigation(theme: ThemeChoice) {
                 onSell = { navController.navigate(SellRoute) },
                 onStock = { navController.navigate(StockRoute) },
                 onSold = { navController.navigate(SoldRoute) },
+                onSessions = { navController.navigate(SellingSessionsRoute) },
                 isDark = theme.mode.isDark,
                 onToggleTheme = theme.toggle,
             )
@@ -104,6 +109,24 @@ private fun MainNavigation(theme: ThemeChoice) {
         composable<SoldRoute> {
             SoldScreen(
                 onOpenItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
+                onDone = { navController.popBackStack() },
+            )
+        }
+
+        composable<SellingSessionsRoute> {
+            SellingSessionScreen(
+                onOpenSession = { eventId -> navController.navigate(SellingSessionRoute(eventId)) },
+                onDone = { navController.popBackStack() },
+            )
+        }
+
+        // A day is a way into the records rather than a separate reading of them, so
+        // its rows land on the same two item screens the other lists open.
+        composable<SellingSessionRoute> { entry ->
+            SellingSessionDetailScreen(
+                eventId = entry.toRoute<SellingSessionRoute>().eventId,
+                onOpenStockItem = { itemId -> navController.navigate(StockItemRoute(itemId)) },
+                onOpenSoldItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
                 onDone = { navController.popBackStack() },
             )
         }

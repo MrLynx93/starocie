@@ -154,13 +154,28 @@ Firebase and identical on every platform.
 - `Buy.stats` — `itemCount`, `resolvedItemCount`, `cost`, `proceeds`, `profit?`,
   `fullyResolved`
 - `Event.stats` — `spent`, `earned`, `buyCount`, `sellCount`, `itemsBought`,
-  `itemsSold`
+  `itemsSold`, `profit`, `profitIsEstimated`, `sellsOfUnknownCost`
+- `Ledger.sellCost(sell)` — what one sale's pieces had cost, or null
 
 Buy-level profit is never an estimate — measured cost against measured proceeds.
 Only the split beneath it is inferred.
 
-`Event.stats` is cash in and cash out, **not** profit: what you sell at an event is
-rarely what you bought there. Never subtract one from the other.
+`Event.stats.spent` and `.earned` are cash out and cash in, and **must never be
+subtracted from each other**: what you sell at an event is rarely what you bought
+there, so their difference is not profit and nothing may present it as one.
+`itemsBought` and `itemsSold` count **pieces**, so each answers for the same things
+its money does.
+
+`Event.stats.profit` is the real figure and comes from somewhere else entirely: each
+of the day's sales set against what its own pieces cost, which is the arithmetic
+`Item.stats.profit` does one thing at a time. A sale whose cost is unknown is left
+**out of it** rather than counted as pure gain — `sellsOfUnknownCost` says how many,
+and a screen showing the profit must admit that gap.
+
+`sellCost` splits an item's cost across its sales by pieces, the unsold ones holding
+their share back, using the same largest-remainder rounding a box does. That is what
+makes a fully sold lot's shares come to exactly its cost — without it a day's profit
+and the item's own disagree by a grosz about the very same sale.
 
 Profit is sale prices minus buying prices. No fees, no shipping, no overhead.
 
@@ -418,9 +433,9 @@ write nothing until their main button is pressed.
   The current event's name or date sits under it
   as a caption: it says which day the figures belong to and is not a control. The
   round buttons align their icon and label to the left edge, so three labels of
-  different lengths read as one stack rather than three unrelated buttons. Two
-  summary cards sit under the day — stock and sold — each a read-out with its list
-  behind it, then recent activity.
+  different lengths read as one stack rather than three unrelated buttons. Three
+  summary cards sit under the day — stock, sold and giełdy — each a read-out with
+  its list behind it, then recent activity.
 - **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact
@@ -553,6 +568,25 @@ write nothing until their main button is pressed.
   The photo shows if there is one, with the bin but **no camera**: an empty capture
   target on something that is no longer ours would invite photographing somebody
   else's.
+- **Giełdy** — the third home card, "Mamy za sobą 12 giełd", over a list of the
+  events themselves, newest first. The other two lists answer questions about
+  things; this one answers them about days, and an `Event` is the app's only notion
+  of a day. A row says what the day cost and what it brought in — "kupiliśmy 17
+  przedmiotów za 492,00 zł" over "sprzedaliśmy 5 przedmiotów za 244,00 zł" — with
+  **what we made kept apart from that pair**, because it is not the gap between
+  them: it is each sale against what that thing cost. A day we only bought on says
+  nothing there rather than claiming a nought, and a day whose costs we do not know
+  says "nie wiemy" and, when only some are missing, names how many sales it had to
+  leave out.
+  The list has no total of its own above it: a giełda is a day, and the days do not
+  add up to a day.
+  **A row opens the day**, onto its own screen — the magazyn's list and the sold list
+  narrowed to it, in two sections, with the same rows and the same wording. A row
+  there opens the thing, in the magazyn's item screen or the sold one depending on
+  where it is now, so a day is a way *into* the records rather than a second reading
+  of them. A sale carries its own share of the cost, so a lot that went across three
+  giełdy shows a third of itself at each; a sale whose item has been deleted reads
+  "—" and opens nothing.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"

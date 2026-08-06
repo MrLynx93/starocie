@@ -246,7 +246,7 @@ private fun SaleFields(
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+internal fun SectionLabel(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,

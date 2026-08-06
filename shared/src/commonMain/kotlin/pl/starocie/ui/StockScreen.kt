@@ -144,6 +144,21 @@ internal fun przedmioty(count: Int): String {
 }
 
 /**
+ * The same rule again for market days, also in the accusative: "Mamy za sobą 1
+ * giełdę", "…2 giełdy", "…12 giełd".
+ */
+internal fun giełdy(count: Int): String {
+    val tail = count % 10
+    val teens = count % 100 in 12..14
+    val word = when {
+        count == 1 -> "giełdę"
+        tail in 2..4 && !teens -> "giełdy"
+        else -> "giełd"
+    }
+    return "$count $word"
+}
+
+/**
  * The same rule for pieces of a lot, in the accusative — this one is always read as
  * the object of something we are doing: "Sprzedajemy 1 sztukę za", "…3 sztuki za",
  * "…12 sztuk za".

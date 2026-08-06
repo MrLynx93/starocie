@@ -49,6 +49,7 @@ internal fun sell(
     itemId: String,
     price: Long,
     eventId: String = "2026-08-02",
+    quantity: Int = 1,
     soldCompletely: Boolean = true,
 ) = Sell(
     id = id,
@@ -56,6 +57,7 @@ internal fun sell(
     eventId = eventId,
     date = D1,
     price = Money(price),
+    quantity = quantity,
     soldCompletely = soldCompletely,
     createdBy = "u",
     createdAt = T0,

@@ -27,10 +27,32 @@ object CostAllocator {
         if (items.size == 1) return mapOf(items[0].id to total)
 
         val weights = weightsFor(items)
-        val weightSum = weights.sumOf { it }
 
         // Every weight is zero (all asking prices are zero): fall back to an even split.
-        if (weightSum == 0L) return allocate(total, items.map { it.copy(price = null) })
+        if (weights.sum() == 0L) return allocate(total, items.map { it.copy(price = null) })
+
+        return largestRemainder(total, items.map { it.id }, weights)
+    }
+
+    /**
+     * The rounding rule on its own, over whatever is being weighed: floor every share,
+     * then hand out the leftover grosz one at a time, largest fractional remainder
+     * first, ties broken on the key so two devices holding the same things in a
+     * different order still agree.
+     *
+     * Splitting an item's cost across the sales that took its pieces needs exactly
+     * this, for exactly the reason a buy does: naive division drops a grosz, and then
+     * a day's profit and the item's own profit quietly disagree about the same sale.
+     */
+    internal fun largestRemainder(
+        total: Money,
+        keys: List<String>,
+        weights: List<Long>,
+    ): Map<String, Money> {
+        require(total.minor >= 0) { "cannot allocate a negative total: ${total.minor}" }
+
+        val weightSum = weights.sum()
+        if (keys.isEmpty() || weightSum == 0L) return keys.associateWith { Money.ZERO }
 
         val exactNumerators = weights.map { total.minor * it }
         val floors = exactNumerators.map { it / weightSum }
@@ -44,8 +66,8 @@ object CostAllocator {
         var leftover = total.minor - floors.sum()
         val shares = floors.toMutableList()
 
-        val order = items.indices.sortedWith(
-            compareByDescending<Int> { remainders[it] }.thenBy { items[it].id },
+        val order = keys.indices.sortedWith(
+            compareByDescending<Int> { remainders[it] }.thenBy { keys[it] },
         )
         for (index in order) {
             if (leftover <= 0) break
@@ -53,7 +75,7 @@ object CostAllocator {
             leftover--
         }
 
-        return items.indices.associate { items[it].id to Money(shares[it]) }
+        return keys.indices.associate { keys[it] to Money(shares[it]) }
     }
 
     /**

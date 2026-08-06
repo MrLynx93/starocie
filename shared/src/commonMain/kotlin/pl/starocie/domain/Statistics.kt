@@ -33,15 +33,38 @@ data class BuyStats(
     val fullyResolved: Boolean,
 )
 
-/** Cash in and cash out — deliberately **not** profit. Never subtract these. */
+/**
+ * A day's figures.
+ *
+ * [spent] and [earned] are cash out and cash in, and **never** to be subtracted from
+ * each other: what we sell at a giełda is rarely what we bought there, so their
+ * difference is not profit and nothing may present it as one.
+ *
+ * [profit] is the real thing, and it is not that subtraction: it is each sale of the
+ * day set against what the pieces it took had cost, item by item, which is the same
+ * arithmetic [ItemStats.profit] does one thing at a time.
+ */
 data class EventStats(
     val spent: Money,
     val earned: Money,
     val buyCount: Int,
     val sellCount: Int,
+    /** Pieces that came in — a lot counts as the many things it is. */
     val itemsBought: Int,
+    /** Pieces that went out, which is what [earned] is the price of. */
     val itemsSold: Int,
+    /**
+     * What the day's sales made over what those things cost. Sales whose cost we do
+     * not know are left out of it entirely rather than counted as pure gain —
+     * [sellsOfUnknownCost] says how many, so a screen can admit the gap.
+     */
+    val profit: Money,
+    val profitIsEstimated: Boolean,
+    val sellsOfUnknownCost: Int,
 )
+
+/** What the pieces one sale took had cost us. */
+data class SellCost(val cost: Money, val isEstimated: Boolean)
 
 /**
  * The whole dataset in memory, which is what makes computed statistics, name joins
@@ -68,20 +91,68 @@ data class Ledger(
         }
     }
 
-    fun itemStats(item: Item): ItemStats {
-        val itemSells = sellsByItem[item.id].orEmpty()
-        val proceeds = itemSells.map { it.price }.sum()
-
+    /**
+     * What one item cost us, and whether that figure is a guess.
+     *
+     * A sole item's cost is its buy's price exactly; one of many gets a share. Null
+     * when there is no buy behind it, which is a genuine unknown and never a zero.
+     */
+    private fun costOf(item: Item): Pair<Money?, Boolean> {
         val buy = item.buyId?.let { buysById[it] }
         val siblingCount = item.buyId?.let { itemsByBuy[it]?.size } ?: 0
 
-        // A sole item's cost is its buy's price exactly; one of many gets a share.
         val estimated = buy?.price != null && siblingCount > 1
         val cost: Money? = when {
             buy?.price == null -> null
             siblingCount <= 1 -> buy.price
             else -> allocationByItem[item.id]
         }
+        return cost to estimated
+    }
+
+    /**
+     * Each sale's share of what its item cost, split across the item's pieces.
+     *
+     * A whole thing gone in one sale carries its whole cost, exactly. A lot going a
+     * few pieces at a time splits that cost by pieces — including the pieces still
+     * unsold, which hold their share back rather than loading it onto whatever went
+     * first. The split uses the same largest-remainder rounding a box does, so the
+     * shares of a fully sold lot come to exactly its cost and a day's profit agrees
+     * with the item's own to the grosz.
+     */
+    private val sellCostById: Map<String, SellCost> = buildMap {
+        for (item in items) {
+            val itemSells = sellsByItem[item.id].orEmpty()
+            if (itemSells.isEmpty()) continue
+            val (cost, estimated) = costOf(item)
+            if (cost == null) continue
+
+            val gone = itemSells.sumOf { it.quantity }
+            if (itemSells.size == 1 && gone >= item.quantity) {
+                put(itemSells[0].id, SellCost(cost, estimated))
+                continue
+            }
+
+            // What has gone outranks what the record says, so a lot that turned out
+            // to hold more pieces than we counted still splits across all of them.
+            val pieces = maxOf(item.quantity, gone, 1)
+            // The empty key is the pieces nobody has bought yet; no document id is
+            // empty, so it cannot collide with a sale.
+            val shares = CostAllocator.largestRemainder(
+                total = cost,
+                keys = itemSells.map { it.id } + "",
+                weights = itemSells.map { it.quantity.toLong() } + (pieces - gone).toLong(),
+            )
+            for (sell in itemSells) {
+                put(sell.id, SellCost(shares.getValue(sell.id), isEstimated = true))
+            }
+        }
+    }
+
+    fun itemStats(item: Item): ItemStats {
+        val itemSells = sellsByItem[item.id].orEmpty()
+        val proceeds = itemSells.map { it.price }.sum()
+        val (cost, estimated) = costOf(item)
 
         return ItemStats(
             sellCount = itemSells.size,
@@ -112,22 +183,56 @@ data class Ledger(
         )
     }
 
+    /**
+     * What one sale's pieces had cost, or null when there is nothing to measure it
+     * against: the item has no buy, or no longer exists at all — deleting a thing
+     * leaves its sales unresolvable on purpose, the proceeds still counting.
+     */
+    fun sellCost(sell: Sell): SellCost? = sellCostById[sell.id]
+
     fun eventStats(event: Event): EventStats {
         val eventBuys = buys.filter { it.eventId == event.id }
         val eventSells = sells.filter { it.eventId == event.id }
+
+        // Sale by sale against its own cost — never earned minus spent, which is two
+        // unrelated days' worth of money and would read as profit while being no
+        // such thing.
+        var profit = Money.ZERO
+        var estimated = false
+        var unknown = 0
+        for (sell in eventSells) {
+            val cost = sellCost(sell)
+            if (cost == null) {
+                unknown++
+                continue
+            }
+            profit += sell.price - cost.cost
+            estimated = estimated || cost.isEstimated
+        }
 
         return EventStats(
             spent = eventBuys.mapNotNull { it.price }.sum(),
             earned = eventSells.map { it.price }.sum(),
             buyCount = eventBuys.size,
             sellCount = eventSells.size,
-            itemsBought = eventBuys.sumOf { itemsByBuy[it.id]?.size ?: 0 },
-            itemsSold = eventSells.filter { it.soldCompletely }
-                .map { it.itemId }
-                .distinct()
-                .size,
+            itemsBought = eventBuys.sumOf { buy ->
+                itemsByBuy[buy.id].orEmpty().sumOf { it.quantity }
+            },
+            itemsSold = eventSells.sumOf { it.quantity },
+            profit = profit,
+            profitIsEstimated = estimated,
+            sellsOfUnknownCost = unknown,
         )
     }
+
+    /** Everything one buy covers, and everything bought at one event. */
+    fun itemsOfBuy(id: String): List<Item> = itemsByBuy[id].orEmpty()
+
+    fun buysOfEvent(id: String): List<Buy> = buys.filter { it.eventId == id }
+
+    fun sellsOfEvent(id: String): List<Sell> = sells.filter { it.eventId == id }
+
+    fun eventById(id: String): Event? = events.firstOrNull { it.id == id }
 
     fun itemsInStock(): List<Item> = items.filter { it.status == ItemStatus.IN_STOCK }
 

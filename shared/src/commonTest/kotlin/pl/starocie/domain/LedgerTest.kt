@@ -132,6 +132,102 @@ class LedgerTest {
         assertEquals(3, sellingDay.itemsSold)
     }
 
+    /**
+     * The one figure on a giełda that *is* profit, and it is not the day's takings
+     * less the day's spending: those two are different things' money.
+     */
+    @Test
+    fun event_profit_is_each_sale_against_what_that_thing_cost() {
+        val ledger = boxLedger()
+        val sellingDay = ledger.eventStats(event("2026-08-02", D1))
+
+        // 55.00 - 35.71, 20.00 - 21.43 and 10.00 - 17.86, which is nothing like the
+        // 85.00 that earned-minus-spent would have claimed.
+        assertEquals(Money(1000), sellingDay.profit)
+        assertTrue(sellingDay.profitIsEstimated, "shares of a box are guesses")
+        assertEquals(0, sellingDay.sellsOfUnknownCost)
+    }
+
+    /** A shortcut sale is left out of the day's profit rather than counted as gain. */
+    @Test
+    fun a_sale_with_no_buy_behind_it_is_left_out_of_the_days_profit() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 1000)),
+            items = listOf(
+                item("lamp", buyId = "b1", status = ItemStatus.SOLD),
+                item("mug", status = ItemStatus.SOLD),
+            ),
+            sells = listOf(sell("s1", "lamp", 2500), sell("s2", "mug", 4000)),
+        )
+
+        val stats = ledger.eventStats(event("2026-08-02", D1))
+
+        assertEquals(Money(6500), stats.earned)
+        assertEquals(Money(1500), stats.profit, "only the sale we know the cost of")
+        assertEquals(1, stats.sellsOfUnknownCost)
+    }
+
+    /**
+     * A few pieces out of a lot carry their share of it, not the whole cost — and the
+     * pieces still unsold hold theirs back rather than loading it onto what went.
+     */
+    @Test
+    fun a_sale_of_part_of_a_lot_costs_its_share_of_the_lot() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 6000)),
+            items = listOf(item("plates", buyId = "b1", quantity = 12)),
+            sells = listOf(sell("s1", "plates", 2000, quantity = 3, soldCompletely = false)),
+        )
+
+        val cost = ledger.sellCost(ledger.sellsOfEvent("2026-08-02").single())!!
+
+        assertEquals(Money(1500), cost.cost, "three of twelve at 60.00")
+        assertTrue(cost.isEstimated, "a share is a division, however exact the price")
+        assertEquals(Money(500), ledger.eventStats(event("2026-08-02", D1)).profit)
+    }
+
+    /**
+     * The same reason a box's shares must sum to its price: otherwise the giełda and
+     * the item disagree about the very same sales, by a grosz nobody can find.
+     */
+    @Test
+    fun a_lots_sales_share_its_cost_to_the_grosz() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 9286)),
+            items = listOf(item("plates", buyId = "b1", quantity = 12, status = ItemStatus.SOLD)),
+            sells = listOf(
+                sell("s1", "plates", 1300, quantity = 9, soldCompletely = false),
+                sell("s2", "plates", 1300, quantity = 3),
+            ),
+        )
+
+        val shares = ledger.sellsOfEvent("2026-08-02").map { ledger.sellCost(it)!!.cost }
+        assertEquals(Money(9286), shares.sum(), "naive division drops a grosz here")
+
+        assertEquals(
+            ledger.itemStats(ledger.itemById("plates")!!).profit,
+            ledger.eventStats(event("2026-08-02", D1)).profit,
+            "the day and the thing must agree about the same sales",
+        )
+    }
+
+    /** Both counts are pieces, so they answer for the same things the money does. */
+    @Test
+    fun a_day_counts_pieces_rather_than_records() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-01", D0), event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 6000)),
+            items = listOf(item("plates", buyId = "b1", quantity = 12)),
+            sells = listOf(sell("s1", "plates", 2000, quantity = 3, soldCompletely = false)),
+        )
+
+        assertEquals(12, ledger.eventStats(event("2026-08-01", D0)).itemsBought)
+        assertEquals(3, ledger.eventStats(event("2026-08-02", D1)).itemsSold)
+    }
+
     @Test
     fun in_stock_excludes_sold_and_removed() {
         val inStock = boxLedger(candleStatus = ItemStatus.IN_STOCK, sellCandle = false)
