@@ -49,11 +49,33 @@ interface LedgerRepository {
      */
     suspend fun addItem(buyId: String?, draft: DraftItem): String
 
+    /**
+     * One sale against one item.
+     *
+     * [quantity] is how many of a lot's pieces went; one for a single thing. The
+     * item resolves when its last piece goes — the count that decides that is the
+     * sum over its sales, worked out here rather than trusted from the caller, so
+     * two phones selling the last pieces of the same lot both reach the same answer
+     * from whatever each of them has.
+     *
+     * Selling **more** pieces than the lot was recorded as holding raises
+     * [Item.quantity] to meet the total instead of being refused. A box counted in a
+     * hurry comes out short far more often than a piece appears from nowhere, and
+     * the sale is how we find out — so it is the correction, not an error.
+     *
+     * [soldCompletely] closes the item outright regardless — the answer to "that's
+     * the lot gone" when the rest was lost, kept or given away. It **defaults to
+     * false**, which is not the same as saying the item stays in stock: the count
+     * decides that, and for anything that was only ever one thing the count says
+     * yes. A default of true would close a lot on every partial sale by a caller
+     * that simply had no opinion.
+     */
     suspend fun recordSell(
         itemId: String,
         price: Money,
         note: String? = null,
-        soldCompletely: Boolean = true,
+        quantity: Int = 1,
+        soldCompletely: Boolean = false,
     )
 
     /**
@@ -98,6 +120,38 @@ interface LedgerRepository {
      * an honest unknown into a record saying we paid nothing.
      */
     suspend fun setPaidPrice(itemId: String, price: Money?)
+
+    /**
+     * The day we bought it, corrected after the fact — the buy forms never ask, so
+     * a thing entered the evening after the market is dated a day late until
+     * somebody says otherwise.
+     *
+     * The buy moves with the item when it holds only that item, so the two cannot
+     * disagree about a purchase that was one purchase. A box keeps its own date:
+     * one thing out of it being dated wrong says nothing about the rest.
+     *
+     * The event does not move. Grouping is [Buy.eventId]'s job alone, and a date
+     * edited long afterwards must not silently reassign what was bought where.
+     */
+    suspend fun setBoughtDate(itemId: String, date: LocalDate)
+
+    /**
+     * What a sale went for, corrected after the fact — a price fat-fingered at the
+     * stall is found later, and every figure the app shows is drawn from it.
+     *
+     * There is no null: a sale happened for some amount, and one we cannot name is
+     * not the same kind of unknown as a cost we never paid.
+     */
+    suspend fun setSellPrice(sellId: String, price: Money)
+
+    /**
+     * The day a sale happened, corrected the same way — entered a day later, or
+     * caught up on at the end of a weekend.
+     *
+     * As with [setBoughtDate] the event stays where it is: an edited date changes
+     * sorting, never which day's takings the sale counts toward.
+     */
+    suspend fun setSellDate(sellId: String, date: LocalDate)
 
     /**
      * Broken, lost, given away or kept — and deleted outright, not flagged.

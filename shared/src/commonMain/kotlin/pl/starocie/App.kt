@@ -23,8 +23,8 @@ import pl.starocie.ui.BuyBoxScreen
 import pl.starocie.ui.BuyOneScreen
 import pl.starocie.ui.HomeScreen
 import pl.starocie.ui.SellNewItemScreen
-import pl.starocie.ui.SellScreen
 import pl.starocie.ui.SignInScreen
+import pl.starocie.ui.SoldItemScreen
 import pl.starocie.ui.SoldScreen
 import pl.starocie.ui.StockItemScreen
 import pl.starocie.ui.StockScreen
@@ -43,6 +43,7 @@ import pl.starocie.ui.theme.rememberThemeChoice
 @Serializable private data object StockRoute
 @Serializable private data object SoldRoute
 @Serializable private data class StockItemRoute(val itemId: String)
+@Serializable private data class SoldItemRoute(val itemId: String)
 
 @Composable
 fun App() {
@@ -88,14 +89,33 @@ private fun MainNavigation(theme: ThemeChoice) {
             )
         }
 
+        // One screen, two doors. The route is the whole difference: arriving from
+        // "Sprzedaj" adds the button for a thing that was never recorded, and
+        // arriving from the magazyn card does not.
         composable<StockRoute> {
             StockScreen(
+                selling = false,
                 onOpenItem = { itemId -> navController.navigate(StockItemRoute(itemId)) },
+                onAddNew = {},
                 onDone = { navController.popBackStack() },
             )
         }
 
-        composable<SoldRoute> { SoldScreen(onDone = { navController.popBackStack() }) }
+        composable<SoldRoute> {
+            SoldScreen(
+                onOpenItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
+                onDone = { navController.popBackStack() },
+            )
+        }
+
+        // The counterpart of the magazyn's item screen: a thing that has gone still
+        // has four numbers that can be wrong, and this is where they are corrected.
+        composable<SoldItemRoute> { entry ->
+            SoldItemScreen(
+                itemId = entry.toRoute<SoldItemRoute>().itemId,
+                onDone = { navController.popBackStack() },
+            )
+        }
 
         // Only the id travels: the item itself is read from the ledger, so the
         // screen follows every edit and every sale rather than showing a snapshot
@@ -130,10 +150,11 @@ private fun MainNavigation(theme: ThemeChoice) {
         }
 
         composable<SellRoute> {
-            SellScreen(
-                onDone = { navController.popBackStack() },
-                onAddNew = { navController.navigate(SellNewRoute) },
+            StockScreen(
+                selling = true,
                 onOpenItem = { itemId -> navController.navigate(StockItemRoute(itemId)) },
+                onAddNew = { navController.navigate(SellNewRoute) },
+                onDone = { navController.popBackStack() },
             )
         }
 

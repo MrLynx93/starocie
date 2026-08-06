@@ -23,6 +23,9 @@ value class Money(val minor: Long) : Comparable<Money> {
 
     operator fun minus(other: Money): Money = Money(minor - other.minor)
 
+    /** A price per piece taken a whole number of times. Exact — grosze, not floats. */
+    operator fun times(count: Int): Money = Money(minor * count)
+
     override fun compareTo(other: Money): Int = minor.compareTo(other.minor)
 
     companion object {

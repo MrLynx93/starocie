@@ -1,5 +1,6 @@
 package pl.starocie.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,7 +43,7 @@ import pl.starocie.domain.sum
  * Removed things never sold, so they are in neither.
  */
 @Composable
-fun SoldScreen(onDone: () -> Unit) {
+fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
@@ -77,7 +78,7 @@ fun SoldScreen(onDone: () -> Unit) {
         } else {
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(sold, key = { (item, _) -> item.id }) { (item, stats) ->
-                    SoldRow(item, stats)
+                    SoldRow(item, stats) { onOpenItem(item.id) }
                     HorizontalDivider()
                 }
             }
@@ -88,10 +89,15 @@ fun SoldScreen(onDone: () -> Unit) {
     }
 }
 
+/**
+ * The whole row is one target, the way it is in the magazyn: it opens the thing, and
+ * everything still correctable about it is there. What is on the row answers "was it
+ * worth it" without the tap — the tap is for when one of the numbers is wrong.
+ */
 @Composable
-private fun SoldRow(item: Item, stats: ItemStats) {
+private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -104,11 +110,7 @@ private fun SoldRow(item: Item, stats: ItemStats) {
         Column(Modifier.weight(1f)) {
             Text(item.name, fontWeight = FontWeight.Medium)
             Text(
-                text = when {
-                    stats.cost == null -> "nie wiemy, za ile kupiliśmy"
-                    stats.costIsEstimated -> "kupiliśmy za ok. ${stats.cost.format()}"
-                    else -> "kupiliśmy za ${stats.cost.format()}"
-                },
+                text = boughtForLabel(stats),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -126,7 +128,7 @@ private fun SoldRow(item: Item, stats: ItemStats) {
         // loss said as a loss rather than written as a negative gain.
         Column(horizontalAlignment = Alignment.End) {
             val profit = stats.profit
-            val lost = profit != null && profit.minor < 0
+            val lost = stats.isALoss
 
             Text(
                 text = when {

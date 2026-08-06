@@ -46,7 +46,7 @@ sold at a different event from the one where they were bought.
 | `Event` | `id`, `date`, `name?`, `note?` |
 | `Buy` | `id`, `eventId`, `date`, `price?`, `name?`, `note?`, `photoUrls` |
 | `Item` | `id`, `buyId?`, `date`, `name`, `note?`, `photo?`, `price?`, `quantity`, `status` |
-| `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `note?`, `soldCompletely` |
+| `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `note?`, `quantity`, `soldCompletely` |
 
 All four also carry `createdBy`, `createdAt`, `updatedAt`.
 
@@ -74,10 +74,27 @@ before that change are still in Firestore and must keep loading.
 4. **Nothing derivable is stored** — no denormalised names, no device paths, no
    cached statistics. The inline photo is an exception only in appearance: it is
    original data, not a copy of something held elsewhere.
-5. **`quantity` is a count, not a stock level.** One means a single thing; more
-   means a lot that may sell in parts. It is *not* decremented per sale — a
-   splittable lot stays in stock until a sale is marked as completing it, which
-   is the deliberate choice against forcing an accurate running count.
+5. **`Item.quantity` is what the lot was, and is never decremented.** One means a
+   single thing; more means a lot that sells in parts. What is *left* is derived —
+   `Ledger.piecesLeft` subtracts the sum of `Sell.quantity` — so the running count
+   is computed like every other statistic and cannot drift.
+   **A lot leaves stock when its last piece goes**, worked out in the repository
+   from the ledger rather than trusted from the caller, so two offline phones
+   selling the last pieces converge. Selling **more** pieces than the record holds
+   raises `Item.quantity` to meet the total instead of being refused — that is the
+   one thing that ever writes it after creation, and it is a correction of a
+   miscount, not a stock movement. `Sell.soldCompletely` stays as the override
+   for "and the rest is not coming back" — kept, lost or given away — and it
+   **defaults to false** on `recordSell`: a default of true would close a lot on
+   every partial sale by a caller that had no opinion. For something that only ever
+   was one thing the count reaches the end on its first sale anyway.
+   The friction stays paid-for because the count defaults to **1** and is a stepper,
+   not a field: the commonest answer costs no taps.
+   A `Sell` written before `quantity` existed reads as one piece — those sales
+   closed their lot with `soldCompletely`, so the count never had to be right for
+   them. `piecesLeft` therefore floors at 1 while an item is `IN_STOCK`: an old lot
+   can look oversold, and arithmetic must never be what makes something in the
+   magazyn unsellable.
 6. **Three kinds of "when", each with exactly one job:**
    - `createdAt` — audit stamp. Set once, never edited, never used for reporting.
    - `date` — defaulted from `createdAt`, freely editable, drives sorting/filters.
@@ -132,8 +149,8 @@ Pure functions over the in-memory collections, exposed as nested `stats` objects
 Nothing is written to Firestore, so nothing can drift. Unit-testable without
 Firebase and identical on every platform.
 
-- `Item.stats` — `sellCount`, `proceeds`, `cost?`, `costIsEstimated`, `profit?`,
-  `profitIsEstimated`, `soldAt?`
+- `Item.stats` — `sellCount`, `soldQuantity`, `proceeds`, `cost?`,
+  `costIsEstimated`, `profit?`, `profitIsEstimated`, `soldAt?`
 - `Buy.stats` — `itemCount`, `resolvedItemCount`, `cost`, `proceeds`, `profit?`,
   `fullyResolved`
 - `Event.stats` — `spent`, `earned`, `buyCount`, `sellCount`, `itemsBought`,
@@ -428,17 +445,22 @@ write nothing until their main button is pressed.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
   root column, "Zapisz" is exactly what ends up underneath it.
-- **Sell** — a search field over a list of `IN_STOCK` items: type, tap the row,
-  enter the final price, done. Splittables show a note field and a "fully sold"
-  tick setting `soldCompletely`. The dialog does only that one thing.
-  **The photo in a row is its own target**, opening the item screen rather than the
-  sell dialog: from the middle of a search it is the only way through to the thing
-  itself, and a picture is what you press when you are not sure the row is the one
-  you meant. Where the row already opens the item — the stock list — the photo just
-  follows it.
-- **Stock** — the same `IN_STOCK` list, newest first, reached from the home
-  summary card and browsed rather than searched: the sell screen answers "what am
-  I holding", this one answers "what have we still got". A row opens the item.
+- **Stock and Sell are one screen.** They were the same `IN_STOCK` list twice —
+  a search box for selling, a browse list for looking — and typing a name is how a
+  thing is found either way, so the search belongs to both. Newest first, a heading
+  and the count and asking total over it, and **a row opens the item, always**: a
+  row that did one thing from one door and something else from the other is exactly
+  the kind of difference that gets learned wrong once and then costs money. The
+  photo is no longer a separate target, having nowhere else to go.
+  **A row carries what we paid**, the way the sold list does — "kupiliśmy za",
+  "kupiliśmy za ok." for a share of a box, "nie wiemy, za ile kupiliśmy" — because
+  the asking price alone does not say whether there is a gap worth stopping at.
+  The count and the total are computed over **what is on screen**, so a search
+  answers for what it found rather than for the whole magazyn.
+  **The route is the only difference.** Arriving from "Sprzedaj" adds the
+  "Dodaj … i sprzedaj" button, pinned at the bottom above "Wstecz" rather than
+  sitting under the search box where it used to shove the list down a line every
+  time the typing stopped matching. From the magazyn card it is simply absent.
   **The item screen puts the facts above and the three buttons below** — Sprzedaj,
   Usuń, Wstecz — pinned, so what you can do about a thing is always in the same
   place under the thumb while what it is scrolls past.
@@ -460,9 +482,31 @@ write nothing until their main button is pressed.
   editable, so a dialog would only be a second place to type it. The button waits
   for a price, since without one there is nothing to sell at. The field's text is
   held by the screen rather than the field, so a price typed and sold on in the same
-  motion goes out at the new number instead of racing the half-second save. A lot is
-  not closed this way: it takes the sale and stays in stock, and the "sprzedane w
-  całości" tick is still the sell screen's dialog to offer.
+  motion goes out at the new number instead of racing the half-second save.
+  **A lot is the one exception, and the only thing the sell dialog is still for**:
+  a piece goes at its own price, so "Sprzedaj" opens the dialog instead. The
+  **count leads it** — a stepper starting at 1, reading "z 9" beside it — because
+  the count is what the price depends on and the thing only somebody standing at
+  the stall knows. Since the list stopped selling from under the thumb this is the
+  only way to that dialog, so the button does not wait for an asking price on a lot.
+  **The price follows the count**, multiplied up from what one piece was asked for:
+  three at 15,00 zł fills in 45,00 zł, and the label says what the number covers —
+  "Sprzedajemy 3 sztuki za", with `sztuki(n)` carrying the same 1 / 2–4 / rest rule
+  as `przedmioty(n)`. It multiplies the price the dialog *opened* with, not whatever
+  is in the field, so stepping up and back down lands where it started instead of
+  compounding; a price typed by hand stands until the count moves again.
+  **Taking the last pieces ticks "Sprzedaliśmy już wszystkie" itself** and stops
+  offering it as a choice, there being nothing left for it to write off. Below that
+  it is still worth asking, and it no longer means "this finishes it" — the count
+  means that now — but that the rest was kept, lost or given away.
+  **The count has no ceiling.** Selling more pieces than the lot was recorded as
+  holding raises `Item.quantity` to meet the total rather than being refused, and
+  the dialog says so: "Było ich więcej, niż zapisaliśmy — poprawimy paczkę na 22
+  szt." A box counted in a hurry comes out short far more often than a piece appears
+  from nowhere, the pieces in your hand outrank a number typed at a stall, and the
+  sale is how we find out — so it is the correction, not an error.
+  A half-sold lot shows what is left rather than what it started as, in the list
+  ("zostało 9 z 12 szt.") and above the item ("Zostało 9 z 12 szt.").
   What was paid is the **buy's** price, not the item's, and the field says which it
   is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
   "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a
@@ -487,6 +531,28 @@ write nothing until their main button is pressed.
   never looks like a measured price. A lot
   sold in part is still `IN_STOCK` and stays in the magazyn list; a deleted thing
   is in neither, having stopped existing.
+  **A row opens the thing, the way it does in the magazyn**, onto the sold item
+  screen — the counterpart of the one in stock, for a thing there is nothing left to
+  decide about but plenty left to correct. Four numbers make the whole record and
+  every one of them can be mistyped or dated a day late, so **the buying date, what
+  we paid, the selling date and what it went for are all fields**, saving themselves
+  half a second after the typing stops exactly as the magazyn's prices do. The profit
+  sits at the top and is recomputed from them as they change, which is what says the
+  correction landed; it is the only figure on the screen nobody entered.
+  A **date is picked from a calendar, never typed** — it is the one value the
+  keyboard offers no help with, and every separator is a chance to record a day that
+  never happened. **The event never follows the date**: grouping is `eventId`'s alone,
+  and a date put right weeks later must not silently move a sale into another day's
+  takings. Correcting the buying date moves the **buy** with it only when that buy
+  holds this item alone; a box was bought once, whatever one thing out of it turns
+  out to be dated.
+  A lot that went in several sales gets a date and a price **per sale**, each
+  happening on its own day for its own money, with the total underneath.
+  There is **no "Usuń"** here — deleting belongs where a thing still exists to be got
+  rid of, and erasing a sold item would only lose the proceeds it is the record of.
+  The photo shows if there is one, with the bin but **no camera**: an empty capture
+  target on something that is no longer ours would invite photographing somebody
+  else's.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"

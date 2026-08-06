@@ -43,12 +43,16 @@ import androidx.compose.ui.window.DialogProperties
  * The photo of the thing in front of you. Empty, it is a large camera target —
  * large because it is meant to be hit one-handed while holding the object. Filled,
  * tapping opens it full-screen, and the overlay buttons retake or remove it.
+ *
+ * A null [onCapture] drops the camera, which is what a thing already sold wants:
+ * the picture is worth keeping and worth looking at, but there is nothing left in
+ * front of you to point a lens at. A null [onClear] drops the bin the same way.
  */
 @Composable
 fun PhotoArea(
     photo: String?,
-    onCapture: () -> Unit,
-    onClear: () -> Unit,
+    onCapture: (() -> Unit)?,
+    onClear: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val bitmap = remember(photo) { photo?.let { decodePhoto(it) } }
@@ -76,15 +80,19 @@ fun PhotoArea(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
                 ) {
-                    FilledTonalIconButton(onClick = onCapture) {
-                        Icon(Icons.Filled.PhotoCamera, contentDescription = "Zmień zdjęcie")
+                    onCapture?.let {
+                        FilledTonalIconButton(onClick = it) {
+                            Icon(Icons.Filled.PhotoCamera, contentDescription = "Zmień zdjęcie")
+                        }
                     }
-                    FilledTonalIconButton(onClick = onClear) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Usuń zdjęcie")
+                    onClear?.let {
+                        FilledTonalIconButton(onClick = it) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Usuń zdjęcie")
+                        }
                     }
                 }
             }
-        } else {
+        } else if (onCapture != null) {
             Box(
                 modifier = Modifier.fillMaxSize().clickable(onClick = onCapture),
                 contentAlignment = Alignment.Center,

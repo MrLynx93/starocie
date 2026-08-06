@@ -91,7 +91,20 @@ data class Sell(
     val date: LocalDate,
     val price: Money,
     val note: String? = null,
-    /** True flips the item to [ItemStatus.SOLD]. Always true for non-splittables. */
+    /**
+     * How many of the item's pieces this sale took. One for a single thing, and
+     * one by default for a lot, which is what a record written before this field
+     * existed also reads as — those sales closed their lot with [soldCompletely]
+     * instead, so the count never had to be right for them.
+     *
+     * [Item.quantity] is still never decremented: what has gone is the sum of these.
+     */
+    val quantity: Int = 1,
+    /**
+     * True flips the item to [ItemStatus.SOLD]. Always true for non-splittables,
+     * and set for a lot either by selling its last pieces or by saying outright
+     * that the rest is not coming back.
+     */
     val soldCompletely: Boolean = true,
     val createdBy: String,
     val createdAt: Instant,

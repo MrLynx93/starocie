@@ -27,42 +27,54 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import pl.starocie.domain.Item
+import pl.starocie.domain.ItemStats
 import pl.starocie.domain.format
 
 /**
- * One thing in stock, as it appears in a list.
+ * One thing in stock, as it appears in the list.
  *
- * Shared by the sell search and the stock list so a thing looks the same wherever
- * it is met — the two screens differ in what tapping does, not in what a row is.
+ * What we paid sits under the name, the way it does on the sold list: a thing is
+ * worth stopping at because of the gap between the two numbers, and the ask alone
+ * does not say whether there is one. A guess says "ok." so it never passes for a
+ * measured price, and an unknown says so rather than showing nothing.
  *
- * The photo is its own target, because the two screens want different things of it:
- * on the sell list the row sells and the picture opens the thing to look at
- * properly, which is the only way to reach that from the middle of a sale. Where
- * the row already opens the item, [onPhotoClick] simply follows it.
+ * The whole row is one target, photo included — it opens the thing, and everything
+ * you can do about it is there.
  */
 @Composable
-internal fun StockRow(item: Item, onClick: () -> Unit, onPhotoClick: () -> Unit = onClick) {
+internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        ItemThumb(item.photo, onClick = onPhotoClick)
+        ItemThumb(item.photo)
         Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
             Text(item.name, fontWeight = FontWeight.Medium)
             if (item.splittable) {
-                // "12 szt." alone reads as a stock level, which invites the
-                // expectation that selling counts it down. It never does — the lot
-                // leaves stock when a sale is marked as completing it.
+                // A half-sold lot says what is left rather than what it started as:
+                // that is the number you are deciding against when you pick it up.
                 Text(
-                    "${item.quantity} szt. · na sztuki",
+                    if (piecesLeft < item.quantity) {
+                        "zostało $piecesLeft z ${item.quantity} szt."
+                    } else {
+                        "${item.quantity} szt. · na sztuki"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+            Text(
+                boughtForLabel(stats),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+
+        Spacer(Modifier.width(12.dp))
+
         item.price?.let {
             Text(
                 it.format(),
@@ -71,6 +83,19 @@ internal fun StockRow(item: Item, onClick: () -> Unit, onPhotoClick: () -> Unit 
             )
         }
     }
+}
+
+/**
+ * What we gave for a thing, said the same way everywhere it is read.
+ *
+ * A share of a box is marked "ok.", and a thing with no buy behind it says we do
+ * not know rather than quietly reading as free — the whole point of tolerating a
+ * shortcut sale is that the gap stays visible.
+ */
+internal fun boughtForLabel(stats: ItemStats): String = when {
+    stats.cost == null -> "nie wiemy, za ile kupiliśmy"
+    stats.costIsEstimated -> "kupiliśmy za ok. ${stats.cost.format()}"
+    else -> "kupiliśmy za ${stats.cost.format()}"
 }
 
 /**

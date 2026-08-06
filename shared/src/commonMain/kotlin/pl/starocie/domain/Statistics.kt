@@ -9,6 +9,11 @@ import kotlin.time.Instant
 
 data class ItemStats(
     val sellCount: Int,
+    /**
+     * How many pieces have gone, summed across the sales rather than counted down
+     * on the item — the item's own `quantity` is what it always was.
+     */
+    val soldQuantity: Int,
     val proceeds: Money,
     /** Null when the item has no buy, and therefore no knowable cost. */
     val cost: Money?,
@@ -80,6 +85,7 @@ data class Ledger(
 
         return ItemStats(
             sellCount = itemSells.size,
+            soldQuantity = itemSells.sumOf { it.quantity },
             proceeds = proceeds,
             cost = cost,
             costIsEstimated = estimated,
@@ -125,7 +131,29 @@ data class Ledger(
 
     fun itemsInStock(): List<Item> = items.filter { it.status == ItemStatus.IN_STOCK }
 
+    /**
+     * How many of a lot's pieces have not gone yet.
+     *
+     * Never below zero and never below one while the item is still in stock: an old
+     * record whose sales predate [Sell.quantity] reads as one piece each, so a lot
+     * that really did go a few at a time can look oversold. Something still sitting
+     * in the magazyn must stay sellable, and the arithmetic must not be what stops
+     * it.
+     */
+    fun piecesLeft(item: Item): Int {
+        val gone = sellsByItem[item.id].orEmpty().sumOf { it.quantity }
+        val left = item.quantity - gone
+        return if (item.status == ItemStatus.IN_STOCK) left.coerceAtLeast(1) else left.coerceAtLeast(0)
+    }
+
     fun itemById(id: String): Item? = itemsById[id]
+
+    /**
+     * Everything one item went out on, oldest first — the sales themselves rather
+     * than the total, which is what a screen correcting one of them needs.
+     */
+    fun sellsOfItem(id: String): List<Sell> =
+        sellsByItem[id].orEmpty().sortedBy { it.createdAt }
 
     fun buyById(id: String): Buy? = buysById[id]
 

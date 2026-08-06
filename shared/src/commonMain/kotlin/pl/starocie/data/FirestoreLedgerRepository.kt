@@ -185,9 +185,26 @@ class FirestoreLedgerRepository(
         itemId: String,
         price: Money,
         note: String?,
+        quantity: Int,
         soldCompletely: Boolean,
     ) {
         val at = now()
+        val pieces = quantity.coerceAtLeast(1)
+
+        // Selling the last of a lot closes it, whether or not anybody said so: the
+        // count is the point of asking for one. The item may be gone from under us,
+        // in which case there is nothing left to close.
+        val item = ledger.value.itemById(itemId)
+        val resolves = soldCompletely ||
+            (item != null && pieces >= ledger.value.piecesLeft(item))
+
+        // Selling more pieces than the lot was recorded as holding says the record
+        // was wrong, not the sale: a box counted at a stall comes out short far more
+        // often than a piece appears from nowhere. The sale is the correction.
+        val corrected = item
+            ?.let { ledger.value.itemStats(it).soldQuantity + pieces }
+            ?.takeIf { it > item.quantity }
+
         val sell = Sell(
             id = newId(),
             itemId = itemId,
@@ -195,21 +212,26 @@ class FirestoreLedgerRepository(
             date = events.dateOf(at),
             price = price,
             note = note?.takeIf { it.isNotBlank() },
-            soldCompletely = soldCompletely,
+            quantity = pieces,
+            soldCompletely = resolves,
             createdBy = userId,
             createdAt = at,
             updatedAt = at,
         )
 
+        // One batch: the sale, the closing and the corrected count are one fact about
+        // one moment, and a half-written one would leave a lot that cannot add up.
+        val itemChanges = buildList {
+            if (resolves) add("status" to ItemStatus.SOLD.name)
+            if (corrected != null) add("quantity" to corrected)
+            if (isNotEmpty()) add("updatedAt" to at.toEpochMilliseconds())
+        }
+
         firestore.batch().apply {
             setEvent(this, at)
             set(sellsRef.document(sell.id), sell.toDoc())
-            if (soldCompletely) {
-                update(
-                    itemsRef.document(itemId),
-                    "status" to ItemStatus.SOLD.name,
-                    "updatedAt" to at.toEpochMilliseconds(),
-                )
+            if (itemChanges.isNotEmpty()) {
+                update(itemsRef.document(itemId), *itemChanges.toTypedArray())
             }
         }.commitDetached()
     }
@@ -239,6 +261,9 @@ class FirestoreLedgerRepository(
             eventId = eventId,
             date = events.dateOf(at),
             price = price,
+            // Closing a brand-new lot in the same motion means the whole of it went;
+            // otherwise the sale is one piece and the rest is still in stock.
+            quantity = if (soldCompletely) item.quantity else 1,
             soldCompletely = soldCompletely,
             createdBy = userId,
             createdAt = at,
@@ -328,6 +353,51 @@ class FirestoreLedgerRepository(
                 "updatedAt" to at.toEpochMilliseconds(),
             )
         }.commitDetached()
+    }
+
+    override suspend fun setBoughtDate(itemId: String, date: LocalDate) {
+        val at = now()
+        val item = ledger.value.itemById(itemId) ?: return
+        // A buy holding only this item is this item's purchase, so it moves too; a
+        // box was bought once, on its own day, whatever its contents are dated.
+        val buyId = item.buyId?.takeIf { ledger.value.itemCountOfBuy(it) <= 1 }
+
+        firestore.batch().apply {
+            update(
+                itemsRef.document(itemId),
+                "date" to date.toString(),
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+            if (buyId != null) {
+                update(
+                    buysRef.document(buyId),
+                    "date" to date.toString(),
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+            }
+        }.commitDetached()
+    }
+
+    override suspend fun setSellPrice(sellId: String, price: Money) {
+        val at = now()
+        detached {
+            sellsRef.document(sellId).update(
+                "price" to price.minor,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
+    }
+
+    override suspend fun setSellDate(sellId: String, date: LocalDate) {
+        val at = now()
+        // Deliberately not `eventId`: the event is where the sale was made, and a
+        // date typed in afterwards is not evidence that it was made somewhere else.
+        detached {
+            sellsRef.document(sellId).update(
+                "date" to date.toString(),
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
     }
 
     override suspend fun removeItem(itemId: String) {

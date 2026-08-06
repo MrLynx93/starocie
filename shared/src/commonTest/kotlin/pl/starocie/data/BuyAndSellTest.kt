@@ -73,6 +73,84 @@ class BuyAndSellTest {
         assertEquals(Money(2500), ledger.itemStats(ledger.itemById(itemId)!!).proceeds)
     }
 
+    /**
+     * The rule the count exists for: a lot closes itself when its last piece goes,
+     * without anybody having to remember to say so.
+     */
+    @Test
+    fun a_lot_leaves_stock_once_its_last_piece_is_sold() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.addItem(
+            buyId = null,
+            draft = DraftItem(name = "talerze", quantity = 3),
+        )
+
+        repository.recordSell(itemId = itemId, price = Money(1000), quantity = 2)
+
+        var ledger = repository.ledger.value
+        assertEquals(ItemStatus.IN_STOCK, ledger.itemById(itemId)!!.status)
+        assertEquals(1, ledger.piecesLeft(ledger.itemById(itemId)!!))
+        assertEquals(2, ledger.itemStats(ledger.itemById(itemId)!!).soldQuantity)
+
+        repository.recordSell(itemId = itemId, price = Money(600), quantity = 1)
+
+        ledger = repository.ledger.value
+        assertEquals(ItemStatus.SOLD, ledger.itemById(itemId)!!.status)
+        assertTrue(ledger.itemsInStock().isEmpty(), "nothing left of it to hold")
+        assertEquals(3, ledger.itemStats(ledger.itemById(itemId)!!).soldQuantity)
+        assertEquals(Money(1600), ledger.itemStats(ledger.itemById(itemId)!!).proceeds)
+    }
+
+    /** The rest was kept, lost or given away: the lot closes with pieces unsold. */
+    @Test
+    fun a_lot_can_be_closed_early_with_pieces_left_unsold() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.addItem(
+            buyId = null,
+            draft = DraftItem(name = "talerze", quantity = 12),
+        )
+
+        repository.recordSell(
+            itemId = itemId,
+            price = Money(2500),
+            quantity = 3,
+            soldCompletely = true,
+        )
+
+        val ledger = repository.ledger.value
+        assertEquals(ItemStatus.SOLD, ledger.itemById(itemId)!!.status)
+        assertEquals(3, ledger.itemStats(ledger.itemById(itemId)!!).soldQuantity)
+    }
+
+    /**
+     * A box counted at a stall comes out short more often than a piece appears from
+     * nowhere, so selling past the end of a lot fixes the record rather than being
+     * refused by it.
+     */
+    @Test
+    fun selling_more_pieces_than_recorded_corrects_the_lot() = runTest {
+        val repository = InMemoryLedgerRepository()
+
+        val itemId = repository.addItem(
+            buyId = null,
+            draft = DraftItem(name = "talerze", quantity = 6),
+        )
+
+        repository.recordSell(itemId = itemId, price = Money(1000), quantity = 2)
+        // Four were expected to be left; there turn out to be five.
+        repository.recordSell(itemId = itemId, price = Money(2000), quantity = 5)
+
+        val ledger = repository.ledger.value
+        val item = ledger.itemById(itemId)!!
+
+        assertEquals(7, item.quantity, "the lot really held seven")
+        assertEquals(7, ledger.itemStats(item).soldQuantity)
+        assertEquals(ItemStatus.SOLD, item.status, "and all seven have now gone")
+        assertEquals(0, ledger.piecesLeft(item))
+    }
+
     /** Grouping is the event's job, and both sides of the motion belong to today's. */
     @Test
     fun the_buy_and_the_sell_land_on_the_same_current_event() = runTest {

@@ -92,10 +92,23 @@ class InMemoryLedgerRepository(
         itemId: String,
         price: Money,
         note: String?,
+        quantity: Int,
         soldCompletely: Boolean,
     ) {
         val at = now()
         val eventId = ensureEvent(at)
+        val pieces = quantity.coerceAtLeast(1)
+
+        // Selling the last of a lot closes it, whether or not anybody said so.
+        val item = state.value.itemById(itemId)
+        val resolves = soldCompletely ||
+            (item != null && pieces >= state.value.piecesLeft(item))
+
+        // More pieces than the lot was recorded as holding means the record was
+        // wrong, not the sale — so the sale corrects it.
+        val corrected = item
+            ?.let { state.value.itemStats(it).soldQuantity + pieces }
+            ?.takeIf { it > item.quantity }
 
         val sell = Sell(
             id = newId(),
@@ -104,7 +117,8 @@ class InMemoryLedgerRepository(
             date = events.dateOf(at),
             price = price,
             note = note?.takeIf { it.isNotBlank() },
-            soldCompletely = soldCompletely,
+            quantity = pieces,
+            soldCompletely = resolves,
             createdBy = userId,
             createdAt = at,
             updatedAt = at,
@@ -113,13 +127,15 @@ class InMemoryLedgerRepository(
         state.update { current ->
             current.copy(
                 sells = current.sells + sell,
-                // A non-splittable item is closed by its only sell; a splittable lot
-                // stays in stock until one is marked as completing it.
-                items = current.items.map { item ->
-                    if (item.id == itemId && soldCompletely) {
-                        item.copy(status = ItemStatus.SOLD, updatedAt = at)
+                items = current.items.map {
+                    if (it.id != itemId || (!resolves && corrected == null)) {
+                        it
                     } else {
-                        item
+                        it.copy(
+                            status = if (resolves) ItemStatus.SOLD else it.status,
+                            quantity = corrected ?: it.quantity,
+                            updatedAt = at,
+                        )
                     }
                 },
             )
@@ -157,6 +173,9 @@ class InMemoryLedgerRepository(
             eventId = eventId,
             date = events.dateOf(at),
             price = price,
+            // Closing a brand-new lot in the same motion means the whole of it went;
+            // otherwise the sale is one piece and the rest is still in stock.
+            quantity = if (soldCompletely) item.quantity else 1,
             soldCompletely = soldCompletely,
             createdBy = userId,
             createdAt = at,
@@ -230,6 +249,49 @@ class InMemoryLedgerRepository(
                 buys = current.buys + buy,
                 items = current.items.map {
                     if (it.id == itemId) it.copy(buyId = buy.id, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
+    override suspend fun setBoughtDate(itemId: String, date: LocalDate) {
+        val at = now()
+        val item = state.value.itemById(itemId) ?: return
+        // A buy holding only this item is this item's purchase, so it moves too; a
+        // box was bought once, on its own day, whatever its contents are dated.
+        val buyId = item.buyId?.takeIf { state.value.itemCountOfBuy(it) <= 1 }
+
+        state.update { current ->
+            current.copy(
+                buys = current.buys.map {
+                    if (it.id == buyId) it.copy(date = date, updatedAt = at) else it
+                },
+                items = current.items.map {
+                    if (it.id == itemId) it.copy(date = date, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
+    override suspend fun setSellPrice(sellId: String, price: Money) {
+        val at = now()
+        state.update { current ->
+            current.copy(
+                sells = current.sells.map {
+                    if (it.id == sellId) it.copy(price = price, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
+    override suspend fun setSellDate(sellId: String, date: LocalDate) {
+        val at = now()
+        // The event is left alone on purpose: it is where the sale was made, and a
+        // date typed in afterwards is not evidence that it was made somewhere else.
+        state.update { current ->
+            current.copy(
+                sells = current.sells.map {
+                    if (it.id == sellId) it.copy(date = date, updatedAt = at) else it
                 },
             )
         }

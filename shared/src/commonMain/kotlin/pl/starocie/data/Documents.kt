@@ -76,6 +76,7 @@ internal data class SellDoc(
     val date: String = "",
     val price: Money = Money.ZERO,
     val note: String? = null,
+    val quantity: Int = 1,
     val soldCompletely: Boolean = true,
     val createdBy: String = "",
     val createdAt: Long = 0,
@@ -168,6 +169,7 @@ internal fun Sell.toDoc() = SellDoc(
     date = date.toString(),
     price = price,
     note = note,
+    quantity = quantity,
     soldCompletely = soldCompletely,
     createdBy = createdBy,
     createdAt = createdAt.toEpochMilliseconds(),
@@ -181,6 +183,9 @@ internal fun SellDoc.toDomain() = Sell(
     date = LocalDate.parse(date),
     price = price,
     note = note,
+    // A sale that took nothing cannot have happened; records written before the
+    // field existed have no value here at all and come back as one.
+    quantity = quantity.coerceAtLeast(1),
     soldCompletely = soldCompletely,
     createdBy = createdBy,
     createdAt = Instant.fromEpochMilliseconds(createdAt),

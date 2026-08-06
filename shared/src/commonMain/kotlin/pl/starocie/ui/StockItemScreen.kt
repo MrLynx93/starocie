@@ -1,24 +1,19 @@
 package pl.starocie.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,18 +23,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
-import pl.starocie.domain.Money
 import pl.starocie.domain.format
 import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
@@ -57,6 +48,11 @@ import pl.starocie.domain.toInputText
  * in between: the number is already on screen and already editable, so a dialog
  * would be a second place to type it. Without a price there is nothing to sell at,
  * so the button waits for one.
+ *
+ * A lot is the one thing that still opens a dialog, because a piece of it goes at
+ * its own price and only somebody who is there can say whether that was the last of
+ * it. This is now the only way to that dialog: the list opens the item rather than
+ * offering to sell it from under your thumb.
  *
  * Removing used to sit inside the sell dialog, one thumb-width from the price
  * field — a screen you reach by searching for something to sell is the wrong place
@@ -117,8 +113,15 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
 
             if (item.splittable) {
+                // What is left is the number that matters when the lot is half gone,
+                // and the one the dialog is about to open on.
+                val left = ledger.piecesLeft(item)
                 Text(
-                    "${item.quantity} szt. · sprzedaje się po kawałku",
+                    if (left < item.quantity) {
+                        "Zostało $left z ${item.quantity} szt."
+                    } else {
+                        "${item.quantity} szt. · sprzedaje się po kawałku"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -145,8 +148,12 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
             if (stats.sellCount > 0) {
                 Detail(
                     label = "Sprzedaliśmy do tej pory",
-                    value = "${stats.sellCount} × · ${stats.proceeds.format()}",
-                    hint = "Zostaje w magazynie, aż zaznaczymy «sprzedane w całości».",
+                    value = if (item.splittable) {
+                        "${stats.soldQuantity} szt. · ${stats.proceeds.format()}"
+                    } else {
+                        "${stats.sellCount} × · ${stats.proceeds.format()}"
+                    },
+                    hint = "Zostaje w magazynie, aż pójdzie ostatnia sztuka.",
                 )
             }
 
@@ -186,8 +193,13 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
                 saved = item.price,
                 placeholder = "jeszcze nie wiemy",
                 // It is also the price a sale goes out at, so an empty one is the
-                // one thing standing between this screen and "Sprzedaj".
-                hint = if (asking == null) "Wpiszmy cenę, a sprzedamy jednym tapnięciem." else null,
+                // one thing standing between this screen and "Sprzedaj". A lot is
+                // sold a piece at a time, at a price this field never held.
+                hint = when {
+                    item.splittable -> "Sprzedajemy po kawałku, więc cenę podamy przy sprzedaży."
+                    asking == null -> "Wpiszmy cenę, a sprzedamy jednym tapnięciem."
+                    else -> null
+                },
                 onSave = { viewModel.setAskingPrice(item.id, it) },
             )
 
@@ -208,9 +220,20 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
         // One tap sells, at the price standing in the field above. Nothing is asked
         // in between: the price is already on screen and editable, so a dialog
         // repeating it back would only be a second place to type the same number.
+        //
+        // A lot is the exception, and the only reason the dialog still exists: a
+        // piece goes at its own price, and somebody has to say whether that was the
+        // last of it. Reaching it is what "Sprzedaj" does here, now that the list
+        // behind this screen opens the item instead.
         Button(
-            onClick = { asking?.let { viewModel.sell(item, it) } },
-            enabled = asking != null,
+            onClick = {
+                if (item.splittable) {
+                    viewModel.select(item, askingText)
+                } else {
+                    asking?.let { viewModel.sell(item, it) }
+                }
+            },
+            enabled = item.splittable || asking != null,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp),
         ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
@@ -235,6 +258,19 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
         BackButton(onDone)
     }
 
+    state.selected?.let { selected ->
+        SellDialog(
+            item = selected,
+            state = state,
+            onPriceChange = viewModel::onPriceChange,
+            onNoteChange = viewModel::onNoteChange,
+            onQuantityChange = viewModel::onSellQuantityChange,
+            onSoldCompletelyChange = viewModel::onSoldCompletelyChange,
+            onConfirm = viewModel::confirm,
+            onDismiss = viewModel::dismiss,
+        )
+    }
+
     if (confirmingRemoval) {
         AlertDialog(
             onDismissRequest = { confirmingRemoval = false },
@@ -251,84 +287,4 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
             },
         )
     }
-}
-
-/**
- * A price you can correct, saved without being asked to confirm it.
- *
- * There is no save button: the write goes out once the typing stops. Firestore
- * takes it locally either way, so the pause costs nothing — whereas a price change
- * that depends on remembering to press something is a price change that gets lost
- * at a stall.
- *
- * The text belongs to the caller, because the sell button has to read what is in
- * the field rather than what has been written so far. [saved] is only what the
- * record currently holds, used to tell an edit from a redisplay — following it into
- * the field would fight the keyboard, since every write comes back through the
- * ledger.
- */
-@Composable
-private fun MoneyField(
-    label: String,
-    text: String,
-    onTextChange: (String) -> Unit,
-    saved: Money?,
-    placeholder: String,
-    onSave: (String) -> Unit,
-    hint: String? = null,
-) {
-    LaunchedEffect(text) {
-        if (parseMoney(text) == saved) return@LaunchedEffect
-        delay(SAVE_AFTER_TYPING_MS)
-        onSave(text)
-    }
-
-    Column {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChange,
-            singleLine = true,
-            label = { Text(label) },
-            placeholder = { Text(placeholder) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        hint?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp, start = 4.dp),
-            )
-        }
-    }
-}
-
-private const val SAVE_AFTER_TYPING_MS = 500L
-
-@Composable
-private fun Detail(label: String, value: String, hint: String? = null) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 16.dp)) {
-            Text(value, style = MaterialTheme.typography.bodyLarge)
-            hint?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-    HorizontalDivider()
 }
