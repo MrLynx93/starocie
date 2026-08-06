@@ -27,6 +27,7 @@ import org.koin.compose.koinInject
 import pl.starocie.domain.Event
 import pl.starocie.domain.EventStats
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.LongAgo
 import pl.starocie.domain.Money
 import pl.starocie.domain.format
 
@@ -49,6 +50,9 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
     // asked about. Two events on one day fall back to when they were made.
     val sessions = remember(ledger) {
         ledger.events
+            // "Dawno temu" holds the purchases of things sold that were never
+            // recorded. It is a filing cabinet, not a day we went anywhere.
+            .filter { it.id != LongAgo.EVENT_ID }
             .sortedWith(compareByDescending<Event> { it.date }.thenByDescending { it.createdAt })
             .map { it to ledger.eventStats(it) }
     }
@@ -92,10 +96,10 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(event.name ?: event.date.toString(), fontWeight = FontWeight.Medium)
+            Text(event.name ?: event.date.asText(), fontWeight = FontWeight.Medium)
             if (event.name != null) {
                 Text(
-                    event.date.toString(),
+                    event.date.asText(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -16,6 +16,7 @@ import pl.starocie.domain.DraftItem
 import pl.starocie.domain.Event
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
+import pl.starocie.domain.LongAgo
 import pl.starocie.domain.Ledger
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
@@ -150,14 +151,15 @@ class InMemoryLedgerRepository(
     ): String {
         val at = now()
         val eventId = ensureEvent(at)
+        if (paid != null) ensureLongAgoEvent(at)
 
         // A stated price gets a buy of its own, holding only this item, so its cost
         // is exact. No price means no buy at all, which keeps the cost unknown.
         val buy = paid?.let {
             Buy(
                 id = newId(),
-                eventId = eventId,
-                date = events.dateOf(at),
+                eventId = LongAgo.EVENT_ID,
+                date = LongAgo.DATE,
                 price = it,
                 createdBy = userId,
                 createdAt = at,
@@ -324,6 +326,26 @@ class InMemoryLedgerRepository(
                     }
                 },
             )
+        }
+    }
+
+    /** The bucket for purchases that predate the books. */
+    private fun ensureLongAgoEvent(at: Instant) {
+        state.update { current ->
+            if (current.events.any { it.id == LongAgo.EVENT_ID }) {
+                current
+            } else {
+                current.copy(
+                    events = current.events + Event(
+                        id = LongAgo.EVENT_ID,
+                        date = LongAgo.DATE,
+                        name = "Dawno temu",
+                        createdBy = userId,
+                        createdAt = at,
+                        updatedAt = at,
+                    ),
+                )
+            }
         }
     }
 

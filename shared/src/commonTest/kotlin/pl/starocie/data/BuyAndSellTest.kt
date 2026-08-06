@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlinx.coroutines.test.runTest
 import pl.starocie.domain.DraftItem
 import pl.starocie.domain.ItemStatus
+import pl.starocie.domain.LongAgo
 import pl.starocie.domain.Money
 
 /**
@@ -151,9 +152,14 @@ class BuyAndSellTest {
         assertEquals(0, ledger.piecesLeft(item))
     }
 
-    /** Grouping is the event's job, and both sides of the motion belong to today's. */
+    /**
+     * The sale happened at today's giełda; the purchase did not. Selling something
+     * that was never recorded says nothing about when it was bought, so its buy is
+     * filed under "dawno temu" rather than claiming this day — which would inflate
+     * the day's spend and list the thing among what we carried home from it.
+     */
     @Test
-    fun the_buy_and_the_sell_land_on_the_same_current_event() = runTest {
+    fun a_never_recorded_thing_is_sold_today_but_was_bought_long_ago() = runTest {
         val repository = InMemoryLedgerRepository()
 
         repository.recordBuyAndSell(
@@ -163,9 +169,17 @@ class BuyAndSellTest {
         )
 
         val ledger = repository.ledger.value
-        val eventId = ledger.events.single().id
+        val today = ledger.events.first { it.id != LongAgo.EVENT_ID }
 
-        assertEquals(eventId, ledger.buys.single().eventId)
-        assertEquals(eventId, ledger.sells.single().eventId)
+        assertEquals(today.id, ledger.sells.single().eventId, "sold at today's giełda")
+        assertEquals(LongAgo.EVENT_ID, ledger.buys.single().eventId)
+        assertEquals(LongAgo.DATE, ledger.buys.single().date)
+
+        // The day's own figures must not count a purchase it did not make.
+        assertEquals(Money.ZERO, ledger.eventStats(today).spent)
+        assertTrue(ledger.buysOfEvent(today.id).isEmpty(), "nothing was carried home")
+
+        // The profit still lands, because a sale is costed against its own buy.
+        assertEquals(Money(500), ledger.eventStats(today).profit)
     }
 }

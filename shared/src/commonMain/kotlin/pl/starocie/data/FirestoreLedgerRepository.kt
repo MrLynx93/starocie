@@ -28,6 +28,7 @@ import pl.starocie.domain.DraftItem
 import pl.starocie.domain.Event
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
+import pl.starocie.domain.LongAgo
 import pl.starocie.domain.Ledger
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
@@ -273,10 +274,13 @@ class FirestoreLedgerRepository(
         firestore.batch().apply {
             setEvent(this, at)
             if (buyId != null) {
+                // Its own event, never today's: claiming we bought it here would
+                // inflate the day's spend and list it among what we carried home.
+                setLongAgoEvent(this, at)
                 val buy = Buy(
                     id = buyId,
-                    eventId = eventId,
-                    date = events.dateOf(at),
+                    eventId = LongAgo.EVENT_ID,
+                    date = LongAgo.DATE,
                     price = paid,
                     createdBy = userId,
                     createdAt = at,
@@ -428,6 +432,19 @@ class FirestoreLedgerRepository(
      * market both write `2026-08-01` rather than inventing separate events, and
      * merge means whichever arrives second does not clobber a name already set.
      */
+    /** The bucket for purchases that predate the books. Merged, so it is written once. */
+    private fun setLongAgoEvent(batch: WriteBatch, at: Instant) {
+        val event = Event(
+            id = LongAgo.EVENT_ID,
+            date = LongAgo.DATE,
+            name = "Dawno temu",
+            createdBy = userId,
+            createdAt = at,
+            updatedAt = at,
+        )
+        batch.set(eventsRef.document(event.id), event.toDoc(), merge = true)
+    }
+
     private fun setEvent(batch: WriteBatch, at: Instant) {
         val date = events.dateOf(at)
         val event = Event(

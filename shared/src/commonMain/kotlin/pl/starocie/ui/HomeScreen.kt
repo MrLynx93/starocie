@@ -156,7 +156,7 @@ fun HomeScreen(
             // The day is a caption under the title now, not a heading of its own —
             // it says which day the figures below belong to and nothing more.
             Text(
-                text = today?.name ?: today?.date?.toString() ?: "jeszcze nic dziś nie robiliśmy",
+                text = today?.name ?: today?.date?.asText() ?: "jeszcze nic dziś nie robiliśmy",
                 style = MaterialTheme.typography.titleSmall,
             )
 

@@ -16,12 +16,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
@@ -52,7 +57,13 @@ fun SellingSessionDetailScreen(
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
+    val scope = rememberCoroutineScope()
     val event = ledger.eventById(eventId)
+
+    // Seeded once the day actually arrives, and left alone after: following the
+    // ledger into the field would fight the keyboard, since every write comes back.
+    var name by remember(eventId) { mutableStateOf("") }
+    LaunchedEffect(event?.id) { event?.let { name = it.name.orEmpty() } }
     val stats = remember(ledger, eventId) { event?.let { ledger.eventStats(it) } }
 
     // Everything that came in that day, newest first — an item belongs to a giełda
@@ -67,13 +78,22 @@ fun SellingSessionDetailScreen(
     }
 
     ScreenColumn {
-        Text(
-            event?.name ?: event?.date?.toString() ?: "Nie znamy tej giełdy",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        if (event?.name != null) {
+        if (event == null) {
+            Text("Nie znamy tej giełdy", style = MaterialTheme.typography.headlineSmall)
+        } else {
+            // Named after the fact, usually: the day exists the moment anything is
+            // recorded, and what to call it is remembered on the way home.
+            NameField(
+                label = "Nazwa giełdy",
+                text = name,
+                onTextChange = { name = it },
+                saved = event.name.orEmpty(),
+                placeholder = event.date.asText(),
+                onSave = { scope.launch { repository.nameEvent(eventId, it) } },
+            )
+            Spacer(Modifier.height(4.dp))
             Text(
-                event.date.toString(),
+                event.date.asText(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -99,26 +119,10 @@ fun SellingSessionDetailScreen(
             )
         } else {
             LazyColumn(modifier = Modifier.weight(1f)) {
-                if (bought.isNotEmpty()) {
-                    item { Column { SectionLabel("Co kupiliśmy") } }
-                    items(bought, key = { "bought-${it.id}" }) { item ->
-                        StockRow(
-                            item = item,
-                            stats = ledger.itemStats(item),
-                            piecesLeft = ledger.piecesLeft(item),
-                            onClick = openItemOrNull(item, onOpenStockItem, onOpenSoldItem) ?: {},
-                        )
-                        HorizontalDivider()
-                    }
-                }
-
+                // Selling is what a giełda is for, so it leads. What we carried
+                // home follows, and is read as the day's other half.
                 if (sold.isNotEmpty()) {
-                    item {
-                        Column {
-                            Spacer(Modifier.height(if (bought.isEmpty()) 0.dp else 20.dp))
-                            SectionLabel("Co sprzedaliśmy")
-                        }
-                    }
+                    item { Column { SectionLabel("Co sprzedaliśmy") } }
                     items(sold, key = { "sold-${it.id}" }) { sell ->
                         SessionSellRow(
                             sell = sell,
@@ -129,6 +133,24 @@ fun SellingSessionDetailScreen(
                                 onOpenStockItem,
                                 onOpenSoldItem,
                             ),
+                        )
+                        HorizontalDivider()
+                    }
+                }
+
+                if (bought.isNotEmpty()) {
+                    item {
+                        Column {
+                            Spacer(Modifier.height(if (sold.isEmpty()) 0.dp else 20.dp))
+                            SectionLabel("Co kupiliśmy")
+                        }
+                    }
+                    items(bought, key = { "bought-${it.id}" }) { item ->
+                        StockRow(
+                            item = item,
+                            stats = ledger.itemStats(item),
+                            piecesLeft = ledger.piecesLeft(item),
+                            onClick = openItemOrNull(item, onOpenStockItem, onOpenSoldItem) ?: {},
                         )
                         HorizontalDivider()
                     }

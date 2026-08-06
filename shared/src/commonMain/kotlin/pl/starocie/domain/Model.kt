@@ -10,6 +10,25 @@ import kotlinx.datetime.LocalDate
  * on [Item]: an item has many sells and one id could not represent them.
  */
 
+/**
+ * Where a thing bought before the books existed is filed.
+ *
+ * Selling something that was never recorded still has to put its purchase
+ * *somewhere*, and putting it on today's giełda would claim we bought it there —
+ * inflating that day's spend and listing it among what we carried home. It goes to
+ * its own event instead, because `eventId` is the only thing that decides what a
+ * giełda holds; a date alone would not have moved it.
+ *
+ * The date is plainly not a real purchase date, and is never shown as one: every
+ * screen renders it as "Dawno temu".
+ */
+object LongAgo {
+    const val EVENT_ID: String = "dawno-temu"
+    val DATE: LocalDate = LocalDate(2000, 1, 1)
+}
+
+fun LocalDate.isLongAgo(): Boolean = this == LongAgo.DATE
+
 enum class ItemStatus {
     IN_STOCK,
 

@@ -143,7 +143,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
 
             // The date leads: it is the one fact here that was never a choice, and
             // it says which day's trip this thing came home from.
-            Detail("Kupiliśmy dnia", item.date.toString())
+            Detail("Kupiliśmy dnia", item.date.asText())
 
             if (stats.sellCount > 0) {
                 Detail(

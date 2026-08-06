@@ -99,6 +99,43 @@ internal fun MoneyField(
 internal const val SAVE_AFTER_TYPING_MS = 500L
 
 /**
+ * A short piece of text you can correct, written the moment the typing stops.
+ *
+ * Same bargain as [MoneyField]: no save button, because a name changed at a stall
+ * must not depend on remembering to confirm it. The text belongs to the caller and
+ * [saved] is only what the record holds, used to tell an edit from a redisplay.
+ */
+@Composable
+internal fun NameField(
+    label: String,
+    text: String,
+    onTextChange: (String) -> Unit,
+    saved: String,
+    placeholder: String,
+    onSave: (String) -> Unit,
+    hint: String? = null,
+) {
+    LaunchedEffect(text) {
+        if (text.trim() == saved) return@LaunchedEffect
+        delay(SAVE_AFTER_TYPING_MS)
+        onSave(text.trim())
+    }
+
+    Column {
+        OutlinedTextField(
+            value = text,
+            onValueChange = onTextChange,
+            singleLine = true,
+            label = { Text(label) },
+            placeholder = { Text(placeholder) },
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        hint?.let { FieldHint(it) }
+    }
+}
+
+/**
  * A day you can correct, picked from a calendar rather than typed.
  *
  * It looks like the price fields beside it and behaves like one — the choice is
@@ -138,7 +175,7 @@ internal fun DateField(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(2.dp))
-                    Text(date.toString(), style = MaterialTheme.typography.bodyLarge)
+                    Text(date.asText(), style = MaterialTheme.typography.bodyLarge)
                 }
                 Icon(
                     Icons.Filled.CalendarToday,
