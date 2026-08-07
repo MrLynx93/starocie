@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <defs>
+    <clipPath id="roof">
+      <path d="M8,50 C20,46 27,22 39,18 L61,18 C73,22 80,46 92,50 Z"/>
+    </clipPath>
+    <clipPath id="valance">
+      <path d="M8,50 h84 v6 q-10.5,8 -21,0 q-10.5,8 -21,0 q-10.5,8 -21,0 q-10.5,8 -21,0 Z"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(21,19.02) scale(0.66)">
+    <rect x="15" y="58" width="5" height="30" rx="2.5" fill="#6B4A2E"/>
+    <rect x="80" y="58" width="5" height="30" rx="2.5" fill="#6B4A2E"/>
+    <g clip-path="url(#roof)">
+      <rect x="8" y="14" width="21" height="40" fill="#3D6E9C"/>
+      <rect x="29" y="14" width="21" height="40" fill="#2F8F7F"/>
+      <rect x="50" y="14" width="21" height="40" fill="#E9A13B"/>
+      <rect x="71" y="14" width="21" height="40" fill="#D9534F"/>
+    </g>
+    <g clip-path="url(#valance)">
+      <rect x="8" y="50" width="21" height="16" fill="#3D6E9C"/>
+      <rect x="29" y="50" width="21" height="16" fill="#2F8F7F"/>
+      <rect x="50" y="50" width="21" height="16" fill="#E9A13B"/>
+      <rect x="71" y="50" width="21" height="16" fill="#D9534F"/>
+    </g>
+    <!-- The mark sits *within* the art's own footprint, which is what keeps the
+         foreground's furthest point where it already was: a leg's bottom corner,
+         right on the 66 dp keyline. A badge hung off the edge would be the first
+         thing a circle mask took. -->
+    <circle cx="50" cy="78" r="14" fill="#2F2A26" stroke="#FFF8F4" stroke-width="3"/>
+    <path d="M42,71 H58 V75.5 H52.25 V85.5 H47.75 V75.5 H42 Z" fill="#FFF8F4"/>
+  </g>
+</svg>

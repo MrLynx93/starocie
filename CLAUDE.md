@@ -347,6 +347,22 @@ icon is edited in one place and re-rendered rather than touched up per density:
 | `starocie-icon-foreground.svg` | adaptive-icon foreground (108 dp, 5 densities) |
 | `starocie-icon-monochrome.svg` | the themed-icon silhouette |
 | `starocie-icon-square.svg` | iOS `AppIcon-1024.png` |
+| `starocie-icon-test*.svg` | the same four, into the dev flavour's `res/` |
+
+**`icon/render.sh` renders all of them**, into `src/main/res` and `src/dev/res`
+respectively. Nine masters times five densities is too many chances to leave one
+behind by hand, and the two icons drifting apart is exactly the failure the mark
+exists to prevent.
+
+The test build carries **the same art with a dark disc hung under the canopy,
+carrying a T**. It is drawn rather than lettered, because a word is a smudge at
+48 px, and it hangs **between the legs rather than over one**: a stall that has
+lost a leg reads as a broken icon rather than a marked one. The disc sits within
+the art's existing footprint, so the foreground's furthest point is still a leg's
+bottom corner and the keyline below still holds. On the themed silhouette, where
+there is only one colour to work with, the T is **punched out of the disc** —
+one path with `fill-rule="evenodd"`, and the T drawn as a single outline, because
+a bar and a stem as separate subpaths would fill their overlap back in.
 
 The foreground master is the art at **0.66 scale, centred on its own bounding box
 rather than the canvas** — its centre of mass is above the middle, because the legs
@@ -615,10 +631,10 @@ The real books are kept by two people who are using this at a stall, and a chang
 worth trying is a change that might be wrong. So there are two Android builds, and
 **a workspace each**:
 
-| Build | applicationId | Label | Workspace |
-|---|---|---|---|
-| prod | `pl.starocie` | starocie | `starocie-prod` |
-| test | `pl.starocie.test` | starocie (test) | `starocie` |
+| Build | applicationId | Label | Icon | Workspace |
+|---|---|---|---|---|
+| prod | `pl.starocie` | starocie | the stall | `starocie-prod` |
+| test | `pl.starocie.test` | starocie (test) | the stall, marked with a T | `starocie` |
 
 The test build inherits the original `starocie` workspace, everything entered
 while the app was being built being exactly what a test build should have in it,
@@ -631,7 +647,22 @@ accounts per person, all to buy an isolation the workspace already gives.
 
 **Different applicationIds are what make it worth having.** Both sit on the phone
 at once, with their own launcher entries and their own theme preference, so trying
-something out costs nothing and reaching for the real one is never ambiguous.
+something out costs nothing and reaching for the real one is never ambiguous —
+which is also why the test build's icon carries a mark of its own. Two identical
+tiles a thumb apart is precisely the ambiguity two builds were meant to remove.
+
+**Two run configurations, one per build** — "starocie (prod)" and
+"starocie (test)", shared through `.idea/runConfigurations/`, which is the one
+thing under `.idea/` that is not gitignored. They run `:androidApp:runProdDebug`
+and `:androidApp:runDevDebug`, Gradle tasks that install and then launch through
+adb; `-Pdevice=<serial>` picks a phone when two are plugged in.
+
+They exist because **Android Studio's own ▶ takes the variant from the Build
+Variants panel**, not from the run configuration — there is no variant to set on
+an Android App configuration, so two of those would be the same button twice.
+Leaving the choice in a panel means leaving it wherever it was last, and here
+that is reaching for the test build and getting the real books. The panel and ▶
+are still the way in when a debugger has to be attached.
 
 Which workspace a build talks to is a **parameter, not a default** — `App()` takes
 it, Android hands it `BuildConfig.WORKSPACE_ID` from the flavour, and no screen

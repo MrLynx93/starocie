@@ -16,9 +16,12 @@ captures/
 *.apk
 output-metadata.json
 
-# IntelliJ
+# IntelliJ. The run configurations are the exception: two builds means two
+# buttons, and a button that only exists on the machine it was made on is a
+# setting each of us has to rediscover.
 *.iml
-.idea/
+.idea/*
+!.idea/runConfigurations/
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml

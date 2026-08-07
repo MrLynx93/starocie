@@ -85,6 +85,53 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 }
 
+// One runner per build, so which of the two starts is a button rather than a
+// setting remembered from last time. Android Studio's own ▶ takes the variant
+// from the Build Variants panel instead of from the run configuration, which is
+// exactly the kind of state that gets left where it was — and here that means
+// reaching for the test build and getting the real books, or the other way
+// round. These install and launch outright; the panel and ▶ are still the way
+// in when a debugger has to be attached.
+//
+// A phone is picked with -Pdevice=<serial> when two are plugged in, which is
+// what `adb devices` prints.
+listOf("Prod" to prodApplicationId, "Dev" to testApplicationId).forEach { (flavour, appId) ->
+    tasks.register<Exec>("run${flavour}Debug") {
+        group = "install"
+        description = "Installs and starts the ${flavour.lowercase()} build on a connected phone."
+        dependsOn("install${flavour}Debug")
+
+        val device = providers.gradleProperty("device").orNull
+        commandLine(
+            buildList {
+                add(adbExecutable())
+                if (device != null) addAll(listOf("-s", device))
+                addAll(listOf("shell", "am", "start", "-n", "$appId/pl.starocie.MainActivity"))
+            },
+        )
+    }
+}
+
+/**
+ * Where the SDK is, asked in the order the machine answers it: the path Studio
+ * wrote into `local.properties`, then the environment, then whatever is on PATH.
+ * The last one is the fallback that keeps this a task failure with adb's own
+ * message rather than a configuration error about a file nobody set.
+ */
+fun adbExecutable(): String {
+    val sdkDir = rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.readLines()
+        ?.firstOrNull { it.startsWith("sdk.dir=") }
+        ?.substringAfter('=')
+        ?.trim()
+        ?: System.getenv("ANDROID_HOME")
+        ?: System.getenv("ANDROID_SDK_ROOT")
+
+    val adb = sdkDir?.let { File(it, "platform-tools/adb") }
+    return if (adb != null && adb.exists()) adb.absolutePath else "adb"
+}
+
 /**
  * Writes `src/dev/google-services.json` for the test build's own applicationId.
  *
