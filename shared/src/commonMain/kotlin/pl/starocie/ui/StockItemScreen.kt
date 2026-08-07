@@ -64,7 +64,7 @@ import pl.starocie.domain.toInputText
  * sold in part is still in stock, so the screen stays and shows one more sale.
  */
 @Composable
-fun StockItemScreen(itemId: String, onDone: () -> Unit) {
+fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
     val viewModel: SellViewModel = koinViewModel()
@@ -225,20 +225,26 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit) {
         // piece goes at its own price, and somebody has to say whether that was the
         // last of it. Reaching it is what "Sprzedaj" does here, now that the list
         // behind this screen opens the item instead.
-        Button(
-            onClick = {
-                if (item.splittable) {
-                    viewModel.select(item, askingText)
-                } else {
-                    asking?.let { viewModel.sell(item, it) }
-                }
-            },
-            enabled = item.splittable || asking != null,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
+        //
+        // A giełda that has already happened is the one place it is missing: those
+        // rows are a record of a day, and a sale started from one would be dated
+        // today and land in today's takings, which is not the day you are reading.
+        if (selling) {
+            Button(
+                onClick = {
+                    if (item.splittable) {
+                        viewModel.select(item, askingText)
+                    } else {
+                        asking?.let { viewModel.sell(item, it) }
+                    }
+                },
+                enabled = item.splittable || asking != null,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
 
-        Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(10.dp))
+        }
 
         // Red, because it is the one button here that destroys something: it now
         // deletes the record rather than parking it out of sight, so it must not

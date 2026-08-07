@@ -225,6 +225,30 @@ data class Ledger(
         )
     }
 
+    /**
+     * Every giełda at once, in the same shape one of them comes in.
+     *
+     * The home screen answers for all the days together, and the only honest way to
+     * that figure is the way a single day gets it: each sale against what its own
+     * pieces cost. Summing the days does exactly that, an event being the sole
+     * grouping there is, so no sale can fall outside one or be counted twice.
+     */
+    fun overallStats(): EventStats {
+        val days = events.map { eventStats(it) }
+        return EventStats(
+            spent = days.map { it.spent }.sum(),
+            earned = days.map { it.earned }.sum(),
+            buyCount = days.sumOf { it.buyCount },
+            sellCount = days.sumOf { it.sellCount },
+            itemsBought = days.sumOf { it.itemsBought },
+            itemsSold = days.sumOf { it.itemsSold },
+            profit = Money(days.sumOf { it.profit.minor }),
+            // One estimated share anywhere makes the whole total a guess.
+            profitIsEstimated = days.any { it.profitIsEstimated },
+            sellsOfUnknownCost = days.sumOf { it.sellsOfUnknownCost },
+        )
+    }
+
     /** Everything one buy covers, and everything bought at one event. */
     fun itemsOfBuy(id: String): List<Item> = itemsByBuy[id].orEmpty()
 

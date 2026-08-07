@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import pl.starocie.domain.EventStats
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
@@ -69,9 +71,9 @@ fun HomeScreen(
     val sold = ledger.items.filter { it.status == ItemStatus.SOLD }
     val soldProceeds = sold.map { ledger.itemStats(it).proceeds }.sum()
     val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(30)
-    // Every giełda's takings, which is the same sum as every sale's — an event is
-    // the sole grouping, so nothing can fall outside one.
-    val sessionsEarned = ledger.sells.map { it.price }.sum()
+    // What every giełda made, not what it took: each sale against what its own
+    // pieces cost. Takings minus spending would be two unrelated days' money.
+    val sessions = remember(ledger) { ledger.overallStats() }
 
     Scaffold(
         floatingActionButton = {
@@ -173,7 +175,7 @@ fun HomeScreen(
 
             SummaryCard(
                 title = "Mamy ${przedmioty(stock.size)}",
-                subtitle = "chcemy za nie ${stockValue.format()}",
+                subtitle = "Chcemy sprzedać za łącznie ${stockValue.format()}",
                 openLabel = "Pokaż magazyn",
                 onClick = onStock,
             )
@@ -182,7 +184,7 @@ fun HomeScreen(
 
             SummaryCard(
                 title = "Sprzedaliśmy ${przedmioty(sold.size)}",
-                subtitle = "wzięliśmy za nie ${soldProceeds.format()}",
+                subtitle = "Sprzedaliśmy za łącznie ${soldProceeds.format()}",
                 openLabel = "Pokaż, co sprzedaliśmy",
                 onClick = onSold,
             )
@@ -190,13 +192,19 @@ fun HomeScreen(
             Spacer(Modifier.height(10.dp))
 
             // The third card is about days rather than things: how many giełd we have
-            // been to and what they brought in altogether.
+            // been to and what we made on them altogether.
             SummaryCard(
                 title = "Mamy za sobą ${giełdy(ledger.events.size)}",
-                subtitle = if (ledger.events.isEmpty()) {
-                    "jeszcze nigdzie nie byliśmy"
+                subtitle = when {
+                    ledger.events.isEmpty() -> "jeszcze nigdzie nie byliśmy"
+                    else -> sessionsProfitLine(sessions)
+                },
+                // Only when some sales are uncosted and some are not: all of them
+                // and the line above already says we do not know.
+                note = if (sessions.sellsOfUnknownCost in 1 until sessions.sellCount) {
+                    unknownCostNote(sessions)
                 } else {
-                    "wzięliśmy na nich ${sessionsEarned.format()}"
+                    null
                 },
                 openLabel = "Pokaż nasze giełdy",
                 onClick = onSessions,
@@ -299,6 +307,23 @@ private fun HomeAction(
     }
 }
 
+/**
+ * What every giełda made together, in the one line a card has.
+ *
+ * The days we could not cost are already left out of the figure, so when that is
+ * all of them there is nothing to report but the gap itself.
+ */
+private fun sessionsProfitLine(stats: EventStats): String {
+    val approx = if (stats.profitIsEstimated) "ok. " else ""
+    return when {
+        stats.sellCount == 0 -> "jeszcze nic na nich nie sprzedaliśmy"
+        stats.sellsOfUnknownCost == stats.sellCount -> "nie wiemy, ile zarobiliśmy"
+        stats.profit.minor < 0 ->
+            "straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"
+        else -> "zarobiliśmy na nich $approx${stats.profit.format()}"
+    }
+}
+
 /** A read-out with a list behind it. */
 @Composable
 private fun SummaryCard(
@@ -306,6 +331,7 @@ private fun SummaryCard(
     subtitle: String,
     openLabel: String,
     onClick: () -> Unit,
+    note: String? = null,
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -325,6 +351,14 @@ private fun SummaryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // What the figure above had to leave out, when it left anything out.
+                note?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             // The card was a read-out for long enough that nothing about it
             // suggests it opens anything; the chevron is the only cue that the

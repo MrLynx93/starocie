@@ -45,7 +45,8 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
 
             Text("Kupujemy paczkę", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Najpierw cena za całość. Potem wpisujemy przedmioty po kolei — same trafią do tej paczki.",
+                "Podaj cenę za całą paczkę łącznie. Potem dodaj przedmioty, które były " +
+                    "w tej paczce. (Nie znamy cen pojedynczych przedmiotów w kupionej paczce)",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -89,8 +90,8 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
             // a single thing can never be broken back apart. So the alternative is
             // named here, pointing at the button that actually leads to it.
             Text(
-                "Sprzedajemy to jako jedną pozycję? Wróćmy i wybierzmy «Kup» — " +
-                    "tam wpisujemy sztuki.",
+                "Sprzedajesz to jako jedną pozycję? Wróć i wybierz «Kup» — " +
+                    "tam wpisujesz sztuki.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
