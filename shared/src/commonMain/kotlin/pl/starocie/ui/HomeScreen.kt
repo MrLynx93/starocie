@@ -177,7 +177,7 @@ fun HomeScreen(
             SummaryCard(
                 title = "Mamy za sobą ${giełdy(ledger.events.size)}",
                 subtitle = when {
-                    ledger.events.isEmpty() -> "jeszcze nigdzie nie byliśmy"
+                    ledger.events.isEmpty() -> "Jeszcze nigdzie nie byliśmy"
                     else -> sessionsProfitLine(sessions)
                 },
                 // Only when some sales are uncosted and some are not: all of them
@@ -229,10 +229,10 @@ fun HomeScreen(
                                         // small puzzle every time; said as a loss it
                                         // is just what happened.
                                         text = when {
-                                            profit == null -> "nie wiemy, ile zarobiliśmy"
+                                            profit == null -> "Nie wiemy, ile zarobiliśmy"
                                             profit.minor < 0 ->
-                                                "straciliśmy $approx${Money(-profit.minor).format()}"
-                                            else -> "zarobiliśmy $approx${profit.format()}"
+                                                "Straciliśmy $approx${Money(-profit.minor).format()}"
+                                            else -> "Zarobiliśmy $approx${profit.format()}"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (profit != null && profit.minor < 0) {
@@ -297,11 +297,11 @@ private fun HomeAction(
 private fun sessionsProfitLine(stats: EventStats): String {
     val approx = if (stats.profitIsEstimated) "ok. " else ""
     return when {
-        stats.sellCount == 0 -> "jeszcze nic na nich nie sprzedaliśmy"
-        stats.sellsOfUnknownCost == stats.sellCount -> "nie wiemy, ile zarobiliśmy"
+        stats.sellCount == 0 -> "Jeszcze nic na nich nie sprzedaliśmy"
+        stats.sellsOfUnknownCost == stats.sellCount -> "Nie wiemy, ile zarobiliśmy"
         stats.profit.minor < 0 ->
-            "straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"
-        else -> "zarobiliśmy na nich $approx${stats.profit.format()}"
+            "Straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"
+        else -> "Zarobiliśmy na nich $approx${stats.profit.format()}"
     }
 }
 

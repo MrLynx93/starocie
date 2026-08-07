@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -47,30 +51,54 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
+    // The same in-memory search the magazyn does, for the same reason: a name is how
+    // a thing is found, and by the time there are enough sales to be worth reading
+    // there are too many to scroll.
+    var query by remember { mutableStateOf("") }
+
     // Newest sale first: the thing you are least sure about is the thing that went
     // last. Items with no completed sale left by some other route, so they fall
     // back to when the record was last touched.
-    val sold = remember(ledger) {
+    val sold = remember(ledger, query) {
         ledger.items
             .filter { it.status == ItemStatus.SOLD }
+            .filter { query.isBlank() || it.matchesQuery(query) }
             .map { it to ledger.itemStats(it) }
             .sortedByDescending { (item, stats) -> stats.soldAt ?: item.updatedAt }
     }
+    // Over what is on screen, so a search answers for what it found.
     val proceeds = remember(sold) { sold.map { (_, stats) -> stats.proceeds }.sum() }
+    val profit = remember(sold) { soldProfit(sold.map { (_, stats) -> stats }) }
 
     ScreenColumn {
         Text("Co sprzedaliśmy", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Poszło ${przedmioty(sold.size)} · wzięliśmy za nie ${proceeds.format()}",
+            "Sprzedaliśmy ${przedmioty(sold.size)} za ${proceeds.format()}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            profit,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(Modifier.height(16.dp))
 
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            placeholder = { Text("Czego szukamy?") },
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(12.dp))
+
         if (sold.isEmpty()) {
             Text(
-                "Jeszcze nic nie sprzedaliśmy.",
+                if (query.isBlank()) "Jeszcze nic nie sprzedaliśmy." else "Nic takiego nie sprzedaliśmy.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -115,7 +143,7 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "sprzedaliśmy za ${stats.proceeds.format()}" +
+                text = "Sprzedaliśmy za ${stats.proceeds.format()}" +
                     if (stats.sellCount > 1) " · w ${stats.sellCount} kawałkach" else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -132,7 +160,7 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
 
             Text(
                 text = when {
-                    profit == null -> "nie wiemy"
+                    profit == null -> "Nie wiemy"
                     lost -> "${approx(stats)}${Money(-profit.minor).format()}"
                     else -> "${approx(stats)}${profit.format()}"
                 },
@@ -145,9 +173,9 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
             )
             Text(
                 text = when {
-                    profit == null -> "ile zarobiliśmy"
-                    lost -> "straciliśmy"
-                    else -> "zarobiliśmy"
+                    profit == null -> "Ile zarobiliśmy"
+                    lost -> "Straciliśmy"
+                    else -> "Zarobiliśmy"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (lost) {
@@ -161,3 +189,25 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
 }
 
 private fun approx(stats: ItemStats) = if (stats.profitIsEstimated) "ok. " else ""
+
+/**
+ * What everything on screen made together, over the things we can cost.
+ *
+ * A thing we never recorded buying has no cost to be measured against, so it is left
+ * out rather than counted as pure gain — the same rule a giełda's profit follows. Its
+ * own row says "nie wiemy", which is where the gap is admitted; here, when every one
+ * of them is like that, there is nothing left to report but the gap.
+ */
+private fun soldProfit(stats: List<ItemStats>): String {
+    val known = stats.mapNotNull { it.profit }
+    if (known.isEmpty()) return "Nie wiemy, ile zarobiliśmy"
+
+    val total = known.sum()
+    // One share of a box anywhere makes the whole figure a guess.
+    val approx = if (stats.any { it.profitIsEstimated }) "ok. " else ""
+    return if (total.minor < 0) {
+        "Straciliśmy $approx${Money(-total.minor).format()}"
+    } else {
+        "Zarobiliśmy $approx${total.format()}"
+    }
+}

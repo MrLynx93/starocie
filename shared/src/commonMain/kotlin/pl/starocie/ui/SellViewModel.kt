@@ -114,7 +114,8 @@ data class SellUiState(
         get() = inStock.none { it.item.name.equals(query.trim(), ignoreCase = true) }
 }
 
-private fun Item.matches(query: String): Boolean =
+/** One search rule for both lists: the magazyn's and the sold one's. */
+internal fun Item.matchesQuery(query: String): Boolean =
     name.contains(query, ignoreCase = true) ||
         note?.contains(query, ignoreCase = true) == true
 
@@ -132,7 +133,7 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
      */
     val state: StateFlow<SellUiState> = combine(local, repository.ledger) { ui, ledger ->
         val stock = ledger.itemsInStock()
-            .filter { ui.query.isBlank() || it.matches(ui.query) }
+            .filter { ui.query.isBlank() || it.matchesQuery(ui.query) }
             .sortedByDescending { it.createdAt }
             .map { StockEntry(it, ledger.itemStats(it), ledger.piecesLeft(it)) }
         ui.copy(inStock = stock)

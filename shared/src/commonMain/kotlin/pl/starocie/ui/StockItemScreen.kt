@@ -31,6 +31,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Money
 import pl.starocie.domain.format
 import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
@@ -72,6 +73,10 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
     val item = ledger.itemById(itemId)
     var confirmingRemoval by remember { mutableStateOf(false) }
+    // The price it would go out at, held while the question is on screen: the field
+    // behind the dialog keeps saving, and the answer must be about the number that
+    // was asked about.
+    var confirmingSale by remember { mutableStateOf<Money?>(null) }
 
     // Waiting to have seen it in stock first: the ledger is empty for the instant
     // before the first snapshot arrives, and popping on that would close the screen
@@ -169,7 +174,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 text = paidText,
                 onTextChange = { paidText = it },
                 saved = buy?.price,
-                placeholder = "nie wiemy",
+                placeholder = "Nie wiemy",
                 // An exact cost and a guess must never look alike: with several
                 // things in one buy, this field is the box's price and the item's
                 // own cost is only a share of it.
@@ -191,7 +196,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 text = askingText,
                 onTextChange = { askingText = it },
                 saved = item.price,
-                placeholder = "jeszcze nie wiemy",
+                placeholder = "Jeszcze nie wiemy",
                 // It is also the price a sale goes out at, so an empty one is the
                 // one thing standing between this screen and "Sprzedaj". A lot is
                 // sold a piece at a time, at a price this field never held.
@@ -235,7 +240,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                     if (item.splittable) {
                         viewModel.select(item, askingText)
                     } else {
-                        asking?.let { viewModel.sell(item, it) }
+                        confirmingSale = asking
                     }
                 },
                 enabled = item.splittable || asking != null,
@@ -274,6 +279,26 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             onSoldCompletelyChange = viewModel::onSoldCompletelyChange,
             onConfirm = viewModel::confirm,
             onDismiss = viewModel::dismiss,
+        )
+    }
+
+    // Selling is one tap and then one answer: the price is already on screen, so the
+    // question is only whether that is the number it goes at. A lot asks its own
+    // questions in the sell dialog and never comes through here.
+    confirmingSale?.let { price ->
+        AlertDialog(
+            onDismissRequest = { confirmingSale = null },
+            title = { Text("Sprzedajemy?") },
+            text = { Text("Czy chcesz sprzedać ten przedmiot za ${price.format()}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingSale = null
+                    viewModel.sell(item, price)
+                }) { Text("Sprzedaj") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingSale = null }) { Text("Anuluj") }
+            },
         )
     }
 

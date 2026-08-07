@@ -128,12 +128,12 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
 @Composable
 internal fun SessionFigures(stats: EventStats) {
     Text(
-        "sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
+        "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(
-        "kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}",
+        "Kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -161,7 +161,7 @@ internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = when {
-                allUnknown -> "nie wiemy"
+                allUnknown -> "Nie wiemy"
                 lost -> "$approx${Money(-stats.profit.minor).format()}"
                 else -> "$approx${stats.profit.format()}"
             },
@@ -170,9 +170,9 @@ internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
         )
         Text(
             text = when {
-                allUnknown -> "ile zarobiliśmy"
-                lost -> "straciliśmy"
-                else -> "zarobiliśmy"
+                allUnknown -> "Ile zarobiliśmy"
+                lost -> "Straciliśmy"
+                else -> "Zarobiliśmy"
             },
             style = MaterialTheme.typography.bodySmall,
             color = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,8 +189,8 @@ internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
  */
 internal fun unknownCostNote(stats: EventStats): String? = when {
     stats.sellsOfUnknownCost == 0 -> null
-    stats.sellsOfUnknownCost == stats.sellCount -> "nie wiemy, za ile to kupiliśmy"
-    else -> "przy ${sprzedażach(stats.sellsOfUnknownCost)} nie wiemy, za ile kupiliśmy"
+    stats.sellsOfUnknownCost == stats.sellCount -> "Nie wiemy, za ile to kupiliśmy"
+    else -> "Przy ${sprzedażach(stats.sellsOfUnknownCost)} nie wiemy, za ile kupiliśmy"
 }
 
 /**

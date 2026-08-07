@@ -58,7 +58,7 @@ internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: ()
                 // that is the number you are deciding against when you pick it up.
                 Text(
                     if (piecesLeft < item.quantity) {
-                        "zostało $piecesLeft z ${item.quantity} szt."
+                        "Zostało $piecesLeft z ${item.quantity} szt."
                     } else {
                         "${item.quantity} szt. · na sztuki"
                     },
@@ -93,9 +93,9 @@ internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: ()
  * shortcut sale is that the gap stays visible.
  */
 internal fun boughtForLabel(stats: ItemStats): String = when {
-    stats.cost == null -> "nie wiemy, za ile kupiliśmy"
-    stats.costIsEstimated -> "kupiliśmy za ok. ${stats.cost.format()}"
-    else -> "kupiliśmy za ${stats.cost.format()}"
+    stats.cost == null -> "Nie wiemy, za ile kupiliśmy"
+    stats.costIsEstimated -> "Kupiliśmy za ok. ${stats.cost.format()}"
+    else -> "Kupiliśmy za ${stats.cost.format()}"
 }
 
 /**

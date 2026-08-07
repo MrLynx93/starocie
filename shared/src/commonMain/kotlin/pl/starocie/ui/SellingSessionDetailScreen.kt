@@ -210,7 +210,7 @@ private fun SessionSellRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "sprzedaliśmy za ${sell.price.format()}",
+                text = "Sprzedaliśmy za ${sell.price.format()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -238,7 +238,7 @@ private fun SellProfit(sell: Sell, cost: SellCost?) {
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = when {
-                profit == null -> "nie wiemy"
+                profit == null -> "Nie wiemy"
                 lost -> "$approx${Money(-profit.minor).format()}"
                 else -> "$approx${profit.format()}"
             },
@@ -247,9 +247,9 @@ private fun SellProfit(sell: Sell, cost: SellCost?) {
         )
         Text(
             text = when {
-                profit == null -> "ile zarobiliśmy"
-                lost -> "straciliśmy"
-                else -> "zarobiliśmy"
+                profit == null -> "Ile zarobiliśmy"
+                lost -> "Straciliśmy"
+                else -> "Zarobiliśmy"
             },
             style = MaterialTheme.typography.bodySmall,
             color = if (lost) MaterialTheme.colorScheme.error else muted,
@@ -263,11 +263,11 @@ private fun SellProfit(sell: Sell, cost: SellCost?) {
  * with no buy behind it says we do not know.
  */
 private fun sellCostLabel(cost: SellCost?): String {
-    if (cost == null) return "nie wiemy, za ile kupiliśmy"
+    if (cost == null) return "Nie wiemy, za ile kupiliśmy"
     return if (cost.isEstimated) {
-        "kupiliśmy za ok. ${cost.cost.format()}"
+        "Kupiliśmy za ok. ${cost.cost.format()}"
     } else {
-        "kupiliśmy za ${cost.cost.format()}"
+        "Kupiliśmy za ${cost.cost.format()}"
     }
 }
 

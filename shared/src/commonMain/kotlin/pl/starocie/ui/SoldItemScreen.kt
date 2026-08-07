@@ -107,8 +107,14 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
 
             Spacer(Modifier.height(20.dp))
 
-            // In the order it happened: what we gave, then what we took.
-            SectionLabel("Kupiliśmy")
+            // A single thing has four fields and no ambiguity about which sale is
+            // which, so the headings are noise: the labels on the fields already say
+            // what each one is. A lot earns them back, having several sales to tell
+            // apart and a total to say.
+            if (item.splittable) {
+                // In the order it happened: what we gave, then what we took.
+                SectionLabel("Kupiliśmy")
+            }
 
             DateField(
                 label = "Kupiliśmy dnia",
@@ -124,7 +130,7 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                 text = paidText,
                 onTextChange = { paidText = it },
                 saved = buy?.price,
-                placeholder = "nie wiemy",
+                placeholder = "Nie wiemy",
                 // An exact cost and a guess must never look alike: with several
                 // things in one buy this is the box's price, and the item's own cost
                 // is only a share of it.
@@ -141,9 +147,17 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
 
             Spacer(Modifier.height(24.dp))
 
-            SectionLabel(
-                if (sells.size > 1) "Sprzedaliśmy w ${sells.size} kawałkach" else "Sprzedaliśmy",
-            )
+            // The heading carries the total, which is why there is no separate line
+            // adding the sales up underneath them.
+            if (item.splittable) {
+                SectionLabel(
+                    if (sells.size > 1) {
+                        "Sprzedaliśmy za ${stats.proceeds.format()} w ${sells.size} kawałkach"
+                    } else {
+                        "Sprzedaliśmy za ${stats.proceeds.format()}"
+                    },
+                )
+            }
 
             // Nothing here means the sale it was resolved by is gone, which the
             // screen says rather than showing an empty heading and no explanation.
@@ -169,11 +183,6 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                     onDateChange = { viewModel.setSellDate(sell.id, it) },
                     onPriceSave = { viewModel.setSellPrice(sell.id, it) },
                 )
-            }
-
-            if (sells.size > 1) {
-                Spacer(Modifier.height(16.dp))
-                Detail("Razem wzięliśmy", stats.proceeds.format())
             }
 
             item.note?.takeIf { it.isNotBlank() }?.let {
@@ -238,7 +247,7 @@ private fun SaleFields(
             text = priceText,
             onTextChange = { priceText = it },
             saved = sell.price,
-            placeholder = "za ile poszło",
+            placeholder = "Za ile poszło",
             hint = sell.note?.takeIf { it.isNotBlank() },
             onSave = onPriceSave,
         )
