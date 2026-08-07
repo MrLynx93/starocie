@@ -347,10 +347,10 @@ icon is edited in one place and re-rendered rather than touched up per density:
 | `starocie-icon-foreground.svg` | adaptive-icon foreground (108 dp, 5 densities) |
 | `starocie-icon-monochrome.svg` | the themed-icon silhouette |
 | `starocie-icon-square.svg` | iOS `AppIcon-1024.png` |
-| `starocie-icon-test*.svg` | the same four, into the dev flavour's `res/` |
+| `starocie-icon-test*.svg` | the same four, into `androidAppTest`'s `res/` |
 
-**`icon/render.sh` renders all of them**, into `src/main/res` and `src/dev/res`
-respectively. Nine masters times five densities is too many chances to leave one
+**`icon/render.sh` renders all of them**, into `androidApp/src/main/res` and
+`androidAppTest/src/main/res` respectively. Nine masters times five densities is too many chances to leave one
 behind by hand, and the two icons drifting apart is exactly the failure the mark
 exists to prevent.
 
@@ -651,39 +651,47 @@ something out costs nothing and reaching for the real one is never ambiguous —
 which is also why the test build's icon carries a mark of its own. Two identical
 tiles a thumb apart is precisely the ambiguity two builds were meant to remove.
 
-**Two run configurations, one per build** — "starocie (prod)" and
-"starocie (test)", shared through `.idea/runConfigurations/`, which is the one
-thing under `.idea/` that is not gitignored. They run `:androidApp:runProdDebug`
-and `:androidApp:runDevDebug`, Gradle tasks that install and then launch through
-adb; `-Pdevice=<serial>` picks a phone when two are plugged in.
+### A module each, not a flavour each
 
-They exist because **Android Studio's own ▶ takes the variant from the Build
-Variants panel**, not from the run configuration — there is no variant to set on
-an Android App configuration, so two of those would be the same button twice.
-Leaving the choice in a panel means leaving it wherever it was last, and here
-that is reaching for the test build and getting the real books. The panel and ▶
-are still the way in when a debugger has to be attached.
+```
+androidHost/          the manifest, MainActivity, every resource but the icon
+androidApp/           prod:  pl.starocie      + starocie-prod + the plain icon
+androidAppTest/       test:  pl.starocie.test + starocie      + the marked icon
+```
 
-Which workspace a build talks to is a **parameter, not a default** — `App()` takes
-it, Android hands it `BuildConfig.WORKSPACE_ID` from the flavour, and no screen
+Product flavours would be the obvious way to do this and are the wrong one,
+because **Android Studio's ▶ takes a flavour from the Build Variants panel rather
+than from the run configuration**. There is no variant to set on an Android App
+configuration, so two of those would be the same button twice, and the real
+choice would live in a panel — which means it stays wherever it was left. That is
+exactly how you reach for the test build and get the real books. A *module* is
+something a run configuration can name, so `.idea/runConfigurations/` holds
+**"starocie (prod)" and "starocie (test)"**, each pinned to its module, each with
+Studio's own device picker, debugger and logcat. They are the one thing under
+`.idea/` that is not gitignored: a button that exists only on the machine it was
+made on is a setting each of us has to rediscover.
+
+The price is two application modules, and it is kept small by their sharing
+`androidHost/` through `sourceSets` — one manifest, one `MainActivity`, one
+theme. Each module's own `res/` holds its launcher icon and nothing else, which
+is also what keeps the two out of each other's way: the same resource under two
+source dirs is a merge conflict, not an override.
+
+Which workspace a build talks to is a **parameter, not a default** — `App()`
+takes it, each module hands it its own `BuildConfig.WORKSPACE_ID`, and no screen
 below can tell which it is in. Giving it a default would be giving a test build a
 way to reach the real books by omission.
 
-Two shapes the toolchain forces:
-
-- **the flavour is named `dev`, not `test`** — Gradle reserves that name, it
-  collides with the unit-test source set. Everything a person sees says test: the
-  label, the applicationId, the APK's name
-- **the google-services plugin fails a variant whose package name has no client**
-  in the JSON, so a second applicationId would normally mean registering a second
-  Android app in the console. `androidApp/build.gradle.kts` **derives**
-  `src/dev/google-services.json` from the real client instead — same project, same
-  API key, only the package name changed, which is all Firestore and e-mail
-  sign-in ever read. It is gitignored like the file it comes from, and it deletes
-  itself the moment the real JSON carries a client for `pl.starocie.test`, so
-  registering that app properly — which is what Google sign-in on the test build
-  would need, being keyed to package name and fingerprint together — is an upgrade
-  rather than a conflict
+One shape the toolchain forces: **the google-services plugin fails a build whose
+package name has no client** in the JSON, so a second applicationId would
+normally mean registering a second Android app in the console.
+`androidAppTest/build.gradle.kts` **derives** its `google-services.json` from the
+real one next door instead — same project, same API key, only the package name
+changed, which is all Firestore and e-mail sign-in ever read. It is gitignored
+like the file it comes from, and it copies the real client across untouched the
+moment that file carries one for `pl.starocie.test`, so registering that app
+properly — which is what Google sign-in on the test build would need, being keyed
+to package name and fingerprint together — is an upgrade rather than a conflict.
 
 **A new workspace has to be let in on.** The first person to open the prod build
 creates `workspaces/starocie-prod` with themselves as its only member, and the
@@ -767,8 +775,8 @@ Two things Xcode does not come with:
 
 ### Getting an APK onto a phone
 
-`.github/workflows/android-apk.yml` builds `assembleProdDebug` **and**
-`assembleDevDebug` and attaches both APKs to a rolling `latest-apk` prerelease,
+`.github/workflows/android-apk.yml` builds `:androidApp:assembleDebug` **and**
+`:androidAppTest:assembleDebug` and attaches both APKs to a rolling `latest-apk` prerelease,
 so installing is opening one URL on the phone rather than plugging it into a
 laptop:
 

@@ -23,15 +23,15 @@ fi
 # layers are drawn on.
 densities="mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432"
 
-# Both sets: the real books' icon into main, the test build's into the dev
-# flavour, where it overrides main by name and nothing else has to know.
+# Both sets: one module per build, each holding its own launcher icon and
+# nothing else — every other resource the two share comes from androidHost/.
 render_set() {
-  local prefix="$1" res="$2"
+  local prefix="$1" module="$2"
 
   for d in $densities; do
     local density="${d%%:*}" rest="${d#*:}"
     local tile="${rest%%:*}" canvas="${rest#*:}"
-    local dir="../androidApp/src/$res/res/mipmap-$density"
+    local dir="../$module/src/main/res/mipmap-$density"
 
     mkdir -p "$dir"
     rsvg-convert -w "$tile" -h "$tile" "$prefix.svg" -o "$dir/ic_launcher.png"
@@ -40,11 +40,11 @@ render_set() {
     rsvg-convert -w "$canvas" -h "$canvas" "$prefix-monochrome.svg" -o "$dir/ic_launcher_monochrome.png"
   done
 
-  echo "rendered $prefix.svg → androidApp/src/$res/res/mipmap-*"
+  echo "rendered $prefix.svg → $module/src/main/res/mipmap-*"
 }
 
-render_set starocie-icon main
-render_set starocie-icon-test dev
+render_set starocie-icon androidApp
+render_set starocie-icon-test androidAppTest
 
 # The store listing and iOS take one large square each. iOS rejects an alpha
 # channel at upload, which is why its master carries a background of its own

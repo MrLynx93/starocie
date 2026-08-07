@@ -93,7 +93,7 @@ jobs:
       # workspace they read, so building one and not the other would mean the
       # test APK is always a commit or two behind the thing it exists to test.
       - name: Build debug APKs
-        run: ./gradlew :androidApp:assembleProdDebug :androidApp:assembleDevDebug --stacktrace
+        run: ./gradlew :androidApp:assembleDebug :androidAppTest:assembleDebug --stacktrace
 
       # The plugin is applied conditionally, so "the secret was set" and "the app
       # can reach Firebase" are two different claims. Proving the generated string
@@ -102,10 +102,12 @@ jobs:
         if: env.FIREBASE_CONFIGURED == '1'
         run: |
           set -euo pipefail
-          if ! grep -rl google_app_id androidApp/build/generated > /dev/null 2>&1; then
-            echo "::error::google-services plugin did not generate Firebase resources — the APK would crash on launch"
-            exit 1
-          fi
+          for module in androidApp androidAppTest; do
+            if ! grep -rl google_app_id "$module/build/generated" > /dev/null 2>&1; then
+              echo "::error::google-services plugin did not generate Firebase resources for $module — that APK would crash on launch"
+              exit 1
+            fi
+          done
           echo "Firebase resources generated; this APK can sign in."
 
       # Which of the two a file is has to be legible on a phone's download list,
@@ -113,9 +115,9 @@ jobs:
       - name: Name the APKs after the commit
         run: |
           mkdir -p artifacts
-          cp androidApp/build/outputs/apk/prod/debug/androidApp-prod-debug.apk \
+          cp androidApp/build/outputs/apk/debug/androidApp-debug.apk \
              "artifacts/starocie-${GITHUB_SHA::7}.apk"
-          cp androidApp/build/outputs/apk/dev/debug/androidApp-dev-debug.apk \
+          cp androidAppTest/build/outputs/apk/debug/androidAppTest-debug.apk \
              "artifacts/starocie-test-${GITHUB_SHA::7}.apk"
 
       - uses: actions/upload-artifact@v4
