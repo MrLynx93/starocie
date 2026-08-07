@@ -3,6 +3,7 @@ package pl.starocie.ui
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,11 +57,17 @@ actual fun rememberGoogleSignIn(onResult: (GoogleSignInResult) -> Unit): (() -> 
                         ?: GoogleSignInResult.Failed("Google nie dało nam tokenu"),
                 )
             }.onFailure { e ->
+                // Whatever else happens, the reason lands in logcat. Credential
+                // Manager's own messages are often null and its failures reach
+                // the screen as one sentence, so without this the only trace of
+                // a misconfigured project is a DEVELOPER_ERROR logged by Play
+                // services under a tag that has nothing to do with this app.
+                Log.w(TAG, "Google sign-in failed", e)
                 onResult(
                     if (e is GetCredentialCancellationException) {
                         GoogleSignInResult.Cancelled
                     } else {
-                        GoogleSignInResult.Failed(e.message ?: "Nie udało się zalogować przez Google")
+                        GoogleSignInResult.Failed(e.describe())
                     },
                 )
             }
@@ -68,6 +75,17 @@ actual fun rememberGoogleSignIn(onResult: (GoogleSignInResult) -> Unit): (() -> 
         Unit
     }
 }
+
+private const val TAG = "starocie/google"
+
+/**
+ * Credential Manager's exceptions usually carry a null message, so `e.message`
+ * alone reaches the screen as an empty line. The class name is not friendly, but
+ * a name we can look up beats a blank.
+ */
+private fun Throwable.describe(): String =
+    message?.takeIf { it.isNotBlank() }
+        ?: "Nie udało się zalogować przez Google (${this::class.simpleName})"
 
 private fun Context.webClientId(): String? {
     val id = resources.getIdentifier("default_web_client_id", "string", packageName)

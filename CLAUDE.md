@@ -671,6 +671,11 @@ Studio's own device picker, debugger and logcat. They are the one thing under
 `.idea/` that is not gitignored: a button that exists only on the machine it was
 made on is a setting each of us has to rediscover.
 
+A module is also something the IDE has to be told about: until Gradle is synced,
+`:androidAppTest` is not in Studio's model and its button falls back to the app
+Studio does know, which is the real one. A sync is the first thing to try when a
+run configuration does something other than what its name says.
+
 The price is two application modules, and it is kept small by their sharing
 `androidHost/` through `sourceSets` — one manifest, one `MainActivity`, one
 theme. Each module's own `res/` holds its launcher icon and nothing else, which
@@ -737,6 +742,24 @@ console are what make that true:
    button simply is not drawn.
 
 A quick check that a given JSON will work: `oauth_client` is not `[]`.
+
+**The button appearing is not the same as it working**, and this is the trap: the
+web client of step 3 belongs to the *project*, so enabling Google is enough to
+draw the button, while step 2's fingerprint belongs to a *package and a signing
+key*. Miss it and the account chooser opens, an account is picked, and then
+nothing happens at all — Play services logs `DEVELOPER_ERROR` under its own tag
+and hands Credential Manager back a `[16] Cancelled by user`, which is
+indistinguishable from someone dismissing the sheet, so the screen says nothing.
+`rememberGoogleSignIn` logs every failure under `starocie/google`, which is where
+to look first.
+
+Two fingerprints follow from all of that, and each has to be registered against
+**the app whose package it signs**: `pl.starocie` and `pl.starocie.test` are
+separate console entries, and an `oauth_client` of type 1 under a client is what
+says one has been added. An APK from Actions is signed with the runner's own
+generated debug keystore rather than this machine's, so Google sign-in fails on
+the download while working on the phone you plugged in — the fix for that is to
+give CI the same keystore, not to chase its fingerprint.
 
 **iOS is deliberately the opposite: no plist, no build.** The Android leniency
 buys something real — an APK worth having even without Firebase. On iOS there is
