@@ -65,7 +65,6 @@ fun HomeScreen(
     val ledger by repository.ledger.collectAsState()
     val syncError by repository.syncError.collectAsState()
 
-    val today = ledger.events.maxByOrNull { it.date }
     val stock = ledger.itemsInStock()
     val stockValue = stock.mapNotNull { it.price }.sum()
     val sold = ledger.items.filter { it.status == ItemStatus.SOLD }
@@ -151,24 +150,6 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // The day is a caption under the title now, not a heading of its own —
-            // it says which day the figures below belong to and nothing more.
-            Text(
-                text = today?.name ?: today?.date?.asText() ?: "jeszcze nic dziś nie robiliśmy",
-                style = MaterialTheme.typography.titleSmall,
-            )
-
-            today?.let {
-                val stats = ledger.eventStats(it)
-                Text(
-                    "Wydaliśmy ${stats.spent.format()} · Zarobiliśmy ${stats.earned.format()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             Spacer(Modifier.height(16.dp))

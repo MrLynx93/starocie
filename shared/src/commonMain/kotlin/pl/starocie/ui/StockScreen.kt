@@ -58,7 +58,8 @@ fun StockScreen(
     ScreenColumn {
         Text("Nasz magazyn", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Mamy tu ${przedmioty(state.inStock.size)} · chcemy za nie ${shownValue.format()}",
+            "Mamy tu ${przedmioty(state.inStock.size)} · " +
+                "Chcemy sprzedać za łącznie ${shownValue.format()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

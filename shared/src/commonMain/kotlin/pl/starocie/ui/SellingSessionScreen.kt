@@ -117,6 +117,9 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
  * The two things that happened that day, each with its count and its money — read one
  * under the other, because a giełda is a day of doing both.
  *
+ * Selling leads, buying follows: a giełda is a day of selling that we also buy on, and
+ * the takings are the thing being looked for.
+ *
  * They are never subtracted from one another here or anywhere else: the things we
  * bought are almost never the things we sold, so the gap between these two numbers is
  * not what we made. That answer is [SessionProfit]'s, and it comes from somewhere else
@@ -125,12 +128,12 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
 @Composable
 internal fun SessionFigures(stats: EventStats) {
     Text(
-        "kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}",
+        "sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(
-        "sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
+        "kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
