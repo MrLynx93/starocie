@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -45,6 +49,11 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
+    // The same search box the other two lists carry, in the same place and with the
+    // same words: typing is how anything is found in this app, and a list of days
+    // gets long the same way a list of things does.
+    var query by remember { mutableStateOf("") }
+
     // Newest first, the way both other lists run: today's giełda is the one being
     // asked about. Two events on one day fall back to when they were made.
     //
@@ -54,8 +63,9 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
     // the same rule the home card counts by, so the two cannot disagree — and it
     // covers "Dawno temu" as well, that being a filing cabinet holding only buys.
     // What was bought on such a day is still in the magazyn, where it is found.
-    val sessions = remember(ledger) {
+    val sessions = remember(ledger, query) {
         ledger.sellingSessions()
+            .filter { query.isBlank() || it.matchesQuery(query) }
             .sortedWith(compareByDescending<Event> { it.date }.thenByDescending { it.createdAt })
             .map { it to ledger.eventStats(it) }
     }
@@ -65,9 +75,24 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            placeholder = { Text("Czego szukamy?") },
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(12.dp))
+
         if (sessions.isEmpty()) {
             Text(
-                "Nie byliśmy jeszcze na żadnej giełdzie.",
+                if (query.isBlank()) {
+                    "Nie byliśmy jeszcze na żadnej giełdzie."
+                } else {
+                    "Na takiej giełdzie nie byliśmy."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -85,6 +110,19 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
         BackButton(onDone)
     }
 }
+
+/**
+ * What a day is found by: the same three things a row shows.
+ *
+ * The date is in here and not only the name, because most giełdy are auto-created and
+ * never named — for those the date is the whole of what the row says, so leaving it
+ * out would make the search unable to find the majority of the list. It matches the
+ * text as shown, so "2026-08" finds a month and "Dawno" finds the bucket.
+ */
+internal fun Event.matchesQuery(query: String): Boolean =
+    name?.contains(query, ignoreCase = true) == true ||
+        note?.contains(query, ignoreCase = true) == true ||
+        date.asText().contains(query, ignoreCase = true)
 
 /**
  * One day. The name is what we called it if we called it anything, and the date is

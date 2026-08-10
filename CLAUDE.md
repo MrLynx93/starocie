@@ -715,8 +715,15 @@ write nothing until their main button is pressed.
   wiemy" and, when only some are missing, names how many sales it had to leave out.
   One composable draws these figures for the list row and for the day's own screen,
   so the two cannot fall out of step.
+  It carries **the same search box as the other two lists**, in the same place and
+  in the same words, because typing is how anything is found in this app and days
+  pile up the way things do. A giełda is matched on its name, its note **and its
+  date as the row says it** — most are auto-created and never named, so the date is
+  the whole of what such a row shows, and leaving it out would make the search blind
+  to the majority of the list. "2026-08" therefore finds a month.
   The list has no total of its own above it: a giełda is a day, and the days do not
-  add up to a day.
+  add up to a day. Nothing above the box is computed over what the search found,
+  because there is nothing above it to compute.
   **A row opens the day**, onto its own screen — the magazyn's list and the sold list
   narrowed to it, in two sections, with the same rows and the same wording. A row
   there opens the thing, in the magazyn's item screen or the sold one depending on
