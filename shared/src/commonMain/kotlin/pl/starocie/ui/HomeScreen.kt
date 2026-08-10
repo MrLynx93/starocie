@@ -183,13 +183,6 @@ fun HomeScreen(
                     sessionCount == 0 -> "Jeszcze nigdzie nie byliśmy"
                     else -> sessionsProfitLine(sessions)
                 },
-                // Only when some sales are uncosted and some are not: all of them
-                // and the line above already says we do not know.
-                note = if (sessions.sellsOfUnknownCost in 1 until sessions.sellCount) {
-                    unknownCostNote(sessions)
-                } else {
-                    null
-                },
                 openLabel = "Pokaż nasze giełdy",
                 onClick = onSessions,
             )
@@ -210,7 +203,10 @@ fun HomeScreen(
                     items(recentSells, key = { it.id }) { sell ->
                         val item = ledger.itemById(sell.itemId)
                         val stats = item?.let { ledger.itemStats(it) }
-                        val profit = stats?.profit
+                        // A deleted thing takes its cost with it, so what the sale
+                        // took is the whole of what it made — the same answer an
+                        // item we never recorded buying gives.
+                        val profit = stats?.profit ?: sell.price
                         val approx = if (stats?.profitIsEstimated == true) "ok. " else ""
 
                         Card(
@@ -231,14 +227,13 @@ fun HomeScreen(
                                         // A loss written as a negative gain is a
                                         // small puzzle every time; said as a loss it
                                         // is just what happened.
-                                        text = when {
-                                            profit == null -> "Nie wiemy, ile zarobiliśmy"
-                                            profit.minor < 0 ->
-                                                "Straciliśmy $approx${Money(-profit.minor).format()}"
-                                            else -> "Zarobiliśmy $approx${profit.format()}"
+                                        text = if (profit.minor < 0) {
+                                            "Straciliśmy $approx${Money(-profit.minor).format()}"
+                                        } else {
+                                            "Zarobiliśmy $approx${profit.format()}"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (profit != null && profit.minor < 0) {
+                                        color = if (profit.minor < 0) {
                                             MaterialTheme.colorScheme.error
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -294,9 +289,6 @@ private fun HomeAction(
 /**
  * What every giełda made together, in the one line a card has.
  *
- * The days we could not cost are already left out of the figure, so when that is
- * all of them there is nothing to report but the gap itself.
- *
  * Only ever read when there is a giełda to read it about, and a giełda is a day we
  * sold something on — so there is no line here for having sold nothing. The card
  * says "Jeszcze nigdzie nie byliśmy" instead, which is the truth in that case: a
@@ -304,11 +296,10 @@ private fun HomeAction(
  */
 private fun sessionsProfitLine(stats: EventStats): String {
     val approx = if (stats.profitIsEstimated) "ok. " else ""
-    return when {
-        stats.sellsOfUnknownCost == stats.sellCount -> "Nie wiemy, ile zarobiliśmy"
-        stats.profit.minor < 0 ->
-            "Straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"
-        else -> "Zarobiliśmy na nich $approx${stats.profit.format()}"
+    return if (stats.profit.minor < 0) {
+        "Straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"
+    } else {
+        "Zarobiliśmy na nich $approx${stats.profit.format()}"
     }
 }
 
@@ -319,7 +310,6 @@ private fun SummaryCard(
     subtitle: String,
     openLabel: String,
     onClick: () -> Unit,
-    note: String? = null,
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -339,14 +329,6 @@ private fun SummaryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // What the figure above had to leave out, when it left anything out.
-                note?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
             // The card was a read-out for long enough that nothing about it
             // suggests it opens anything; the chevron is the only cue that the

@@ -75,17 +75,23 @@ putting the field back would find them where they were left.
    is: "Chcemy sprzedać za sztukę" against "Chcemy sprzedać za". The two differ by
    a factor of however many there are, and a mislabelled one is a stall selling
    twelve plates for the price of one.
-2. **Unknown cost stays unknown.** An item with no `buyId` was invented at point of
-   sale; its cost and profit are `null`, never zero. Reporting such a sale as pure
-   profit would inflate margins every time a shortcut is taken — exactly the
-   behaviour this app exists to tolerate.
+2. **Unknown cost stays unknown, and what it went for is the profit.** An item with
+   no `buyId` was invented at point of sale, and `Item.stats.cost` is `null` for it —
+   never zero, because nothing may claim we paid nothing. **`profit` is not null**:
+   with nothing recorded going out, the whole of what came in is what we made, so it
+   is the proceeds. Every screen says both halves of that — "Nie wiemy, za ile
+   kupiliśmy" over "Zarobiliśmy 40,00 zł" — and the sale counts in the day's profit
+   and the overall total like any other. That is the shortcut sale's honest reading:
+   the money is real, and it is the cost that is missing, not the gain.
 3. **Removing an item deletes it, and takes its buy with it once that buy is
    empty.** A buy exists to say what was paid for its contents, so one with nothing
    left in it is a price with nothing to be the cost of; a box therefore survives
    until the last thing out of it is deleted too. The cost of this is real and
    accepted: a `Sell` against a deleted item is left unresolvable, so its row reads
-   "—" and its profit "Nie wiemy" while its proceeds still count toward the event.
-   Screens must degrade to an unknown here, never assume `itemById` resolves.
+   "—" for the thing and "Nie wiemy, za ile kupiliśmy" for what it had cost. Its
+   profit follows rule 2 — the whole price, there being nothing left to set it
+   against — so the day still agrees with the rows it is made of. Screens must
+   degrade to an unknown *thing* here, never assume `itemById` resolves.
 4. **Nothing derivable is stored** — no denormalised names, no device paths, no
    cached statistics. The inline photo is an exception only in appearance: it is
    original data, not a copy of something held elsewhere.
@@ -135,7 +141,7 @@ Swift, which does not matter here: iOS only receives a Compose `UIViewController
 
 ## Cost allocation
 
-- **no buy** → cost unknown, profit `null`
+- **no buy** → cost unknown, and the profit is the whole of what it sold for
 - **sole item of its buy** → cost is the buy price, exact
 - **one of many** → the buy price is split across items in proportion to
   `Item.price`, and flagged estimated
@@ -165,11 +171,11 @@ Nothing is written to Firestore, so nothing can drift. Unit-testable without
 Firebase and identical on every platform.
 
 - `Item.stats` — `sellCount`, `soldQuantity`, `proceeds`, `cost?`,
-  `costIsEstimated`, `profit?`, `profitIsEstimated`, `soldAt?`
+  `costIsEstimated`, `profit`, `profitIsEstimated`, `soldAt?`
 - `Buy.stats` — `itemCount`, `resolvedItemCount`, `cost`, `proceeds`, `profit?`,
   `fullyResolved`
 - `Event.stats` — `spent`, `earned`, `buyCount`, `sellCount`, `itemsBought`,
-  `itemsSold`, `profit`, `profitIsEstimated`, `sellsOfUnknownCost`
+  `itemsSold`, `profit`, `profitIsEstimated`
 - `Ledger.overallStats()` — every giełda at once, in `EventStats`' own shape
 - `Ledger.sellCost(sell)` — what one sale's pieces had cost, or null
 
@@ -184,15 +190,16 @@ its money does.
 
 `Event.stats.profit` is the real figure and comes from somewhere else entirely: each
 of the day's sales set against what its own pieces cost, which is the arithmetic
-`Item.stats.profit` does one thing at a time. A sale whose cost is unknown is left
-**out of it** rather than counted as pure gain — `sellsOfUnknownCost` says how many,
-and a screen showing the profit must admit that gap.
+`Item.stats.profit` does one thing at a time. A sale whose cost is unknown — no buy
+behind the item, or no item left at all — is set against **nothing**, so its whole
+price counts, and **every sale is in the figure**. Nothing is left out, so no screen
+has a gap to admit: the profit is always a number.
 
 `overallStats` answers the home screen's third card, and it **sums the days rather
 than the sales**: an event is the sole grouping, so every sale belongs to exactly one
 day and no sale can fall outside the total or land in it twice. It returns
 `EventStats` — the fields all still mean what they mean for one day — so the card and
-the giełdy list cannot disagree, and the unknown-cost gap travels with the figure.
+the giełdy list cannot disagree.
 
 `sellCost` splits an item's cost across its sales by pieces, the unsold ones holding
 their share back, using the same largest-remainder rounding a box does. That is what
@@ -530,11 +537,10 @@ write nothing until their main button is pressed.
   The rule also keeps "Dawno temu" out, that bucket holding only buys — which the
   count used to get wrong while the list behind it got right.
   With no such day at all the card says "Jeszcze nigdzie nie byliśmy".
-  The third card is the only one showing profit rather than a total, so it is the
-  only one that can be short of an answer: a loss says "Straciliśmy na nich", every
-  sale uncosted says "Nie wiemy, ile zarobiliśmy", and *some* of them uncosted adds
-  a third line naming how many the figure had to leave out — in the giełdy list's
-  own words, since it is the same shortfall.
+  The third card is the only one showing profit rather than a total, and a loss says
+  "Straciliśmy na nich". It is never short of an answer: a sale we know no cost for
+  counts for its whole price, so there is nothing the figure has to leave out and no
+  gap for a further line to admit.
 - **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact
@@ -683,9 +689,10 @@ write nothing until their main button is pressed.
   two can never answer differently about the same typing. Over the box sit the two
   figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
   "Zarobiliśmy ok. 240,00 zł", **both computed over what is on screen**, so a search
-  answers for what it found. The profit leaves out anything it cannot cost rather
-  than counting it as gain — the row itself says "Nie wiemy" — and when that is all
-  of them the line says so instead of naming a figure.
+  answers for what it found. Everything sold is in that profit, including what we
+  never recorded buying: with no cost against it, what it went for is what it made,
+  and its row says as much on the left — "Nie wiemy, za ile kupiliśmy" over what we
+  took.
   Each row answers "was it worth it" without
   a tap: **the pair it is drawn from on the left**, what we paid above what we took,
   and **the profit alone on the right**, said as a loss rather than written as a
@@ -732,8 +739,8 @@ write nothing until their main button is pressed.
   first**, a giełda being a day of selling that we also buy on — with **what we made
   kept apart from that pair**, because it is not the gap between them: it is each
   sale against what that thing cost. A day we only bought on says nothing there
-  rather than claiming a nought, and a day whose costs we do not know says "Nie
-  wiemy" and, when only some are missing, names how many sales it had to leave out.
+  rather than claiming a nought; a day of sales always names a figure, since a sale
+  we know no cost for counts for the whole of what it took.
   One composable draws these figures for the list row and for the day's own screen,
   so the two cannot fall out of step.
   It carries **the same search box as the other two lists**, in the same place and
@@ -752,7 +759,8 @@ write nothing until their main button is pressed.
   into is not the day on screen. A day is a way *into* the records rather than a
   second reading of them, and correcting one is what it is for. A sale carries its
   own share of the cost, so a lot that went across three giełdy shows a third of
-  itself at each; a sale whose item has been deleted reads "—" and opens nothing.
+  itself at each; a sale whose item has been deleted reads "—" for the thing and
+  opens nothing, its profit being the whole price like any other uncosted sale.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"

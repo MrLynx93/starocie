@@ -36,7 +36,10 @@ class BuyAndSellTest {
         assertEquals(ItemStatus.SOLD, ledger.itemById(itemId)!!.status)
     }
 
-    /** Unknown must stay unknown, or every shortcut reads as pure profit. */
+    /**
+     * The cost stays the unknown it is — nothing invents a buy to hold a zero. What we
+     * made is the whole price, there being nothing recorded going the other way.
+     */
     @Test
     fun no_stated_cost_leaves_the_cost_unknown_rather_than_zero() = runTest {
         val repository = InMemoryLedgerRepository()
@@ -53,7 +56,7 @@ class BuyAndSellTest {
         assertTrue(ledger.buys.isEmpty(), "no price paid means there is no buy to record")
         assertEquals(Money(3000), stats.proceeds)
         assertNull(stats.cost)
-        assertNull(stats.profit, "profit is unknown, not equal to the proceeds")
+        assertEquals(Money(3000), stats.profit, "nothing went out, so it is all profit")
     }
 
     @Test

@@ -258,20 +258,19 @@ internal fun SectionLabel(text: String) {
     HorizontalDivider(Modifier.padding(top = 6.dp, bottom = 12.dp))
 }
 
-/** True only when we know the profit *and* it went the wrong way. */
-internal val ItemStats.isALoss: Boolean get() = profit != null && profit.minor < 0
+/** True when the sale went the wrong way. */
+internal val ItemStats.isALoss: Boolean get() = profit.minor < 0
 
 /**
  * What the sale came to, said rather than signed: a loss is something we lost, not
  * a gain with a minus in front of it, and a guess says so.
  */
 internal fun profitLabel(stats: ItemStats): String {
-    val profit = stats.profit ?: return "Nie wiemy, ile na tym zarobiliśmy"
     val approx = if (stats.profitIsEstimated) "ok. " else ""
     return if (stats.isALoss) {
-        "Straciliśmy $approx${Money(-profit.minor).format()}"
+        "Straciliśmy $approx${Money(-stats.profit.minor).format()}"
     } else {
-        "Zarobiliśmy $approx${profit.format()}"
+        "Zarobiliśmy $approx${stats.profit.format()}"
     }
 }
 

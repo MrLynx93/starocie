@@ -36,11 +36,11 @@ class LedgerTest {
     }
 
     /**
-     * A shortcut taken at the stall must never look like pure profit, or margins
-     * inflate every time the app is used the way it was designed to be used.
+     * A shortcut taken at the stall cost us nothing on the books, so the whole of what
+     * it went for is what we made — while the cost itself stays the unknown it is.
      */
     @Test
-    fun an_item_with_no_buy_has_unknown_cost_and_unknown_profit() {
+    fun an_item_with_no_buy_has_unknown_cost_and_the_price_as_its_profit() {
         val ledger = Ledger(
             items = listOf(item("vase", buyId = null, status = ItemStatus.SOLD)),
             sells = listOf(sell("s1", "vase", 3000)),
@@ -50,7 +50,7 @@ class LedgerTest {
 
         assertEquals(Money(3000), stats.proceeds)
         assertNull(stats.cost, "cost is unknown, not zero")
-        assertNull(stats.profit, "profit is unknown, not equal to the proceeds")
+        assertEquals(Money(3000), stats.profit, "nothing went out, so it is all profit")
     }
 
     /** The identity that largest-remainder rounding exists to preserve. */
@@ -61,7 +61,7 @@ class LedgerTest {
 
         val itemProfitSum = ledger.items
             .filter { it.buyId == "box" }
-            .mapNotNull { ledger.itemStats(it).profit }
+            .map { ledger.itemStats(it).profit }
             .sum()
 
         assertEquals(Money(-1500), buyStats.profit)
@@ -145,12 +145,11 @@ class LedgerTest {
         // 85.00 that earned-minus-spent would have claimed.
         assertEquals(Money(1000), sellingDay.profit)
         assertTrue(sellingDay.profitIsEstimated, "shares of a box are guesses")
-        assertEquals(0, sellingDay.sellsOfUnknownCost)
     }
 
-    /** A shortcut sale is left out of the day's profit rather than counted as gain. */
+    /** A shortcut sale had no cost, so the day keeps the whole of what it took. */
     @Test
-    fun a_sale_with_no_buy_behind_it_is_left_out_of_the_days_profit() {
+    fun a_sale_with_no_buy_behind_it_counts_its_whole_price_as_the_days_profit() {
         val ledger = Ledger(
             events = listOf(event("2026-08-02", D1)),
             buys = listOf(buy("b1", price = 1000)),
@@ -164,8 +163,30 @@ class LedgerTest {
         val stats = ledger.eventStats(event("2026-08-02", D1))
 
         assertEquals(Money(6500), stats.earned)
-        assertEquals(Money(1500), stats.profit, "only the sale we know the cost of")
-        assertEquals(1, stats.sellsOfUnknownCost)
+        assertEquals(
+            Money(5500),
+            stats.profit,
+            "25.00 less the 10.00 it cost, plus the whole 40.00 nothing was paid for",
+        )
+    }
+
+    /**
+     * A deleted thing takes its cost with it, which leaves its sale in the same place
+     * as a sale of something we never recorded buying: nothing to set the price
+     * against. It counts for the whole of it, so the day still agrees with its rows.
+     */
+    @Test
+    fun a_sale_whose_item_is_gone_counts_its_whole_price_too() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1)),
+            sells = listOf(sell("s1", "gone", 4000)),
+        )
+
+        assertNull(
+            ledger.sellCost(ledger.sellsOfEvent("2026-08-02").single()),
+            "there is no item left to cost it against",
+        )
+        assertEquals(Money(4000), ledger.eventStats(event("2026-08-02", D1)).profit)
     }
 
     /**

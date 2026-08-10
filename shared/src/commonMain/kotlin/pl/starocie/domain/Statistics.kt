@@ -19,7 +19,12 @@ data class ItemStats(
     val cost: Money?,
     /** True when the cost is a share of a box rather than a measured price. */
     val costIsEstimated: Boolean,
-    val profit: Money?,
+    /**
+     * What the sales made. A thing with no buy behind it cost us nothing we ever
+     * recorded, so the whole of what it went for is what we made on it: [cost] stays
+     * the unknown it is, and the profit is the proceeds.
+     */
+    val profit: Money,
     val profitIsEstimated: Boolean,
     val soldAt: Instant?,
 )
@@ -42,7 +47,8 @@ data class BuyStats(
  *
  * [profit] is the real thing, and it is not that subtraction: it is each sale of the
  * day set against what the pieces it took had cost, item by item, which is the same
- * arithmetic [ItemStats.profit] does one thing at a time.
+ * arithmetic [ItemStats.profit] does one thing at a time. A sale we know no cost for
+ * counts for its whole price, the same way it does on the thing itself.
  */
 data class EventStats(
     val spent: Money,
@@ -54,13 +60,12 @@ data class EventStats(
     /** Pieces that went out, which is what [earned] is the price of. */
     val itemsSold: Int,
     /**
-     * What the day's sales made over what those things cost. Sales whose cost we do
-     * not know are left out of it entirely rather than counted as pure gain —
-     * [sellsOfUnknownCost] says how many, so a screen can admit the gap.
+     * What the day's sales made over what those things cost. Every sale is in it: one
+     * whose thing we never recorded buying cost us nothing on the books, so its price
+     * is the whole of what it made.
      */
     val profit: Money,
     val profitIsEstimated: Boolean,
-    val sellsOfUnknownCost: Int,
 )
 
 /** What the pieces one sale took had cost us. */
@@ -161,7 +166,9 @@ data class Ledger(
             proceeds = proceeds,
             cost = cost,
             costIsEstimated = estimated,
-            profit = cost?.let { proceeds - it },
+            // Nothing recorded going out means nothing to set the proceeds against,
+            // so what it went for is what we made on it.
+            profit = proceeds - (cost ?: Money.ZERO),
             profitIsEstimated = estimated,
             soldAt = itemSells.filter { it.soldCompletely }.maxOfOrNull { it.createdAt },
         )
@@ -197,18 +204,14 @@ data class Ledger(
 
         // Sale by sale against its own cost — never earned minus spent, which is two
         // unrelated days' worth of money and would read as profit while being no
-        // such thing.
+        // such thing. A sale with no cost behind it is set against nothing, so it
+        // counts for its whole price, exactly as it does on the thing's own screen.
         var profit = Money.ZERO
         var estimated = false
-        var unknown = 0
         for (sell in eventSells) {
             val cost = sellCost(sell)
-            if (cost == null) {
-                unknown++
-                continue
-            }
-            profit += sell.price - cost.cost
-            estimated = estimated || cost.isEstimated
+            profit += sell.price - (cost?.cost ?: Money.ZERO)
+            estimated = estimated || cost?.isEstimated == true
         }
 
         return EventStats(
@@ -222,7 +225,6 @@ data class Ledger(
             itemsSold = eventSells.sumOf { it.quantity },
             profit = profit,
             profitIsEstimated = estimated,
-            sellsOfUnknownCost = unknown,
         )
     }
 
@@ -266,7 +268,6 @@ data class Ledger(
             profit = Money(days.sumOf { it.profit.minor }),
             // One estimated share anywhere makes the whole total a guess.
             profitIsEstimated = days.any { it.profitIsEstimated },
-            sellsOfUnknownCost = days.sumOf { it.sellsOfUnknownCost },
         )
     }
 

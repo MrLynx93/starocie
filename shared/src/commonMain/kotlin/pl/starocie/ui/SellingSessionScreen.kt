@@ -177,9 +177,6 @@ internal fun SessionFigures(stats: EventStats) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    unknownCostNote(stats)?.let {
-        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-    }
 }
 
 /**
@@ -193,49 +190,24 @@ internal fun SessionFigures(stats: EventStats) {
 internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
     if (stats.sellCount == 0) return
 
-    val allUnknown = stats.sellsOfUnknownCost == stats.sellCount
     val lost = stats.profit.minor < 0
     val approx = if (stats.profitIsEstimated) "ok. " else ""
     val color = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
     Column(horizontalAlignment = Alignment.End) {
         Text(
-            text = when {
-                allUnknown -> "Nie wiemy"
-                lost -> "$approx${Money(-stats.profit.minor).format()}"
-                else -> "$approx${stats.profit.format()}"
+            text = if (lost) {
+                "$approx${Money(-stats.profit.minor).format()}"
+            } else {
+                "$approx${stats.profit.format()}"
             },
             style = style ?: MaterialTheme.typography.titleMedium,
-            color = if (allUnknown) MaterialTheme.colorScheme.onSurfaceVariant else color,
+            color = color,
         )
         Text(
-            text = when {
-                allUnknown -> "Ile zarobiliśmy"
-                lost -> "Straciliśmy"
-                else -> "Zarobiliśmy"
-            },
+            text = if (lost) "Straciliśmy" else "Zarobiliśmy",
             style = MaterialTheme.typography.bodySmall,
             color = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
-
-/**
- * What the profit above had to leave out.
- *
- * A sale of something we never recorded buying has no cost to be measured against, and
- * counting its whole price as gain would inflate the day every time a shortcut was
- * taken. It is left out instead, and this is the line that admits it.
- */
-internal fun unknownCostNote(stats: EventStats): String? = when {
-    stats.sellsOfUnknownCost == 0 -> null
-    stats.sellsOfUnknownCost == stats.sellCount -> "Nie wiemy, za ile to kupiliśmy"
-    else -> "Przy ${sprzedażach(stats.sellsOfUnknownCost)} nie wiemy, za ile kupiliśmy"
-}
-
-/**
- * The count rule once more, in the locative — it is only ever read after "przy":
- * "przy 1 sprzedaży", "przy 3 sprzedażach".
- */
-internal fun sprzedażach(count: Int): String =
-    "$count " + if (count == 1) "sprzedaży" else "sprzedażach"

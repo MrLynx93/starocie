@@ -159,10 +159,10 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
             val lost = stats.isALoss
 
             Text(
-                text = when {
-                    profit == null -> "Nie wiemy"
-                    lost -> "${approx(stats)}${Money(-profit.minor).format()}"
-                    else -> "${approx(stats)}${profit.format()}"
+                text = if (lost) {
+                    "${approx(stats)}${Money(-profit.minor).format()}"
+                } else {
+                    "${approx(stats)}${profit.format()}"
                 },
                 style = MaterialTheme.typography.titleMedium,
                 color = if (lost) {
@@ -172,11 +172,7 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
                 },
             )
             Text(
-                text = when {
-                    profit == null -> "Ile zarobiliśmy"
-                    lost -> "Straciliśmy"
-                    else -> "Zarobiliśmy"
-                },
+                text = if (lost) "Straciliśmy" else "Zarobiliśmy",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (lost) {
                     MaterialTheme.colorScheme.error
@@ -191,18 +187,14 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
 private fun approx(stats: ItemStats) = if (stats.profitIsEstimated) "ok. " else ""
 
 /**
- * What everything on screen made together, over the things we can cost.
+ * What everything on screen made together.
  *
- * A thing we never recorded buying has no cost to be measured against, so it is left
- * out rather than counted as pure gain — the same rule a giełda's profit follows. Its
- * own row says "nie wiemy", which is where the gap is admitted; here, when every one
- * of them is like that, there is nothing left to report but the gap.
+ * A thing we never recorded buying cost us nothing on the books, so the whole of what
+ * it went for is in here — the same rule a giełda's profit follows, and the same one
+ * its own row reads by.
  */
 private fun soldProfit(stats: List<ItemStats>): String {
-    val known = stats.mapNotNull { it.profit }
-    if (known.isEmpty()) return "Nie wiemy, ile zarobiliśmy"
-
-    val total = known.sum()
+    val total = stats.map { it.profit }.sum()
     // One share of a box anywhere makes the whole figure a guess.
     val approx = if (stats.any { it.profitIsEstimated }) "ok. " else ""
     return if (total.minor < 0) {

@@ -249,33 +249,29 @@ private fun SessionSellRow(
 
 /**
  * What this one sale made, kept out of the pair it is drawn from — a loss said as a
- * loss rather than written as a negative gain, and an unknown cost leaving the answer
- * unknown rather than counting the whole price as profit.
+ * loss rather than written as a negative gain. A sale with no cost behind it is set
+ * against nothing, so its whole price is what it made; the line above still says we do
+ * not know what it had cost.
  */
 @Composable
 private fun SellProfit(sell: Sell, cost: SellCost?) {
-    val profit = cost?.let { sell.price - it.cost }
-    val lost = profit != null && profit.minor < 0
+    val profit = sell.price - (cost?.cost ?: Money.ZERO)
+    val lost = profit.minor < 0
     val approx = if (cost?.isEstimated == true) "ok. " else ""
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val strong = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
     Column(horizontalAlignment = Alignment.End) {
         Text(
-            text = when {
-                profit == null -> "Nie wiemy"
-                lost -> "$approx${Money(-profit.minor).format()}"
-                else -> "$approx${profit.format()}"
+            text = if (lost) {
+                "$approx${Money(-profit.minor).format()}"
+            } else {
+                "$approx${profit.format()}"
             },
             style = MaterialTheme.typography.titleMedium,
-            color = if (profit == null) muted else strong,
+            color = if (lost) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = when {
-                profit == null -> "Ile zarobiliśmy"
-                lost -> "Straciliśmy"
-                else -> "Zarobiliśmy"
-            },
+            text = if (lost) "Straciliśmy" else "Zarobiliśmy",
             style = MaterialTheme.typography.bodySmall,
             color = if (lost) MaterialTheme.colorScheme.error else muted,
         )
