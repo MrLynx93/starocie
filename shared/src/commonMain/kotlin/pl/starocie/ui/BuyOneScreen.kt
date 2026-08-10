@@ -169,11 +169,18 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(10.dp))
 
+                // A lot's ask is what *one* of them goes for — the sale multiplies it
+                // by however many are handed over — so the label has to say so, or
+                // the number reads as the price of the whole pile.
                 OutlinedTextField(
                     value = state.askingText,
                     onValueChange = viewModel::onAskingChange,
                     singleLine = true,
-                    label = { Text("Chcemy sprzedać za") },
+                    label = {
+                        Text(
+                            if (state.splittable) "Chcemy sprzedać za sztukę" else "Chcemy sprzedać za",
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(askingFocus),

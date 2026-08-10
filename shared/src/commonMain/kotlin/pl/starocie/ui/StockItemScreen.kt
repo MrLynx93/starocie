@@ -192,7 +192,9 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             Spacer(Modifier.height(10.dp))
 
             MoneyField(
-                label = "Chcemy sprzedać za",
+                // On a lot this is the price of one piece — the sell dialog
+                // multiplies it by the count — so the label says which it is.
+                label = if (item.splittable) "Chcemy sprzedać za sztukę" else "Chcemy sprzedać za",
                 text = askingText,
                 onTextChange = { askingText = it },
                 saved = item.price,
@@ -201,7 +203,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 // one thing standing between this screen and "Sprzedaj". A lot is
                 // sold a piece at a time, at a price this field never held.
                 hint = when {
-                    item.splittable -> "Sprzedajemy po kawałku, więc cenę podamy przy sprzedaży."
+                    item.splittable -> "Sprzedajemy po kawałku — przy sprzedaży podamy, ile sztuk."
                     asking == null -> "Wpiszmy cenę, a sprzedamy jednym tapnięciem."
                     else -> null
                 },

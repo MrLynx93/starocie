@@ -158,11 +158,25 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
                 // Where the buy form asks what we want for it, this one already
                 // knows: the same slot, filled in with what it actually went for.
+                //
+                // What the number covers depends on the tick below it: a lot handed
+                // over whole is one price for all of them, and a lot we are keeping
+                // the rest of is the price of the piece going now. The label says
+                // which, because the two are the same field and differ by a factor
+                // of however many there are.
                 OutlinedTextField(
                     value = form.priceText,
                     onValueChange = { viewModel.onNewItemChange(form.copy(priceText = it)) },
                     singleLine = true,
-                    label = { Text("Sprzedajemy za") },
+                    label = {
+                        Text(
+                            when {
+                                !form.splittable -> "Sprzedajemy za"
+                                form.soldCompletely -> "Sprzedajemy za wszystkie ${sztuki(form.quantity)}"
+                                else -> "Sprzedajemy za sztukę"
+                            },
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(priceFocus),

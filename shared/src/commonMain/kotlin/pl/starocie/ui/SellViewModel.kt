@@ -32,8 +32,15 @@ data class NewItemForm(
     val quantityText: String = "1",
     val note: String = "",
     val photo: String? = null,
-    /** Only meaningful for a lot; a single thing is always sold in full. */
-    val soldCompletely: Boolean = false,
+    /**
+     * Only meaningful for a lot; a single thing is always sold in full.
+     *
+     * It starts ticked, because a lot entered *here* is a lot being handed over
+     * here: nothing was in the app a moment ago, so there is no pile left behind
+     * to come back to. Unticking it is the rarer answer — we brought five, sold
+     * two, and the other three are going home with us.
+     */
+    val soldCompletely: Boolean = true,
 ) {
     /** What was paid for it, if that is known at all. */
     val paid: Money? get() = parseMoney(paidText)

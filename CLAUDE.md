@@ -60,6 +60,12 @@ before that change are still in Firestore and must keep loading.
 1. **`Item.price` is the asking price, never what the item cost.** There is no cost
    field on `Item` at all. Cost lives on `Buy` and only on `Buy`. Label it "asking
    price" in the UI, because "price" on a thing instinctively reads as cost.
+   **On a lot it is the price of one piece**, which is what makes the sell dialog
+   able to multiply it by the count. Nothing stores that distinction — a lot is
+   simply a `quantity` above one — so every field holding this number says which it
+   is: "Chcemy sprzedać za sztukę" against "Chcemy sprzedać za". The two differ by
+   a factor of however many there are, and a mislabelled one is a stall selling
+   twelve plates for the price of one.
 2. **Unknown cost stays unknown.** An item with no `buyId` was invented at point of
    sale; its cost and profit are `null`, never zero. Reporting such a sale as pure
    profit would inflate margins every time a shortcut is taken — exactly the
@@ -725,6 +731,11 @@ write nothing until their main button is pressed.
   item with no buy, so the cost stays unknown rather than becoming zero. A stated
   price opens a buy holding only that item, so its cost is exact and the allocator
   is never involved.
+  **A count above one arrives with "Sprzedane w całości" already ticked.** The
+  checkbox only shows for a lot, and a lot recorded here is a lot being handed over
+  here — it was not in the app a moment ago, so there is no pile left behind for it
+  to stay in the magazyn for. Unticking it is the rarer answer: we brought five, two
+  went, and three are coming home.
 - **Buying splits in two, but there is only one item form.** "Kup" records one
   thing at one price and clears for the next, so its cost is exact and the
   allocator is not involved. "Kup paczkę" is a two-step wizard: the price first, which
