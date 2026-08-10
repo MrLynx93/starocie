@@ -215,7 +215,7 @@ internal fun DateField(
 
 /** A fact, not a control: the label on the left and the value on the right. */
 @Composable
-internal fun Detail(label: String, value: String, hint: String? = null) {
+internal fun Detail(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -226,16 +226,11 @@ internal fun Detail(label: String, value: String, hint: String? = null) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 16.dp)) {
-            Text(value, style = MaterialTheme.typography.bodyLarge)
-            hint?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 16.dp),
+        )
     }
     HorizontalDivider()
 }

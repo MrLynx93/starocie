@@ -158,7 +158,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                     } else {
                         "${stats.sellCount} × · ${stats.proceeds.format()}"
                     },
-                    hint = "Zostaje w magazynie, aż pójdzie ostatnia sztuka.",
                 )
             }
 
@@ -197,14 +196,9 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 onTextChange = { askingText = it },
                 saved = item.price,
                 placeholder = "Jeszcze nie wiemy",
-                // It is also the price a sale goes out at, so an empty one is the
-                // one thing standing between this screen and "Sprzedaj". A lot is
-                // sold a piece at a time, at a price this field never held.
-                hint = when {
-                    item.splittable -> "Sprzedajemy po kawałku — przy sprzedaży podamy, ile sztuk."
-                    asking == null -> "Wpiszmy cenę, a sprzedamy jednym tapnięciem."
-                    else -> null
-                },
+                // A lot is sold a piece at a time, at a price this field never held.
+                hint = "Sprzedajemy po kawałku — przy sprzedaży podamy, ile sztuk."
+                    .takeIf { item.splittable },
                 onSave = { viewModel.setAskingPrice(item.id, it) },
             )
 
