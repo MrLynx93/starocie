@@ -42,7 +42,8 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * The photo of the thing in front of you. Empty, it is a large camera target —
  * large because it is meant to be hit one-handed while holding the object. Filled,
- * tapping opens it full-screen, and the overlay buttons retake or remove it.
+ * tapping opens it full-screen, and the buttons down its right-hand edge retake it,
+ * ask Google what it is, or throw it away.
  *
  * A null [onCapture] drops the camera, which is what a thing already sold wants:
  * the picture is worth keeping and worth looking at, but there is nothing left in
@@ -57,6 +58,7 @@ fun PhotoArea(
 ) {
     val bitmap = remember(photo) { photo?.let { decodePhoto(it) } }
     var viewing by remember { mutableStateOf(false) }
+    val search = rememberPhotoSearch()
 
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -74,10 +76,14 @@ fun PhotoArea(
                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
                 )
 
+                // Down the right-hand edge rather than across the top: a row of
+                // three starts covering the thing in the picture, which is the one
+                // part of this card that has to stay readable.
+                //
                 // Tonal buttons rather than plain icons: a bare icon disappears
                 // against a photo of the wrong brightness.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
                 ) {
                     onCapture?.let {
@@ -85,6 +91,23 @@ fun PhotoArea(
                             Icon(Icons.Filled.PhotoCamera, contentDescription = "Zmień zdjęcie")
                         }
                     }
+                    // Asking Google what the thing is. Offered wherever there is a
+                    // photo, including on something already sold — "what was that,
+                    // and what do people ask for one" outlives the sale.
+                    search?.let { ask ->
+                        FilledTonalIconButton(onClick = { photo?.let(ask) }) {
+                            // Image, not Icon: an Icon tints what it draws, and
+                            // Google's mark may not be recoloured.
+                            Image(
+                                imageVector = GoogleLogo,
+                                contentDescription = "Poszukaj w Google",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                    // The bin sits last, furthest from the two that only look
+                    // things up: it is the one button here that takes something
+                    // away, and a thumb reaching for the camera must not find it.
                     onClear?.let {
                         FilledTonalIconButton(onClick = it) {
                             Icon(Icons.Filled.Delete, contentDescription = "Usuń zdjęcie")

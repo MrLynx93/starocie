@@ -266,7 +266,21 @@ this scale — so the picture rides in the document instead:
 - **that size is a footprint multiplier**, because every item is held in memory:
   comfortable for a few hundred photographed items, not for a few thousand. Past
   that, photos belong in Cloud Storage with only URLs in the document
-- tapping a photo opens it full-screen; overlay buttons retake or remove it
+- tapping a photo opens it full-screen; buttons down its right-hand edge retake it,
+  ask Google what it is, or throw it away — stacked rather than in a row, because
+  three across the top start covering the thing in the picture, and the bin sits
+  last so a thumb reaching for the camera never finds it
+- **the Google button is a search by image, and it cannot be a browser URL.**
+  Google's reverse image search takes a *public* URL or an upload, and this photo is
+  neither — it exists only as Base64 inside the document. So the picture is handed
+  over as an image: on Android a `content://` file from the cache, sent to the
+  Google app, which is what turns a shared image into a Lens search; on iOS the
+  share sheet, since an app cannot name another app's share target. The manifest
+  has to name the Google app in `<queries>` or Android 11's package visibility
+  makes it invisible and every phone falls back to the chooser. `rememberPhotoSearch`
+  returns null where the platform cannot do it, the way `rememberGoogleSignIn` does.
+  A move to Cloud Storage would make `lens.google.com/uploadbyurl` possible, and
+  that one file is where it would go
 - being part of the document, it syncs like everything else, so both phones see
   it — which local-only files would not have achieved
 
@@ -672,7 +686,8 @@ write nothing until their main button is pressed.
   rid of, and erasing a sold item would only lose the proceeds it is the record of.
   The photo shows if there is one, with the bin but **no camera**: an empty capture
   target on something that is no longer ours would invite photographing somebody
-  else's.
+  else's. The Google button stays, though — "what was that, and what do people ask
+  for one" is a question that outlives the sale.
 - **Giełdy** — the third home card, "Mamy za sobą 12 giełd", over a list of the
   events themselves, newest first. The other two lists answer questions about
   things; this one answers them about days, and an `Event` is the app's only notion

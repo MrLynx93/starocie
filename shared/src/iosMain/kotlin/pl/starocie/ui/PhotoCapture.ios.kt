@@ -98,8 +98,11 @@ private fun cameraOrLibrary(): UIImagePickerControllerSourceType {
 /**
  * Compose owns the single root controller, but presenting over an already-presented
  * controller is rejected, so the chain is walked to its end first.
+ *
+ * Shared with the share sheet in `PhotoSearch.ios.kt`: anything presented over the
+ * app has the same problem to solve, and two answers to it would drift.
  */
-private fun topViewController(): UIViewController? {
+internal fun topViewController(): UIViewController? {
     val windows = UIApplication.sharedApplication.connectedScenes
         .filterIsInstance<UIWindowScene>()
         .flatMap { it.windows.filterIsInstance<UIWindow>() }
