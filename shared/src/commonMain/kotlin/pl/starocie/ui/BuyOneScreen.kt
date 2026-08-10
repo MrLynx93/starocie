@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,12 +131,19 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 // One line: a long name scrolls sideways within it rather than
                 // giving the form a field twice the height of every other one. Enter
                 // moves on to the price — there is no second line to open.
+                //
+                // The keyboard opens shifted, the way it does for a sentence: a name
+                // is written down as a name, and a list of lowercase ones reads as
+                // notes to self rather than a record of what we have.
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
                     singleLine = true,
                     label = { Text("Nazwa") },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Next,
+                    ),
                     keyboardActions = KeyboardActions(onNext = { moveOnToPrice() }),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),

@@ -564,6 +564,11 @@ write nothing until their main button is pressed.
   for `Next` *and* handles it — the keyboard type alone leaves it a dead key. Saving
   gives the name focus with the keyboard, because a run of purchases is a run of
   typing.
+  **A name field opens the keyboard shifted** — `KeyboardCapitalization.Sentences`,
+  here and on the sell-new-item form and the giełda's name alike. A name is written
+  down as a name, and a magazyn of lowercase ones reads as notes to self rather than
+  a record of what we have. It is the shift key pressed for you, not a rule: what is
+  typed still stands, so a name that genuinely starts small is one backspace away.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
   root column, the buy buttons are exactly what ends up underneath it.
