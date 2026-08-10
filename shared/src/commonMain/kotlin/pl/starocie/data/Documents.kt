@@ -37,6 +37,29 @@ internal data class EventDoc(
     val updatedAt: Long = 0,
 )
 
+/**
+ * What it takes to say a day exists, and deliberately nothing more.
+ *
+ * Recording a buy or a sell merges one of these into that day's document so the day
+ * is certainly there. It carries **no `name` and no `note`**: those belong to
+ * whoever typed them, this write knows nothing about them, and a merge writes every
+ * field it is handed.
+ *
+ * That is not a precaution, it is a repair. [EventDoc] has `name` defaulting to
+ * null and GitLive's encoder has `encodeDefaults = true`, so merging a whole
+ * [EventDoc] really did send `name: null` — and a giełda named on the way home lost
+ * its name to the next thing recorded that day. Merging cannot be trusted to leave
+ * a field alone; only not naming the field does that.
+ */
+@Serializable
+internal data class EventStubDoc(
+    val id: String = "",
+    val date: String = "",
+    val createdBy: String = "",
+    val createdAt: Long = 0,
+    val updatedAt: Long = 0,
+)
+
 @Serializable
 internal data class BuyDoc(
     val id: String = "",

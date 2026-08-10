@@ -426,13 +426,11 @@ class FirestoreLedgerRepository(
     }
 
     /**
-     * Writes today's event with `merge`, keyed by its ISO date.
+     * The bucket for purchases that predate the books. Merged, so it is written once.
      *
-     * The deterministic id is what makes this safe offline: two phones at the same
-     * market both write `2026-08-01` rather than inventing separate events, and
-     * merge means whichever arrives second does not clobber a name already set.
+     * This one does send a name, and may: "Dawno temu" is a constant this write owns
+     * rather than anything a person typed, so re-asserting it can destroy nothing.
      */
-    /** The bucket for purchases that predate the books. Merged, so it is written once. */
     private fun setLongAgoEvent(batch: WriteBatch, at: Instant) {
         val event = Event(
             id = LongAgo.EVENT_ID,
@@ -445,16 +443,30 @@ class FirestoreLedgerRepository(
         batch.set(eventsRef.document(event.id), event.toDoc(), merge = true)
     }
 
+    /**
+     * Guarantees today's event exists, keyed by its ISO date.
+     *
+     * The deterministic id is what makes this safe offline: two phones at the same
+     * market both write `2026-08-01` rather than inventing separate events, so they
+     * converge instead of producing two of one day.
+     *
+     * It merges an [EventStubDoc] rather than a whole [EventDoc], and that is the
+     * whole point of the type: a merge writes every field it is handed, `name`
+     * included, and an [EventDoc] built here has no name to hand it. This ran on
+     * every buy and every sell, so a giełda named on the way home was blanked by
+     * the next thing recorded on it — the app deleting what somebody had typed,
+     * with nothing on screen to say so.
+     */
     private fun setEvent(batch: WriteBatch, at: Instant) {
         val date = events.dateOf(at)
-        val event = Event(
+        val stub = EventStubDoc(
             id = events.eventIdFor(date),
-            date = date,
+            date = date.toString(),
             createdBy = userId,
-            createdAt = at,
-            updatedAt = at,
+            createdAt = at.toEpochMilliseconds(),
+            updatedAt = at.toEpochMilliseconds(),
         )
-        batch.set(eventsRef.document(event.id), event.toDoc(), merge = true)
+        batch.set(eventsRef.document(stub.id), stub, merge = true)
     }
 
     /**

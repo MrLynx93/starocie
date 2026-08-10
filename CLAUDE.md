@@ -230,6 +230,23 @@ device would invent its own "today" and produce duplicate events for one day. A
 deterministic id means both write the same document and converge on reconnect. Use
 `SetOptions.merge`. Extra events on a day are user-created and get UUIDs.
 
+**Merge protects nothing — the fields you send do.** A merge leaves alone only what
+it is *not* handed, and GitLive's encoder has `encodeDefaults = true`, so a
+`@Serializable` doc whose `name` defaults to null really does send `name: null` and
+really does blank the stored one. This write runs on every buy and every sell, so
+merging a whole `EventDoc` meant a giełda named on the way home lost its name to the
+next thing recorded that day — the app quietly deleting what somebody had typed,
+with nothing on screen to say so. It therefore merges an **`EventStubDoc`**: id,
+date, `createdBy` and the stamps, and no `name` or `note` at all, because what a
+stamp carries is the whole of what it can destroy. `setLongAgoEvent` does send a
+name and may — "Dawno temu" is a constant that write owns, not anything a person
+typed.
+
+Nothing caught this, and the reason is worth keeping: every repository test runs
+against `InMemoryLedgerRepository`, whose `ensureEvent` creates a day only when it
+is absent and so cannot have the bug. The two implementations agreeing is
+maintained by hand — see the note on that under Architecture.
+
 ## Photos
 
 Optional and supplementary — an item is found by typing its name, never by
