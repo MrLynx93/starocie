@@ -69,7 +69,7 @@ before that change are still in Firestore and must keep loading.
    left in it is a price with nothing to be the cost of; a box therefore survives
    until the last thing out of it is deleted too. The cost of this is real and
    accepted: a `Sell` against a deleted item is left unresolvable, so its row reads
-   "—" and its profit "nie wiemy" while its proceeds still count toward the event.
+   "—" and its profit "Nie wiemy" while its proceeds still count toward the event.
    Screens must degrade to an unknown here, never assume `itemById` resolves.
 4. **Nothing derivable is stored** — no denormalised names, no device paths, no
    cached statistics. The inline photo is an exception only in appearance: it is
@@ -155,6 +155,7 @@ Firebase and identical on every platform.
   `fullyResolved`
 - `Event.stats` — `spent`, `earned`, `buyCount`, `sellCount`, `itemsBought`,
   `itemsSold`, `profit`, `profitIsEstimated`, `sellsOfUnknownCost`
+- `Ledger.overallStats()` — every giełda at once, in `EventStats`' own shape
 - `Ledger.sellCost(sell)` — what one sale's pieces had cost, or null
 
 Buy-level profit is never an estimate — measured cost against measured proceeds.
@@ -171,6 +172,12 @@ of the day's sales set against what its own pieces cost, which is the arithmetic
 `Item.stats.profit` does one thing at a time. A sale whose cost is unknown is left
 **out of it** rather than counted as pure gain — `sellsOfUnknownCost` says how many,
 and a screen showing the profit must admit that gap.
+
+`overallStats` answers the home screen's third card, and it **sums the days rather
+than the sales**: an event is the sole grouping, so every sale belongs to exactly one
+day and no sale can fall outside the total or land in it twice. It returns
+`EventStats` — the fields all still mean what they mean for one day — so the card and
+the giełdy list cannot disagree, and the unknown-cost gap travels with the figure.
 
 `sellCost` splits an item's cost across its sales by pieces, the unsold ones holding
 their share back, using the same largest-remainder rounding a box does. That is what
@@ -420,18 +427,29 @@ speaks as us, never at the user:
 - fields and readouts say what *we* did or want: "Kupiliśmy za", "Chcemy sprzedać
   za", "Sprzedaliśmy za", "Mamy 12 przedmiotów"
 - hints keep the same person — "Wpisujemy po kolei", "Nie wiemy, za ile
-  kupiliśmy? Zostawmy puste" — never "Zacznij pisać", "Nie wiesz", "Sprzedasz"
+  kupiliśmy? Zostawmy puste" — never "Zacznij pisać", "Nie wiesz"
 - **buttons stay imperative** ("Zapisz", "Wstecz", "Anuluj", "Usuń"): a button is
   an instruction to the app, and "Zapiszmy" reads as a suggestion rather than a
   control
+- **a read-out starts with a capital** — "Kupiliśmy za ok. 12,00 zł",
+  "Zarobiliśmy", "Zostało 9 z 12 szt." A line under a name is a sentence about
+  that thing, and a lowercase one reads as a fragment of a heading it does not
+  belong to. What continues a sentence after a `+` stays lowercase, being genuinely
+  the middle of one: "… · w 3 kawałkach"
 - friendly and plain-spoken. Say what happened rather than name a quantity: a loss
-  is "straciliśmy 5,00 zł", not "zysk -5,00 zł". An unknown is "nie wiemy"
+  is "Straciliśmy 5,00 zł", not "zysk -5,00 zł". An unknown is "Nie wiemy"
 - an estimate always says so — "ok. 12,00 zł", with what makes it a guess spelled
   out underneath
 - a thing in stock is a **przedmiot**, never a "rzecz" — one word for it everywhere
 - count words agree with the number (`przedmioty(n)`, which carries the full
   1 / 2–4 / rest rule and the teens exception); "1 przedmiotów" is the small
   wrongness that makes an app feel like a machine
+
+**One line breaks the "we" form on purpose**: the paczka screen's last-chance hint
+addresses one person — "Sprzedajesz to jako jedną pozycję? Wróć i wybierz «Kup»".
+It is the only second-person text in the app. It is not the notebook saying what we
+did; it is the app catching somebody about to take the wrong door, and "Wróć" is
+the same imperative a button uses. A second one of these is drift, not a pattern.
 
 ## Screens
 
@@ -446,12 +464,22 @@ write nothing until their main button is pressed.
   right-hand end: it is the only app-wide setting there is, and a top bar to hold
   one button would cost every screen height it earns nothing with. The icon shows
   what the tap *gives* you — a sun to go bright, a moon to go dark.
-  The current event's name or date sits under it
-  as a caption: it says which day the figures belong to and is not a control. The
-  round buttons align their icon and label to the left edge, so three labels of
-  different lengths read as one stack rather than three unrelated buttons. Three
-  summary cards sit under the day — stock, sold and giełdy — each a read-out with
-  its list behind it, then recent activity.
+  **Nothing about today sits under the title.** There used to be the current event's
+  name and, beneath it, what that day spent and took; both are gone. The screen
+  answers for everything we have, not for one day, and a pair of figures side by
+  side invites exactly the subtraction that is never profit.
+  The round buttons — "Kup paczkę", "Kup", "Sprzedaj" — align their icon and label
+  to the left edge, so three labels of different lengths read as one stack rather
+  than three unrelated buttons. Three summary cards follow, each a read-out with its
+  list behind it, then recent activity:
+  **"Mamy 12 przedmiotów" / "Chcemy sprzedać za łącznie …"**,
+  **"Sprzedaliśmy 12 przedmiotów" / "Sprzedaliśmy za łącznie …"**, and
+  **"Mamy za sobą 12 giełd" / "Zarobiliśmy na nich ok. …"**.
+  The third card is the only one showing profit rather than a total, so it is the
+  only one that can be short of an answer: a loss says "Straciliśmy na nich", every
+  sale uncosted says "Nie wiemy, ile zarobiliśmy", and *some* of them uncosted adds
+  a third line naming how many the figure had to leave out — in the giełdy list's
+  own words, since it is the same shortfall.
 - **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact
@@ -460,11 +488,22 @@ write nothing until their main button is pressed.
   which is nearly always the day it happened; the field earned a tap on every
   purchase to correct the rare one. `Buy.date` and `Item.date` stay editable in the
   model for a later edit screen — the entry forms simply do not ask.
-  **A name and a price are both required**, and "Kup" is disabled without them:
-  the price is the one number you cannot fail to know while buying, and a blank
-  there would be a skipped field rather than an honest unknown. It stays disabled
-  on an untouched form too — it used to be the only way back out, and "Wstecz" is
-  that now, so it no longer has to double as an exit.
+  **A name and a price are both required**, and both buy buttons are disabled
+  without them: the price is the one number you cannot fail to know while buying,
+  and a blank there would be a skipped field rather than an honest unknown. Neither
+  stays enabled on an untouched form — one of them used to be the only way back
+  out, and "Wstecz" is that now, so nothing here has to double as an exit. Filling
+  a box is the exception the same rule makes: the price field is not on screen, so
+  it is not waited for.
+  **Two buy buttons, and they differ only in what happens next.** "Kup i kupuj
+  dalej" records the thing and clears the form for the following one, its arrow
+  pointing the opposite way from "Wstecz"'s; "Kup" records it and leaves. A run of
+  purchases and a single one are both one tap per thing, and neither is the door
+  out — that is "Wstecz", underneath them.
+  The name field is labelled **"Nazwa"**, and a plain buy says nothing under the
+  heading: the form explains itself. Only a box ("Wpisujemy po kolei — same
+  trafiają do paczki.") and a run in progress ("Zapisaliśmy w tej serii: 3") have
+  anything to add.
   The count sits beside what was paid: one lot, one price, so many things. A box
   was paid for once, so there the count stands alone.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
@@ -475,7 +514,7 @@ write nothing until their main button is pressed.
   with the keyboard, because a run of purchases is a run of typing.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
-  root column, "Zapisz" is exactly what ends up underneath it.
+  root column, the buy buttons are exactly what ends up underneath it.
 - **Stock and Sell are one screen.** They were the same `IN_STOCK` list twice —
   a search box for selling, a browse list for looking — and typing a name is how a
   thing is found either way, so the search belongs to both. Newest first, a heading
@@ -483,8 +522,8 @@ write nothing until their main button is pressed.
   row that did one thing from one door and something else from the other is exactly
   the kind of difference that gets learned wrong once and then costs money. The
   photo is no longer a separate target, having nowhere else to go.
-  **A row carries what we paid**, the way the sold list does — "kupiliśmy za",
-  "kupiliśmy za ok." for a share of a box, "nie wiemy, za ile kupiliśmy" — because
+  **A row carries what we paid**, the way the sold list does — "Kupiliśmy za",
+  "Kupiliśmy za ok." for a share of a box, "Nie wiemy, za ile kupiliśmy" — because
   the asking price alone does not say whether there is a gap worth stopping at.
   The count and the total are computed over **what is on screen**, so a search
   answers for what it found rather than for the whole magazyn.
@@ -508,12 +547,22 @@ write nothing until their main button is pressed.
   **save half a second after the typing stops**, with no confirm button: Firestore
   takes the write locally anyway, and a price change that depends on remembering to
   press something is a price change that gets lost.
-  **"Sprzedaj" here sells in one tap**, at whatever stands in the asking-price
-  field, and asks nothing in between — the number is already on screen and already
-  editable, so a dialog would only be a second place to type it. The button waits
-  for a price, since without one there is nothing to sell at. The field's text is
-  held by the screen rather than the field, so a price typed and sold on in the same
-  motion goes out at the new number instead of racing the half-second save.
+  **"Sprzedaj" here sells at whatever stands in the asking-price field**, and asks
+  exactly one question about it: "Czy chcesz sprzedać ten przedmiot za 45,00 zł?",
+  answered with Sprzedaj or Anuluj. The number is already on screen and already
+  editable, so the dialog is not a second place to type it — it is the one place to
+  agree to it, a sale being the one irreversible thing a thumb can do here without
+  meaning to. **The price is captured when the button is pressed**, not read again
+  when the answer comes, so the field's half-second save cannot change what was
+  agreed to underneath the dialog. The button waits for a price, since without one
+  there is nothing to sell at. The field's text is held by the screen rather than
+  the field, so a price typed and sold on in the same motion goes out at the new
+  number instead of racing that save.
+  **A giełda that has been and gone offers no "Sprzedaj" at all.** An item opened
+  from a day's screen shows everything else — the photo, both prices, "Usuń" — but
+  not that button: a sale started there would be dated today and counted in today's
+  takings, not in the day being read. The route carries the flag (`StockItemRoute`'s
+  `selling`, defaulting to true), the way the magazyn's two doors already do.
   **A lot is the one exception, and the only thing the sell dialog is still for**:
   a piece goes at its own price, so "Sprzedaj" opens the dialog instead. The
   **count leads it** — a stepper starting at 1, reading "z 9" beside it — because
@@ -537,7 +586,7 @@ write nothing until their main button is pressed.
   from nowhere, the pieces in your hand outrank a number typed at a stall, and the
   sale is how we find out — so it is the correction, not an error.
   A half-sold lot shows what is left rather than what it started as, in the list
-  ("zostało 9 z 12 szt.") and above the item ("Zostało 9 z 12 szt.").
+  ("Zostało 9 z 12 szt.") in the list and above the item alike.
   What was paid is the **buy's** price, not the item's, and the field says which it
   is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
   "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a
@@ -548,14 +597,23 @@ write nothing until their main button is pressed.
   **Removing lives here and nowhere else.** It used to sit inside the sell dialog,
   a thumb-width from the price field, where the one screen you reach by hunting
   for something to sell also offered the button that resolves an item with no
-  proceeds. Selling stays one tap; deleting a thing costs a deliberate detour and a
-  confirmation, and its button is **red and says only "Usuń"** — it destroys a
-  record now, so it must not read like the neutral way out directly beneath it.
+  proceeds. Both now confirm, and they are still not alike: selling asks about a
+  number and deleting asks about the record itself, whose button is **red and says
+  only "Usuń"** — it destroys something, so it must not read like the neutral way
+  out directly beneath it.
   The detail screen leaves by itself the moment its item stops being `IN_STOCK` or
   stops existing, so a completed sale or a deletion lands back in the list; a lot
   sold in part stays put and shows the extra sale.
 - **Sold** — the mirror of the stock list, reached from the second home card:
-  everything `SOLD`, newest sale first. Each row answers "was it worth it" without
+  everything `SOLD`, newest sale first, **with the magazyn's search over it**. It
+  shares that list's predicate — name or note, case-insensitive, in memory — so the
+  two can never answer differently about the same typing. Over the box sit the two
+  figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
+  "Zarobiliśmy ok. 240,00 zł", **both computed over what is on screen**, so a search
+  answers for what it found. The profit leaves out anything it cannot cost rather
+  than counting it as gain — the row itself says "Nie wiemy" — and when that is all
+  of them the line says so instead of naming a figure.
+  Each row answers "was it worth it" without
   a tap: **the pair it is drawn from on the left**, what we paid above what we took,
   and **the profit alone on the right**, said as a loss rather than written as a
   negative gain when it is one. A share of a box is marked "ok." on both, so a guess
@@ -577,8 +635,13 @@ write nothing until their main button is pressed.
   takings. Correcting the buying date moves the **buy** with it only when that buy
   holds this item alone; a box was bought once, whatever one thing out of it turns
   out to be dated.
+  **A single thing carries no headings** — four fields, each labelled, and a
+  "Kupiliśmy"/"Sprzedaliśmy" divider above them would only name what the labels
+  already say. A lot earns them back, having several sales to tell apart, and its
+  selling heading carries the total — "Sprzedaliśmy za 806,00 zł w 3 kawałkach" —
+  which is why nothing adds the sales up again underneath them.
   A lot that went in several sales gets a date and a price **per sale**, each
-  happening on its own day for its own money, with the total underneath.
+  happening on its own day for its own money.
   There is **no "Usuń"** here — deleting belongs where a thing still exists to be got
   rid of, and erasing a sold item would only lose the proceeds it is the record of.
   The photo shows if there is one, with the bin but **no camera**: an empty capture
@@ -599,10 +662,11 @@ write nothing until their main button is pressed.
   **A row opens the day**, onto its own screen — the magazyn's list and the sold list
   narrowed to it, in two sections, with the same rows and the same wording. A row
   there opens the thing, in the magazyn's item screen or the sold one depending on
-  where it is now, so a day is a way *into* the records rather than a second reading
-  of them. A sale carries its own share of the cost, so a lot that went across three
-  giełdy shows a third of itself at each; a sale whose item has been deleted reads
-  "—" and opens nothing.
+  where it is now — **minus the way to sell it**, since the day it would be sold
+  into is not the day on screen. A day is a way *into* the records rather than a
+  second reading of them, and correcting one is what it is for. A sale carries its
+  own share of the cost, so a lot that went across three giełdy shows a third of
+  itself at each; a sale whose item has been deleted reads "—" and opens nothing.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
@@ -621,6 +685,10 @@ write nothing until their main button is pressed.
   opens the buy, then *the same item screen* with the price field hidden and items
   appended to that buy. Unpacking a box is deliberately the same motion as buying
   things one at a time.
+  The price step says what it is asking for and what it is giving up — "Podaj cenę
+  za całą paczkę łącznie… (Nie znamy cen pojedynczych przedmiotów w kupionej
+  paczce)" — because that is the whole difference between the two doors, and it is
+  the last cheap moment to notice you took the wrong one.
 - The box's buy is created **before** its contents are known, so each item is saved
   as it is unpacked. Accumulating drafts and writing them at the end would lose the
   lot if the user backed out.
