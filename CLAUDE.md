@@ -640,17 +640,19 @@ write nothing until their main button is pressed.
   **save half a second after the typing stops**, with no confirm button: Firestore
   takes the write locally anyway, and a price change that depends on remembering to
   press something is a price change that gets lost.
-  **"Sprzedaj" here sells at whatever stands in the asking-price field**, and asks
-  exactly one question about it: "Czy chcesz sprzedać ten przedmiot za 45,00 zł?",
-  answered with Sprzedaj or Anuluj. The number is already on screen and already
-  editable, so the dialog is not a second place to type it — it is the one place to
-  agree to it, a sale being the one irreversible thing a thumb can do here without
-  meaning to. **The price is captured when the button is pressed**, not read again
-  when the answer comes, so the field's half-second save cannot change what was
-  agreed to underneath the dialog. The button waits for a price, since without one
-  there is nothing to sell at. The field's text is held by the screen rather than
-  the field, so a price typed and sold on in the same motion goes out at the new
-  number instead of racing that save.
+  **"Sprzedaj" here opens the sell dialog on the asking price**, and the price
+  there is **a field, "Sprzedajemy za", pre-filled with what the item is asked at**
+  rather than a sentence reading the number back. What a thing goes for is agreed
+  across a table, and it is often not what we were asking; correcting the ask first
+  and then selling is two motions for one moment, and the second of them is the one
+  that gets forgotten. So the sale is where the price is finally said, and Sprzedaj
+  / Anuluj still make it the deliberate answer a sale needs. **The price the dialog
+  opens with is captured when the button is pressed**, not read again afterwards, so
+  the field's half-second save cannot move it underneath the dialog — and the field's
+  text is held by the screen rather than by the field, so a price typed and sold on
+  in one motion opens the dialog at the new number instead of racing that save.
+  **The button waits for nothing**: an item with no asking price is priced in the
+  dialog like any other, and Sprzedaj there is what waits for a readable amount.
   **A giełda that has been and gone offers no "Sprzedaj" at all.** An item opened
   from a day's screen shows everything else — the photo, both prices, "Usuń" — but
   not that button: a sale started there would be dated today and counted in today's
@@ -663,12 +665,12 @@ write nothing until their main button is pressed.
   every write resolves to the dated id, so an extra event created by hand on today's
   date would never receive the sale, and offering to sell into it would put the
   proceeds in a day nobody was reading.
-  **A lot is the one exception, and the only thing the sell dialog is still for**:
-  a piece goes at its own price, so "Sprzedaj" opens the dialog instead. The
+  **A lot asks more in that same dialog**: a piece goes at its own price, so the
   **count leads it** — a stepper starting at 1, reading "z 9" beside it — because
   the count is what the price depends on and the thing only somebody standing at
-  the stall knows. Since the list stopped selling from under the thumb this is the
-  only way to that dialog, so the button does not wait for an asking price on a lot.
+  the stall knows. A single thing sees none of it: one field and the two buttons.
+  Since the list stopped selling from under the thumb, this screen is the only way
+  to the dialog at all.
   **The price follows the count**, multiplied up from what one piece was asked for:
   three at 15,00 zł fills in 45,00 zł, and the label says what the number covers —
   "Sprzedajemy 3 sztuki za", with `sztuki(n)` carrying the same 1 / 2–4 / rest rule

@@ -310,24 +310,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
     }
 
     /**
-     * Sells in one tap, at the price the item screen already has on show.
-     *
-     * No dialog: that screen carries the asking price as an editable field, so a
-     * dialog would only be a second place to type the same number. Only a single
-     * thing comes through here — a lot has a count to ask about first, so its
-     * button opens [SellDialog] instead.
-     */
-    fun sell(item: Item, price: Money) {
-        viewModelScope.launch {
-            runCatching {
-                // No count and no tick: one thing, one sale, and that closes it.
-                repository.recordSell(itemId = item.id, price = price)
-            }
-                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
-        }
-    }
-
-    /**
      * A new photo for a thing already in stock, or none. Written straight through:
      * there is nothing to confirm about a picture that was just taken.
      */

@@ -28,15 +28,22 @@ import androidx.compose.ui.unit.dp
 import pl.starocie.domain.Item
 
 /**
- * Selling a lot a few pieces at a time: how many went, and for how much.
+ * Agreeing to a sale: what it goes for, and — on a lot — how many pieces are going.
  *
- * The count leads, because it is the thing the price depends on and the thing only
- * somebody standing at the stall knows. It starts at **one** — one is what a sale
- * out of a lot of twenty usually is, and the commonest answer should cost no taps.
+ * **The price is a field, not a sentence read back.** The asking price fills it in,
+ * because that is nearly always what a thing goes for; but haggling is what happens
+ * at a stall, and the number agreed across the table is the one that has to be
+ * recorded. Correcting the asking price first and then selling would be two motions
+ * for one moment, and the second of them would be the one that gets forgotten.
  *
- * The price follows the count, multiplying up from what one piece was asked for:
- * three plates at the asking price is three times it, and that is arithmetic the
- * app can do without being retyped.
+ * On a lot the count leads, because it is the thing the price depends on and the
+ * thing only somebody standing at the stall knows. It starts at **one** — one is
+ * what a sale out of a lot of twenty usually is, and the commonest answer should
+ * cost no taps.
+ *
+ * The price then follows the count, multiplying up from what one piece was asked
+ * for: three plates at the asking price is three times it, and that is arithmetic
+ * the app can do without being retyped.
  *
  * Taking the last pieces ticks "sprzedaliśmy już wszystkie" itself and stops
  * offering it as a choice — there is nothing left for it to write off. Below that,
@@ -47,8 +54,7 @@ import pl.starocie.domain.Item
  * often than a piece appears from nowhere, and the pieces in your hand outrank a
  * number typed in a hurry.
  *
- * Only a lot comes here. A single thing sells in one tap from the item screen,
- * where the price is already on show.
+ * A single thing sees none of that: one field, and the two buttons under it.
  */
 @Composable
 internal fun SellDialog(

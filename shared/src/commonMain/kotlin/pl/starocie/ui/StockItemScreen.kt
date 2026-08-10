@@ -31,9 +31,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
-import pl.starocie.domain.Money
 import pl.starocie.domain.format
-import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
 
 /**
@@ -45,14 +43,17 @@ import pl.starocie.domain.toInputText
  * One gets mistyped or skipped in a hurry; the other changes every time a thing
  * sits around unsold. Neither has a save button.
  *
- * Selling is one tap at the price standing in that second field, with nothing asked
- * in between: the number is already on screen and already editable, so a dialog
- * would be a second place to type it. Without a price there is nothing to sell at,
- * so the button waits for one.
+ * Selling opens one question, seeded with the asking price standing in that second
+ * field: what does it actually go for? A stall haggles, so the number agreed across
+ * the table is not always the one written down — and correcting the ask first and
+ * then selling would be two motions for one moment, the second of them the one that
+ * gets forgotten. So the dialog carries the price as a field rather than reading it
+ * back as a sentence, and the button no longer waits for one: an unpriced thing is
+ * priced there, in the same breath as it is sold.
  *
- * A lot is the one thing that still opens a dialog, because a piece of it goes at
- * its own price and only somebody who is there can say whether that was the last of
- * it. This is now the only way to that dialog: the list opens the item rather than
+ * A lot asks more in the same dialog, because a piece of it goes at its own price
+ * and only somebody who is there can say whether that was the last of it. This
+ * screen is the only way to that dialog: the list opens the item rather than
  * offering to sell it from under your thumb.
  *
  * Removing used to sit inside the sell dialog, one thumb-width from the price
@@ -73,10 +74,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
     val item = ledger.itemById(itemId)
     var confirmingRemoval by remember { mutableStateOf(false) }
-    // The price it would go out at, held while the question is on screen: the field
-    // behind the dialog keeps saving, and the answer must be about the number that
-    // was asked about.
-    var confirmingSale by remember { mutableStateOf<Money?>(null) }
 
     // Waiting to have seen it in stock first: the ledger is empty for the instant
     // before the first snapshot arrives, and popping on that would close the screen
@@ -102,12 +99,12 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     // buy the field edits the price of the box, and has to say that it does.
     val isPartOfABox = item.buyId != null && ledger.itemCountOfBuy(item.buyId) > 1
 
-    // Both fields are held here rather than inside them, so "Sprzedaj" can read what
-    // has been *typed*: the field saves half a second after the typing stops, and a
-    // price entered and sold on in one motion must not go out at the old number.
+    // Both fields are held here rather than inside them, so "Sprzedaj" can hand the
+    // dialog what has been *typed*: the field saves half a second after the typing
+    // stops, and a price entered and sold on in one motion must not open the dialog
+    // on the old number.
     var paidText by remember(item.id) { mutableStateOf(buy?.price?.toInputText() ?: "") }
     var askingText by remember(item.id) { mutableStateOf(item.price?.toInputText() ?: "") }
-    val asking = parseMoney(askingText)
 
     ScreenColumn {
         // What the item is scrolls; what you can do about it stays put at the
@@ -216,14 +213,14 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
         Spacer(Modifier.height(16.dp))
 
-        // One tap sells, at the price standing in the field above. Nothing is asked
-        // in between: the price is already on screen and editable, so a dialog
-        // repeating it back would only be a second place to type the same number.
+        // One tap opens the sale, with the price above already in its field: a thing
+        // usually goes for what we are asking, and when it does not, the number that
+        // was agreed belongs in the sale rather than in a correction made first and
+        // then sold on. So nothing waits for a price here — the dialog is where one
+        // is given.
         //
-        // A lot is the exception, and the only reason the dialog still exists: a
-        // piece goes at its own price, and somebody has to say whether that was the
-        // last of it. Reaching it is what "Sprzedaj" does here, now that the list
-        // behind this screen opens the item instead.
+        // A lot asks its count there too: a piece goes at its own price, and somebody
+        // has to say whether that was the last of it.
         //
         // A giełda that has already happened is the one place it is missing: those
         // rows are a record of a day, and a sale started from one would be dated
@@ -232,14 +229,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         // a stall we are standing at is exactly where selling has to be a tap away.
         if (selling) {
             Button(
-                onClick = {
-                    if (item.splittable) {
-                        viewModel.select(item, askingText)
-                    } else {
-                        confirmingSale = asking
-                    }
-                },
-                enabled = item.splittable || asking != null,
+                onClick = { viewModel.select(item, askingText) },
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
@@ -274,26 +264,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             onSoldCompletelyChange = viewModel::onSoldCompletelyChange,
             onConfirm = viewModel::confirm,
             onDismiss = viewModel::dismiss,
-        )
-    }
-
-    // Selling is one tap and then one answer: the price is already on screen, so the
-    // question is only whether that is the number it goes at. A lot asks its own
-    // questions in the sell dialog and never comes through here.
-    confirmingSale?.let { price ->
-        AlertDialog(
-            onDismissRequest = { confirmingSale = null },
-            title = { Text("Sprzedajemy?") },
-            text = { Text("Czy chcesz sprzedać ten przedmiot za ${price.format()}?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmingSale = null
-                    viewModel.sell(item, price)
-                }) { Text("Sprzedaj") }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmingSale = null }) { Text("Anuluj") }
-            },
         )
     }
 
