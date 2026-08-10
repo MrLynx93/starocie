@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import pl.starocie.domain.format
 
 /**
  * Buying and selling in one sitting, for a thing that was never entered.
@@ -53,6 +54,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
  * beside what was paid — because it is the buy form with a sale price on the end.
  * The same purchase should not feel like a different act depending on how quickly
  * the thing was sold on.
+ *
+ * **A lot is priced by the piece here, both times.** Somebody standing at the table
+ * knows what one of them cost and what one of them is going for; the totals are a
+ * multiplication, and doing it in your head while a buyer waits is where the wrong
+ * number gets written down. Both labels therefore say "za sztukę" and both totals
+ * are read back underneath, so a per-piece price mistaken for a lot price shows up
+ * as a figure nobody recognises before "Sprzedaj" is pressed.
  */
 @Composable
 fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
@@ -125,8 +133,13 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(10.dp))
 
-                // The count rides with what was paid, exactly as on the buy screen:
-                // one lot, one price, and how many things are in it.
+                // A single thing keeps the buy screen's line: the count beside what
+                // was paid, one price and how many things it covered. A lot breaks
+                // that pairing on purpose — the price beside the count is no longer
+                // the lot's — and its label is a phrase rather than two words, which
+                // beside a number field would be ellipsised down to "Kupiliśmy po
+                // tyle za s…". Saying which price this is, is the whole job of that
+                // label, so it gets the width instead.
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = form.quantityText,
@@ -137,14 +150,28 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.4f),
                     )
-                    OutlinedTextField(
-                        value = form.paidText,
-                        onValueChange = { viewModel.onNewItemChange(form.copy(paidText = it)) },
-                        singleLine = true,
-                        label = { Text("Kupiliśmy za") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
+                    if (form.splittable) {
+                        Spacer(Modifier.weight(1f))
+                    } else {
+                        PaidField(form, viewModel::onNewItemChange, Modifier.weight(1f))
+                    }
+                }
+
+                if (form.splittable) {
+                    Spacer(Modifier.height(10.dp))
+                    PaidField(form, viewModel::onNewItemChange, Modifier.fillMaxWidth())
+                }
+
+                // What the whole lot cost, said back. Typing the pile's total into a
+                // per-piece field is the one easy mistake here, and it is invisible
+                // until the profit is wrong weeks later — a figure three times what
+                // anybody remembers paying is not.
+                form.paid?.takeIf { form.splittable }?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Kupiliśmy ${sztuki(form.quantity)} za ${it.format()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -163,21 +190,20 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                 // Where the buy form asks what we want for it, this one already
                 // knows: the same slot, filled in with what it actually went for.
                 //
-                // What the number covers depends on the tick below it: a lot handed
-                // over whole is one price for all of them, and a lot we are keeping
-                // the rest of is the price of the piece going now. The label says
-                // which, because the two are the same field and differ by a factor
-                // of however many there are.
+                // On a lot it is the price of one piece, whatever the tick below says
+                // — that is what the asking price means everywhere else in the app,
+                // and it is what somebody at the table is quoting. How many pieces it
+                // covers is the tick's business, not the field's.
                 OutlinedTextField(
                     value = form.priceText,
                     onValueChange = { viewModel.onNewItemChange(form.copy(priceText = it)) },
                     singleLine = true,
                     label = {
                         Text(
-                            when {
-                                !form.splittable -> "Sprzedajemy za"
-                                form.soldCompletely -> "Sprzedajemy za wszystkie ${sztuki(form.quantity)}"
-                                else -> "Sprzedajemy za sztukę"
+                            if (form.splittable) {
+                                "Sprzedajemy po tyle za sztukę"
+                            } else {
+                                "Sprzedajemy za"
                             },
                         )
                     },
@@ -185,6 +211,18 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(priceFocus),
                 )
+
+                // And the money actually changing hands, for the same reason as
+                // above. Only worth saying when the tick makes it more than one
+                // piece — otherwise it repeats the field.
+                form.price?.takeIf { form.soldQuantity > 1 }?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Sprzedajemy ${sztuki(form.soldQuantity)} za ${it.format()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
                 Spacer(Modifier.height(10.dp))
 
@@ -227,4 +265,34 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
             BackButton(viewModel::cancelNewItem)
         }
     }
+}
+
+/**
+ * What it cost — one of them, on a lot.
+ *
+ * The same field in two places, because a lot moves it out of the count's line and
+ * a single thing keeps it there; the label is what differs between them, and having
+ * it in one place is what stops the two drifting into saying different things about
+ * the same number.
+ *
+ * Empty stays a real answer either way: the cost is then unknown, which is the whole
+ * reason this screen exists.
+ */
+@Composable
+private fun PaidField(
+    form: NewItemForm,
+    onChange: (NewItemForm) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = form.paidText,
+        onValueChange = { onChange(form.copy(paidText = it)) },
+        singleLine = true,
+        label = {
+            Text(if (form.splittable) "Kupiliśmy po tyle za sztukę" else "Kupiliśmy za")
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier,
+    )
 }

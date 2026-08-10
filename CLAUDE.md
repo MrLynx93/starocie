@@ -770,6 +770,24 @@ write nothing until their main button is pressed.
   here — it was not in the app a moment ago, so there is no pile left behind for it
   to stay in the magazyn for. Unticking it is the rarer answer: we brought five, two
   went, and three are coming home.
+  **On a lot both prices are typed per piece** — "Kupiliśmy po tyle za sztukę" and
+  "Sprzedajemy po tyle za sztukę" — and the form multiplies them up: what was paid
+  by the count, what it went for by the pieces actually going. Somebody standing at
+  the table knows what one of them cost and what one of them is fetching; the totals
+  are arithmetic done in your head while a buyer waits, which is where the wrong
+  number gets written down. It also puts the asking price where invariant 1 says it
+  lives, so the ask is written onto the item **whether the lot went whole or in
+  part** — what stays in the magazyn is now asked at what a piece just fetched,
+  where the old total-priced field could only leave it blank. Both totals are read
+  back under their fields ("Kupiliśmy 3 sztuki za 90,00 zł"), because a pile's total
+  typed into a per-piece field is otherwise invisible until the profit is wrong
+  weeks later. A single thing keeps the short labels and the buy form's line, count
+  beside price; a lot moves what was paid onto a line of its own, the label being a
+  phrase rather than two words and the count no longer saying what that price
+  covers. **The buy screen still asks for the lot's total** under the same two words,
+  so the one label means different things on the two forms; if that turns out to be
+  a trap, it is the buy form that should follow this one rather than the other way
+  round.
 - **Buying splits in two, but there is only one item form.** "Kup" records one
   thing at one price and clears for the next, so its cost is exact and the
   allocator is not involved. "Kup paczkę" is a two-step wizard: the price first, which

@@ -24,6 +24,13 @@ import pl.starocie.domain.toInputText
  * Everything except the name and the final price is optional: this exists because
  * a stall does not wait for bookkeeping. A blank [paidText] means the cost really
  * is unknown and must stay that way.
+ *
+ * **Both prices are typed per piece**, and both are multiplied up from there. A lot
+ * is entered here as "these, at this much each, going for this much each" — which is
+ * how it is actually being sold across the table — where the totals are arithmetic
+ * nobody should be doing in their head while somebody waits. It also puts the asking
+ * price where invariant 1 says it lives: [pricePerPiece] is what one goes for, so it
+ * can be written onto the item as it stands.
  */
 data class NewItemForm(
     val name: String = "",
@@ -41,11 +48,11 @@ data class NewItemForm(
      */
     val soldCompletely: Boolean = true,
 ) {
-    /** What was paid for it, if that is known at all. */
-    val paid: Money? get() = parseMoney(paidText)
+    /** What one of them cost, if that is known at all. */
+    val paidPerPiece: Money? get() = parseMoney(paidText)
 
-    /** What it went for. Required — this is a sale. */
-    val price: Money? get() = parseMoney(priceText)
+    /** What one of them goes for. Required — this is a sale. */
+    val pricePerPiece: Money? get() = parseMoney(priceText)
 
     /** Blank or nonsense means one, so a stray edit cannot lose the record. */
     val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
@@ -55,7 +62,20 @@ data class NewItemForm(
     /** A lot only closes when ticked; anything else is closed by its only sale. */
     val closesTheItem: Boolean get() = !splittable || soldCompletely
 
-    val canConfirm: Boolean get() = name.isNotBlank() && price != null
+    /** How many pieces are changing hands now: the whole lot, or one out of it. */
+    val soldQuantity: Int get() = if (closesTheItem) quantity else 1
+
+    /**
+     * The buy's price, which is a total: one piece's cost taken as many times as
+     * there are pieces. `Buy.price` is what was handed over for the lot, so the
+     * multiplication happens here rather than anywhere the cost is later read.
+     */
+    val paid: Money? get() = paidPerPiece?.let { it * quantity }
+
+    /** What this sale is for — the pieces going now, at the price of one. */
+    val price: Money? get() = pricePerPiece?.let { it * soldQuantity }
+
+    val canConfirm: Boolean get() = name.isNotBlank() && pricePerPiece != null
 }
 
 /**
@@ -257,12 +277,17 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                     paid = form.paid,
                     draft = DraftItem(
                         name = form.name.trim(),
-                        // The ask is what it went for — but only when the whole thing
-                        // went. Part of a lot says nothing about the rest of it.
-                        price = price.takeIf { form.closesTheItem },
+                        // The ask is the price of one piece, which is exactly what was
+                        // typed — so it stands whether the lot went whole or in part,
+                        // and what stays in the magazyn is asked at what one just
+                        // fetched rather than at nothing at all.
+                        price = form.pricePerPiece,
                         quantity = form.quantity,
                         photo = form.photo,
                     ),
+                    // The pieces going now, at that price each. The repository sells
+                    // the whole lot or one of it on the same flag, so the two counts
+                    // are the same count.
                     price = price,
                     soldCompletely = form.closesTheItem,
                 )
