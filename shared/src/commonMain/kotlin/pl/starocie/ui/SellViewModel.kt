@@ -30,7 +30,6 @@ data class NewItemForm(
     val paidText: String = "",
     val priceText: String = "",
     val quantityText: String = "1",
-    val note: String = "",
     val photo: String? = null,
     /**
      * Only meaningful for a lot; a single thing is always sold in full.
@@ -74,7 +73,6 @@ data class SellUiState(
     val inStock: List<StockEntry> = emptyList(),
     val selected: Item? = null,
     val priceText: String = "",
-    val note: String = "",
     /** How many of a lot's pieces this sale takes. One thing is always one. */
     val sellQuantity: Int = 1,
     /**
@@ -123,8 +121,7 @@ data class SellUiState(
 
 /** One search rule for both lists: the magazyn's and the sold one's. */
 internal fun Item.matchesQuery(query: String): Boolean =
-    name.contains(query, ignoreCase = true) ||
-        note?.contains(query, ignoreCase = true) == true
+    name.contains(query, ignoreCase = true)
 
 class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
 
@@ -164,7 +161,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
             selected = item,
             priceText = seeded,
             unitPrice = parseMoney(seeded),
-            note = "",
             // One piece, because one is what a sale usually is even out of a lot of
             // twenty — and it is the number that needs no tap to accept.
             sellQuantity = 1,
@@ -178,7 +174,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         it.copy(
             selected = null,
             priceText = "",
-            note = "",
             sellQuantity = 1,
             piecesLeft = 1,
             soldSoFar = 0,
@@ -208,8 +203,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun onPriceChange(value: String) = local.update { it.copy(priceText = value) }
 
-    fun onNoteChange(value: String) = local.update { it.copy(note = value) }
-
     fun onSoldCompletelyChange(value: Boolean) = local.update { it.copy(soldCompletely = value) }
 
     fun confirm() {
@@ -222,7 +215,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                 repository.recordSell(
                     itemId = item.id,
                     price = price,
-                    note = current.note,
                     quantity = current.sellQuantity,
                     // Taking the last pieces closes the lot on its own, so the tick
                     // only ever has to say "and the rest is not coming back".
@@ -269,7 +261,6 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                         // went. Part of a lot says nothing about the rest of it.
                         price = price.takeIf { form.closesTheItem },
                         quantity = form.quantity,
-                        note = form.note.takeIf { it.isNotBlank() },
                         photo = form.photo,
                     ),
                     price = price,

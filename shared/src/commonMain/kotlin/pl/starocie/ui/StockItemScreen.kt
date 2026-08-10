@@ -40,8 +40,8 @@ import pl.starocie.domain.toInputText
  * One thing in stock, in full: what is known about it, what can still be corrected,
  * and the three things you can do about it.
  *
- * The facts scroll — the day it came home, what it has taken so far, the note —
- * and the two prices sit under them as fields, because both are still decisions.
+ * The facts scroll — the day it came home, what it has taken so far — and the two
+ * prices sit under them as fields, because both are still decisions.
  * One gets mistyped or skipped in a hurry; the other changes every time a thing
  * sits around unsold. Neither has a save button.
  *
@@ -162,8 +162,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 )
             }
 
-            item.note?.takeIf { it.isNotBlank() }?.let { Detail("Notatka", it) }
-
             Spacer(Modifier.height(20.dp))
 
             // Both prices are still decisions rather than records — one was mistyped
@@ -276,7 +274,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             item = selected,
             state = state,
             onPriceChange = viewModel::onPriceChange,
-            onNoteChange = viewModel::onNoteChange,
             onQuantityChange = viewModel::onSellQuantityChange,
             onSoldCompletelyChange = viewModel::onSoldCompletelyChange,
             onConfirm = viewModel::confirm,

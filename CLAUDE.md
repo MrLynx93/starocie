@@ -43,10 +43,10 @@ sold at a different event from the one where they were bought.
 
 | Entity | Fields |
 |---|---|
-| `Event` | `id`, `date`, `name?`, `note?` |
-| `Buy` | `id`, `eventId`, `date`, `price?`, `name?`, `note?`, `photoUrls` |
-| `Item` | `id`, `buyId?`, `date`, `name`, `note?`, `photo?`, `price?`, `quantity`, `status` |
-| `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `note?`, `quantity`, `soldCompletely` |
+| `Event` | `id`, `date`, `name?` |
+| `Buy` | `id`, `eventId`, `date`, `price?`, `name?`, `photoUrls` |
+| `Item` | `id`, `buyId?`, `date`, `name`, `photo?`, `price?`, `quantity`, `status` |
+| `Sell` | `id`, `itemId`, `eventId`, `date`, `price`, `quantity`, `soldCompletely` |
 
 All four also carry `createdBy`, `createdAt`, `updatedAt`.
 
@@ -54,6 +54,15 @@ All four also carry `createdBy`, `createdAt`, `updatedAt`.
 or kept; **nothing writes it any more** — removing now deletes the item outright.
 The value stays in the enum, and `ItemDoc` still parses it, because records written
 before that change are still in Firestore and must keep loading.
+
+**There is no `note` on anything, and there was on all four.** A free-text field
+costs a tap to skip on every record and earns it back on almost none — which is the
+friction rule applied to a field rather than to a flow. Unlike `REMOVED` it is gone
+from the docs as well as the models: decoding is driven by the serializer's
+descriptor, so a stored `note` is simply never looked at, and every correction the
+app makes writes named fields rather than whole documents. **The strings that were
+typed are therefore still in Firestore, untouched** — nothing deletes them, and
+putting the field back would find them where they were left.
 
 ### Invariants — break these and the numbers lie
 
@@ -243,7 +252,7 @@ really does blank the stored one. This write runs on every buy and every sell, s
 merging a whole `EventDoc` meant a giełda named on the way home lost its name to the
 next thing recorded that day — the app quietly deleting what somebody had typed,
 with nothing on screen to say so. It therefore merges an **`EventStubDoc`**: id,
-date, `createdBy` and the stamps, and no `name` or `note` at all, because what a
+date, `createdBy` and the stamps, and no `name` at all, because what a
 stamp carries is the whole of what it can destroy. `setLongAgoEvent` does send a
 name and may — "Dawno temu" is a constant that write owns, not anything a person
 typed.
@@ -598,7 +607,7 @@ write nothing until their main button is pressed.
   the bin drops the picture in one tap without a confirmation, a photo being
   supplementary rather than a number anything depends on.
   The read-outs come next, **the date at the top** — the one fact here that was
-  never a choice — then what it has already taken, then the note. **Both prices are
+  never a choice — then what it has already taken. **Both prices are
   editable fields** below them, because both are still decisions: one gets mistyped
   or skipped in a hurry, the other changes every time a thing sits unsold. They
   **save half a second after the typing stops**, with no confirm button: Firestore
@@ -663,7 +672,7 @@ write nothing until their main button is pressed.
   sold in part stays put and shows the extra sale.
 - **Sold** — the mirror of the stock list, reached from the second home card:
   everything `SOLD`, newest sale first, **with the magazyn's search over it**. It
-  shares that list's predicate — name or note, case-insensitive, in memory — so the
+  shares that list's predicate — the name, case-insensitive, in memory — so the
   two can never answer differently about the same typing. Over the box sit the two
   figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
   "Zarobiliśmy ok. 240,00 zł", **both computed over what is on screen**, so a search
@@ -722,7 +731,7 @@ write nothing until their main button is pressed.
   so the two cannot fall out of step.
   It carries **the same search box as the other two lists**, in the same place and
   in the same words, because typing is how anything is found in this app and days
-  pile up the way things do. A giełda is matched on its name, its note **and its
+  pile up the way things do. A giełda is matched on its name **and on its
   date as the row says it** — most are auto-created and never named, so the date is
   the whole of what such a row shows, and leaving it out would make the search blind
   to the majority of the list. "2026-08" therefore finds a month.
@@ -740,7 +749,7 @@ write nothing until their main button is pressed.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
-  offers the whole buy form — name, what was paid, pieces, note, photo — alongside
+  offers the whole buy form — name, what was paid, pieces, photo — alongside
   the final price, and `recordBuyAndSell` writes the buy, the item and the sale in
   one batch. It gets **a screen of its own rather than a dialog**, sharing
   `SellViewModel` with the list behind it so the typed search seeds the name: it

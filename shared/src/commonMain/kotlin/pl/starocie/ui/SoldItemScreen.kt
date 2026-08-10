@@ -185,11 +185,6 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                 )
             }
 
-            item.note?.takeIf { it.isNotBlank() }?.let {
-                Spacer(Modifier.height(16.dp))
-                Detail("Notatka", it)
-            }
-
             // A failed write leaves the screen where it is, so it has to say why
             // rather than looking like nothing was pressed.
             state.error?.let {
@@ -248,7 +243,6 @@ private fun SaleFields(
             onTextChange = { priceText = it },
             saved = sell.price,
             placeholder = "Za ile poszło",
-            hint = sell.note?.takeIf { it.isNotBlank() },
             onSave = onPriceSave,
         )
     }

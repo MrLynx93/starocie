@@ -92,7 +92,6 @@ class InMemoryLedgerRepository(
     override suspend fun recordSell(
         itemId: String,
         price: Money,
-        note: String?,
         quantity: Int,
         soldCompletely: Boolean,
     ) {
@@ -117,7 +116,6 @@ class InMemoryLedgerRepository(
             eventId = eventId,
             date = events.dateOf(at),
             price = price,
-            note = note?.takeIf { it.isNotBlank() },
             quantity = pieces,
             soldCompletely = resolves,
             createdBy = userId,
@@ -377,7 +375,6 @@ class InMemoryLedgerRepository(
         buyId = buyId,
         date = date ?: events.dateOf(at),
         name = name.trim(),
-        note = note?.takeIf { it.isNotBlank() },
         photo = photo,
         price = price,
         quantity = quantity,

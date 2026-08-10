@@ -188,15 +188,6 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    value = form.note,
-                    onValueChange = { viewModel.onNewItemChange(form.copy(note = it)) },
-                    singleLine = true,
-                    label = { Text("Notatka (opcjonalnie)") },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
                 if (form.splittable) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(

@@ -55,7 +55,6 @@ internal fun SellDialog(
     item: Item,
     state: SellUiState,
     onPriceChange: (String) -> Unit,
-    onNoteChange: (String) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onSoldCompletelyChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -108,13 +107,6 @@ internal fun SellDialog(
 
                 if (item.splittable) {
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.note,
-                        onValueChange = onNoteChange,
-                        singleLine = true,
-                        label = { Text("Co poszło (opcjonalnie)") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
 
                     // Taking the last pieces ticks this itself and stops offering
                     // the choice: there would be nothing left for it to write off,

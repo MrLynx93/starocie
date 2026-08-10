@@ -112,7 +112,7 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
 }
 
 /**
- * What a day is found by: the same three things a row shows.
+ * What a day is found by: both of the things a row shows.
  *
  * The date is in here and not only the name, because most giełdy are auto-created and
  * never named — for those the date is the whole of what the row says, so leaving it
@@ -121,7 +121,6 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
  */
 internal fun Event.matchesQuery(query: String): Boolean =
     name?.contains(query, ignoreCase = true) == true ||
-        note?.contains(query, ignoreCase = true) == true ||
         date.asText().contains(query, ignoreCase = true)
 
 /**

@@ -46,7 +46,6 @@ data class Event(
     val id: String,
     val date: LocalDate,
     val name: String? = null,
-    val note: String? = null,
     val createdBy: String,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -59,7 +58,6 @@ data class Buy(
     val date: LocalDate,
     val price: Money? = null,
     val name: String? = null,
-    val note: String? = null,
     val photoUrls: List<String> = emptyList(),
     val createdBy: String,
     val createdAt: Instant,
@@ -73,7 +71,6 @@ data class Item(
     val date: LocalDate,
     /** Required: this is how an item is found when selling. */
     val name: String,
-    val note: String? = null,
     /** Optional and supplementary — an item is identified by its name. */
     val photoUrls: List<String> = emptyList(),
     /**
@@ -109,7 +106,6 @@ data class Sell(
     val eventId: String,
     val date: LocalDate,
     val price: Money,
-    val note: String? = null,
     /**
      * How many of the item's pieces this sale took. One for a single thing, and
      * one by default for a lot, which is what a record written before this field

@@ -32,7 +32,6 @@ class EventStubTest {
         )
 
         assertFalse(stamp.contains("name"), "a merge that names the field overwrites it")
-        assertFalse(stamp.contains("note"), "the note is somebody's too")
     }
 
     /** It still has to say which day it is, or the merge creates nothing usable. */

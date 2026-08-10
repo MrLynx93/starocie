@@ -31,7 +31,6 @@ internal data class EventDoc(
     val id: String = "",
     val date: String = "",
     val name: String? = null,
-    val note: String? = null,
     val createdBy: String = "",
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
@@ -41,9 +40,8 @@ internal data class EventDoc(
  * What it takes to say a day exists, and deliberately nothing more.
  *
  * Recording a buy or a sell merges one of these into that day's document so the day
- * is certainly there. It carries **no `name` and no `note`**: those belong to
- * whoever typed them, this write knows nothing about them, and a merge writes every
- * field it is handed.
+ * is certainly there. It carries **no `name`**: that belongs to whoever typed it,
+ * this write knows nothing about it, and a merge writes every field it is handed.
  *
  * That is not a precaution, it is a repair. [EventDoc] has `name` defaulting to
  * null and GitLive's encoder has `encodeDefaults = true`, so merging a whole
@@ -67,7 +65,6 @@ internal data class BuyDoc(
     val date: String = "",
     val price: Money? = null,
     val name: String? = null,
-    val note: String? = null,
     val photoUrls: List<String> = emptyList(),
     val createdBy: String = "",
     val createdAt: Long = 0,
@@ -80,7 +77,6 @@ internal data class ItemDoc(
     val buyId: String? = null,
     val date: String = "",
     val name: String = "",
-    val note: String? = null,
     val photoUrls: List<String> = emptyList(),
     val photo: String? = null,
     val price: Money? = null,
@@ -98,7 +94,6 @@ internal data class SellDoc(
     val eventId: String = "",
     val date: String = "",
     val price: Money = Money.ZERO,
-    val note: String? = null,
     val quantity: Int = 1,
     val soldCompletely: Boolean = true,
     val createdBy: String = "",
@@ -110,7 +105,6 @@ internal fun Event.toDoc() = EventDoc(
     id = id,
     date = date.toString(),
     name = name,
-    note = note,
     createdBy = createdBy,
     createdAt = createdAt.toEpochMilliseconds(),
     updatedAt = updatedAt.toEpochMilliseconds(),
@@ -120,7 +114,6 @@ internal fun EventDoc.toDomain() = Event(
     id = id,
     date = LocalDate.parse(date),
     name = name,
-    note = note,
     createdBy = createdBy,
     createdAt = Instant.fromEpochMilliseconds(createdAt),
     updatedAt = Instant.fromEpochMilliseconds(updatedAt),
@@ -132,7 +125,6 @@ internal fun Buy.toDoc() = BuyDoc(
     date = date.toString(),
     price = price,
     name = name,
-    note = note,
     photoUrls = photoUrls,
     createdBy = createdBy,
     createdAt = createdAt.toEpochMilliseconds(),
@@ -145,7 +137,6 @@ internal fun BuyDoc.toDomain() = Buy(
     date = LocalDate.parse(date),
     price = price,
     name = name,
-    note = note,
     photoUrls = photoUrls,
     createdBy = createdBy,
     createdAt = Instant.fromEpochMilliseconds(createdAt),
@@ -157,7 +148,6 @@ internal fun Item.toDoc() = ItemDoc(
     buyId = buyId,
     date = date.toString(),
     name = name,
-    note = note,
     photoUrls = photoUrls,
     photo = photo,
     price = price,
@@ -173,7 +163,6 @@ internal fun ItemDoc.toDomain() = Item(
     buyId = buyId,
     date = LocalDate.parse(date),
     name = name,
-    note = note,
     photoUrls = photoUrls,
     photo = photo,
     price = price,
@@ -191,7 +180,6 @@ internal fun Sell.toDoc() = SellDoc(
     eventId = eventId,
     date = date.toString(),
     price = price,
-    note = note,
     quantity = quantity,
     soldCompletely = soldCompletely,
     createdBy = createdBy,
@@ -205,7 +193,6 @@ internal fun SellDoc.toDomain() = Sell(
     eventId = eventId,
     date = LocalDate.parse(date),
     price = price,
-    note = note,
     // A sale that took nothing cannot have happened; records written before the
     // field existed have no value here at all and come back as one.
     quantity = quantity.coerceAtLeast(1),

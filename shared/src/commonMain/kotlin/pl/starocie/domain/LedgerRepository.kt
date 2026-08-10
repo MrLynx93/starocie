@@ -8,7 +8,6 @@ data class DraftItem(
     val name: String,
     val price: Money? = null,
     val quantity: Int = 1,
-    val note: String? = null,
     val photo: String? = null,
     /** When it was actually bought. Null means today. */
     val date: LocalDate? = null,
@@ -73,7 +72,6 @@ interface LedgerRepository {
     suspend fun recordSell(
         itemId: String,
         price: Money,
-        note: String? = null,
         quantity: Int = 1,
         soldCompletely: Boolean = false,
     )
