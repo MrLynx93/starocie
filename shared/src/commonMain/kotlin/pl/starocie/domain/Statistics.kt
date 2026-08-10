@@ -79,6 +79,7 @@ data class Ledger(
     private val buysById: Map<String, Buy> = buys.associateBy { it.id }
     private val itemsById: Map<String, Item> = items.associateBy { it.id }
     private val sellsByItem: Map<String, List<Sell>> = sells.groupBy { it.itemId }
+    private val sellsByEvent: Map<String, List<Sell>> = sells.groupBy { it.eventId }
     private val itemsByBuy: Map<String, List<Item>> =
         items.filter { it.buyId != null }.groupBy { it.buyId!! }
 
@@ -192,7 +193,7 @@ data class Ledger(
 
     fun eventStats(event: Event): EventStats {
         val eventBuys = buys.filter { it.eventId == event.id }
-        val eventSells = sells.filter { it.eventId == event.id }
+        val eventSells = sellsByEvent[event.id].orEmpty()
 
         // Sale by sale against its own cost — never earned minus spent, which is two
         // unrelated days' worth of money and would read as profit while being no
@@ -226,12 +227,32 @@ data class Ledger(
     }
 
     /**
-     * Every giełda at once, in the same shape one of them comes in.
+     * The days that are giełdy: the ones we sold something on.
      *
-     * The home screen answers for all the days together, and the only honest way to
+     * An [Event] is created by buying as readily as by selling, so a trip to
+     * somebody's garage makes one exactly like a market does. It is not a giełda —
+     * it took nothing and made nothing, and counting it would say we have been to a
+     * market we never went to. What we bought there is not lost by this: it is in
+     * the magazyn like everything else, and its buys still count toward [spent].
+     *
+     * This is also the whole of what keeps "Dawno temu" out, that being a filing
+     * cabinet for purchases which only ever holds buys.
+     */
+    fun sellingSessions(): List<Event> = events.filter { sellsByEvent.containsKey(it.id) }
+
+    /**
+     * Every day at once, in the shape one of them comes in.
+     *
+     * The home screen answers for all of them together, and the only honest way to
      * that figure is the way a single day gets it: each sale against what its own
      * pieces cost. Summing the days does exactly that, an event being the sole
      * grouping there is, so no sale can fall outside one or be counted twice.
+     *
+     * Every day rather than every giełda, deliberately: money spent on a day we only
+     * bought on is still money we spent, so [spent] has to see it. Nothing else here
+     * can tell the difference — a day with no sales contributes no sale to any of the
+     * other figures — so the count of giełdy is [sellingSessions]' answer and these
+     * totals are still the right ones to put beside it.
      */
     fun overallStats(): EventStats {
         val days = events.map { eventStats(it) }
@@ -254,7 +275,7 @@ data class Ledger(
 
     fun buysOfEvent(id: String): List<Buy> = buys.filter { it.eventId == id }
 
-    fun sellsOfEvent(id: String): List<Sell> = sells.filter { it.eventId == id }
+    fun sellsOfEvent(id: String): List<Sell> = sellsByEvent[id].orEmpty()
 
     fun eventById(id: String): Event? = events.firstOrNull { it.id == id }
 

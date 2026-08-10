@@ -73,6 +73,9 @@ fun HomeScreen(
     // What every giełda made, not what it took: each sale against what its own
     // pieces cost. Takings minus spending would be two unrelated days' money.
     val sessions = remember(ledger) { ledger.overallStats() }
+    // A day we only bought on is not a giełda, so it is not counted as one — and the
+    // list behind this card leaves out exactly the same days.
+    val sessionCount = remember(ledger) { ledger.sellingSessions().size }
 
     Scaffold(
         floatingActionButton = {
@@ -175,9 +178,9 @@ fun HomeScreen(
             // The third card is about days rather than things: how many giełd we have
             // been to and what we made on them altogether.
             SummaryCard(
-                title = "Mamy za sobą ${giełdy(ledger.events.size)}",
+                title = "Mamy za sobą ${giełdy(sessionCount)}",
                 subtitle = when {
-                    ledger.events.isEmpty() -> "Jeszcze nigdzie nie byliśmy"
+                    sessionCount == 0 -> "Jeszcze nigdzie nie byliśmy"
                     else -> sessionsProfitLine(sessions)
                 },
                 // Only when some sales are uncosted and some are not: all of them
@@ -293,11 +296,15 @@ private fun HomeAction(
  *
  * The days we could not cost are already left out of the figure, so when that is
  * all of them there is nothing to report but the gap itself.
+ *
+ * Only ever read when there is a giełda to read it about, and a giełda is a day we
+ * sold something on — so there is no line here for having sold nothing. The card
+ * says "Jeszcze nigdzie nie byliśmy" instead, which is the truth in that case: a
+ * day of only buying never was a market.
  */
 private fun sessionsProfitLine(stats: EventStats): String {
     val approx = if (stats.profitIsEstimated) "ok. " else ""
     return when {
-        stats.sellCount == 0 -> "Jeszcze nic na nich nie sprzedaliśmy"
         stats.sellsOfUnknownCost == stats.sellCount -> "Nie wiemy, ile zarobiliśmy"
         stats.profit.minor < 0 ->
             "Straciliśmy na nich $approx${Money(-stats.profit.minor).format()}"

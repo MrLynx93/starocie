@@ -228,6 +228,63 @@ class LedgerTest {
         assertEquals(3, ledger.eventStats(event("2026-08-02", D1)).itemsSold)
     }
 
+    /**
+     * An event is made by buying as readily as by selling, so a trip to somebody's
+     * garage produces one exactly like a market does. It is not a giełda, and
+     * counting it would say we have been somewhere we never went.
+     */
+    @Test
+    fun a_day_we_only_bought_on_is_not_a_giełda() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-01", D0), event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 1000, eventId = "2026-08-01")),
+            items = listOf(item("lamp", buyId = "b1", status = ItemStatus.SOLD)),
+            sells = listOf(sell("s1", "lamp", 2500, eventId = "2026-08-02")),
+        )
+
+        assertEquals(
+            listOf("2026-08-02"),
+            ledger.sellingSessions().map { it.id },
+            "the day we bought on took nothing and made nothing",
+        )
+    }
+
+    /** What was bought on such a day still counts toward what we have spent. */
+    @Test
+    fun a_buy_only_day_still_counts_toward_what_we_spent() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-01", D0), event("2026-08-02", D1)),
+            buys = listOf(
+                buy("b1", price = 1000, eventId = "2026-08-01"),
+                buy("b2", price = 400, eventId = "2026-08-02"),
+            ),
+            items = listOf(item("lamp", buyId = "b1", status = ItemStatus.SOLD)),
+            sells = listOf(sell("s1", "lamp", 2500, eventId = "2026-08-02")),
+        )
+
+        val overall = ledger.overallStats()
+
+        assertEquals(Money(1400), overall.spent, "both days' money, giełda or not")
+        assertEquals(Money(1500), overall.profit)
+        assertEquals(1, overall.sellCount)
+    }
+
+    /**
+     * "Dawno temu" files the purchase of a thing that was never recorded until it
+     * sold. It only ever holds buys, so the one rule keeps it out too.
+     */
+    @Test
+    fun the_long_ago_bucket_is_not_a_giełda_either() {
+        val ledger = Ledger(
+            events = listOf(event(LongAgo.EVENT_ID, LongAgo.DATE), event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 1000, eventId = LongAgo.EVENT_ID)),
+            items = listOf(item("vase", buyId = "b1", status = ItemStatus.SOLD)),
+            sells = listOf(sell("s1", "vase", 2500, eventId = "2026-08-02")),
+        )
+
+        assertEquals(listOf("2026-08-02"), ledger.sellingSessions().map { it.id })
+    }
+
     @Test
     fun in_stock_excludes_sold_and_removed() {
         val inStock = boxLedger(candleStatus = ItemStatus.IN_STOCK, sellCandle = false)

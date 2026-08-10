@@ -27,7 +27,6 @@ import org.koin.compose.koinInject
 import pl.starocie.domain.Event
 import pl.starocie.domain.EventStats
 import pl.starocie.domain.LedgerRepository
-import pl.starocie.domain.LongAgo
 import pl.starocie.domain.Money
 import pl.starocie.domain.format
 
@@ -48,11 +47,15 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
 
     // Newest first, the way both other lists run: today's giełda is the one being
     // asked about. Two events on one day fall back to when they were made.
+    //
+    // The days we sold nothing on are not here, because they are not giełdy: an
+    // event is made by buying as readily as by selling, so a trip to somebody's
+    // garage would otherwise sit in this list claiming to have been a market. It is
+    // the same rule the home card counts by, so the two cannot disagree — and it
+    // covers "Dawno temu" as well, that being a filing cabinet holding only buys.
+    // What was bought on such a day is still in the magazyn, where it is found.
     val sessions = remember(ledger) {
-        ledger.events
-            // "Dawno temu" holds the purchases of things sold that were never
-            // recorded. It is a filing cabinet, not a day we went anywhere.
-            .filter { it.id != LongAgo.EVENT_ID }
+        ledger.sellingSessions()
             .sortedWith(compareByDescending<Event> { it.date }.thenByDescending { it.createdAt })
             .map { it to ledger.eventStats(it) }
     }

@@ -492,6 +492,15 @@ write nothing until their main button is pressed.
   **"Mamy 12 przedmiotów" / "Chcemy sprzedać za łącznie …"**,
   **"Sprzedaliśmy 12 przedmiotów" / "Sprzedaliśmy za łącznie …"**, and
   **"Mamy za sobą 12 giełd" / "Zarobiliśmy na nich ok. …"**.
+  **The third card counts only the days we sold something on** — `Ledger.sellingSessions()`,
+  the events with at least one `Sell`. An `Event` is created by buying as readily as
+  by selling, so a trip to somebody's garage makes one exactly like a market does;
+  it took nothing and made nothing, and counting it would claim a giełda that never
+  happened. Nothing is lost by leaving it out: what was bought there is in the
+  magazyn like everything else, and its buys still count toward what we have spent.
+  The rule also keeps "Dawno temu" out, that bucket holding only buys — which the
+  count used to get wrong while the list behind it got right.
+  With no such day at all the card says "Jeszcze nigdzie nie byliśmy".
   The third card is the only one showing profit rather than a total, so it is the
   only one that can be short of an answer: a loss says "Straciliśmy na nich", every
   sale uncosted says "Nie wiemy, ile zarobiliśmy", and *some* of them uncosted adds
@@ -667,13 +676,18 @@ write nothing until their main button is pressed.
 - **Giełdy** — the third home card, "Mamy za sobą 12 giełd", over a list of the
   events themselves, newest first. The other two lists answer questions about
   things; this one answers them about days, and an `Event` is the app's only notion
-  of a day. A row says what the day cost and what it brought in — "kupiliśmy 17
-  przedmiotów za 492,00 zł" over "sprzedaliśmy 5 przedmiotów za 244,00 zł" — with
-  **what we made kept apart from that pair**, because it is not the gap between
-  them: it is each sale against what that thing cost. A day we only bought on says
-  nothing there rather than claiming a nought, and a day whose costs we do not know
-  says "nie wiemy" and, when only some are missing, names how many sales it had to
-  leave out.
+  of a day. **It is `sellingSessions()` rather than every event**, the same rule the
+  card counts by, so the two cannot disagree about how many giełd there have been —
+  a day we only bought on is not one, and it is the magazyn that answers for what
+  came home from it. A row says what the day brought in and what it cost — "Sprzedaliśmy 5
+  przedmiotów za 244,00 zł" over "Kupiliśmy 17 przedmiotów za 492,00 zł", **selling
+  first**, a giełda being a day of selling that we also buy on — with **what we made
+  kept apart from that pair**, because it is not the gap between them: it is each
+  sale against what that thing cost. A day we only bought on says nothing there
+  rather than claiming a nought, and a day whose costs we do not know says "Nie
+  wiemy" and, when only some are missing, names how many sales it had to leave out.
+  One composable draws these figures for the list row and for the day's own screen,
+  so the two cannot fall out of step.
   The list has no total of its own above it: a giełda is a day, and the days do not
   add up to a day.
   **A row opens the day**, onto its own screen — the magazyn's list and the sold list
