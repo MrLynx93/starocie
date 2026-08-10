@@ -555,9 +555,15 @@ write nothing until their main button is pressed.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
   the first move is as often the camera as the name. Focusing a text field *is* the
   request for the keyboard, so the two cannot be separated without hiding it again
-  a frame later and losing the race half the time. Enter in the name moves to the
-  price rather than opening a third line, and after a save the name takes focus
-  with the keyboard, because a run of purchases is a run of typing.
+  a frame later and losing the race half the time. **Every field hands on to the
+  next**, so a whole purchase is typed without the thumb leaving the keyboard: the
+  name's Enter goes to what was paid rather than opening a third line, the count and
+  the price carry `ImeAction.Next` for the same reason, and the asking price is last
+  so its key is a plain Done that puts the keyboard away. A number pad shows an OK
+  where a letter one shows Enter, and it does nothing at all unless the field asks
+  for `Next` *and* handles it — the keyboard type alone leaves it a dead key. Saving
+  gives the name focus with the keyboard, because a run of purchases is a run of
+  typing.
   The form **scrolls under two pinned buttons**. The app draws edge to edge, so the
   keyboard covers the window rather than shrinking it; without `imePadding` on the
   root column, the buy buttons are exactly what ends up underneath it.

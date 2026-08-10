@@ -66,11 +66,17 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
         if (state.recordedCount > 0) runCatching { nameFocus.requestFocus() }
     }
 
-    // A box has no price of its own, so there "next" is the asking price instead.
-    val moveOnFromName = {
+    // Every field hands on to the one after it, so a whole purchase is typed without
+    // the thumb leaving the keyboard. A box has no price of its own, so there the
+    // field after the name is the asking price instead.
+    val moveOnToPrice = {
         runCatching {
             if (state.showPaid) paidFocus.requestFocus() else askingFocus.requestFocus()
         }
+        Unit
+    }
+    val moveOnToAsking = {
+        runCatching { askingFocus.requestFocus() }
         Unit
     }
 
@@ -81,8 +87,8 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(padding).imePadding().padding(20.dp),
         ) {
             // The form scrolls, the buttons do not: with the keyboard up the fields
-            // alone are taller than what is left of the screen, and "Zapisz" must
-            // never be the thing that ends up underneath it.
+            // alone are taller than what is left of the screen, and the buy buttons
+            // must never be the thing that ends up underneath it.
             Column(
                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             ) {
@@ -130,7 +136,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     singleLine = true,
                     label = { Text("Nazwa") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { moveOnFromName() }),
+                    keyboardActions = KeyboardActions(onNext = { moveOnToPrice() }),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
                 )
@@ -146,7 +152,11 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         onValueChange = viewModel::onQuantityChange,
                         singleLine = true,
                         label = { Text("Sztuki") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { moveOnToPrice() }),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.4f),
                     )
@@ -156,7 +166,11 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                             onValueChange = viewModel::onPaidChange,
                             singleLine = true,
                             label = { Text("Kupiliśmy za") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next,
+                            ),
+                            keyboardActions = KeyboardActions(onNext = { moveOnToAsking() }),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.weight(1f).focusRequester(paidFocus),
                         )
