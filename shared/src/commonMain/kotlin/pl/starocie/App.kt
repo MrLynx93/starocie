@@ -47,6 +47,12 @@ import pl.starocie.ui.theme.rememberThemeChoice
 @Serializable private data object SellingSessionsRoute
 @Serializable private data class SellingSessionRoute(val eventId: String)
 /**
+ * The never-recorded form, opened from today's giełda rather than from the sell list.
+ * It carries the day's id only so the screen behind it can be found again, that entry
+ * being where the form's state lives.
+ */
+@Serializable private data class SellingSessionSellNewRoute(val eventId: String)
+/**
  * [selling] is false only from a giełda that has been and gone: the item screen is
  * the same either way, minus the one button that would write a new sale into today.
  * Today's own giełda keeps it — there the sale lands in the very day being read.
@@ -133,12 +139,28 @@ private fun MainNavigation(theme: ThemeChoice) {
         // A day is a way into the records rather than a separate reading of them, so
         // its rows land on the same two item screens the other lists open.
         composable<SellingSessionRoute> { entry ->
+            val eventId = entry.toRoute<SellingSessionRoute>().eventId
             SellingSessionDetailScreen(
-                eventId = entry.toRoute<SellingSessionRoute>().eventId,
+                eventId = eventId,
                 onOpenStockItem = { itemId, selling ->
                     navController.navigate(StockItemRoute(itemId, selling = selling))
                 },
                 onOpenSoldItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
+                onAddNew = { navController.navigate(SellingSessionSellNewRoute(eventId)) },
+                onDone = { navController.popBackStack() },
+            )
+        }
+
+        // The same form the sell list opens, sharing its view model with the day
+        // behind it for the same reason: the screen that pressed the button is the
+        // one holding the half-filled form, and a sale has to clear it there.
+        composable<SellingSessionSellNewRoute> { entry ->
+            val eventId = entry.toRoute<SellingSessionSellNewRoute>().eventId
+            val sessionEntry = remember(entry) {
+                navController.getBackStackEntry(SellingSessionRoute(eventId))
+            }
+            SellNewItemScreen(
+                viewModel = koinViewModel(viewModelStoreOwner = sessionEntry),
                 onDone = { navController.popBackStack() },
             )
         }

@@ -781,6 +781,16 @@ write nothing until their main button is pressed.
   on its item's name, so a deleted thing's sale has nothing left to match and drops
   out of a search; it is back the moment the box is cleared. The box only appears
   once the day holds something, there being nothing to search in an empty one.
+  **Today's giełda carries the sell list's "Dodaj nowy przedmiot i sprzedaj"**,
+  pinned above "Wstecz" the way it is there, and for the reason its rows keep
+  "Sprzedaj": the day on screen is the one every write resolves to, so a thing that
+  was never in the app lands in the takings being read. A day that has been and gone
+  shows no such button — that sale would be dated today. It opens the very same
+  `SellNewItemScreen`, sharing a `SellViewModel` resolved against the day's nav entry
+  exactly as that screen shares the sell list's, and **the search that found nothing
+  seeds the name** in the same words — "Dodaj «lampa» i sprzedaj" — because typing a
+  name and not finding it is how you learn the thing was never entered, whichever
+  list you were typing into.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
