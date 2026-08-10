@@ -58,7 +58,7 @@ fun StockScreen(
     ScreenColumn {
         Text("Nasz magazyn", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Mamy tu ${przedmioty(state.inStock.size)} · " +
+            "Mamy ${przedmioty(state.inStock.size)} · " +
                 "Chcemy sprzedać za łącznie ${shownValue.format()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -70,7 +70,7 @@ fun StockScreen(
             value = state.query,
             onValueChange = viewModel::onQueryChange,
             singleLine = true,
-            placeholder = { Text("Czego szukamy?") },
+            placeholder = { Text("Czego szukasz?") },
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         )

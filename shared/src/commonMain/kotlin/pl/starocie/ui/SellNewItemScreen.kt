@@ -91,7 +91,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
             ) {
                 Text("Sprzedaj nowy przedmiot", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Nigdzie go nie mamy — zapisujemy i sprzedajemy za jednym razem.",
+                    "Jeszcze nie wprowadziliśmy tego przedmiotu do aplikacji. Wprowadź go teraz i od razu sprzedaj.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

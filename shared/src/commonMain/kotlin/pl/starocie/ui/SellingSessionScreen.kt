@@ -79,7 +79,7 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
             value = query,
             onValueChange = { query = it },
             singleLine = true,
-            placeholder = { Text("Czego szukamy?") },
+            placeholder = { Text("Czego szukasz?") },
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         )
