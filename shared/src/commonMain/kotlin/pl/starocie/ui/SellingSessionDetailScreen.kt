@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,6 +51,10 @@ import pl.starocie.domain.format
  * They are two lists rather than one because a giełda is two different days' work at
  * once: what we bought there is still ours, and what we sold there was mostly bought
  * somewhere else. A thing can honestly appear in both.
+ *
+ * One search box sits under the day's figures and narrows both sections, the way the
+ * magazyn, the sold list and the giełdy list are each searched — a day worth reading
+ * is a day too long to scroll. The figures above it stay the day's own.
  *
  * The day being *today* changes one thing: a sale started from here would be dated
  * today and counted in today's takings, which is the whole reason a day that has been
@@ -87,13 +93,31 @@ fun SellingSessionDetailScreen(
 
     // Everything that came in that day, newest first — an item belongs to a giełda
     // through its buy, which is the only place the link exists.
-    val bought = remember(ledger, eventId) {
+    val boughtThatDay = remember(ledger, eventId) {
         ledger.buysOfEvent(eventId)
             .flatMap { ledger.itemsOfBuy(it.id) }
             .sortedByDescending { it.createdAt }
     }
-    val sold = remember(ledger, eventId) {
+    val soldThatDay = remember(ledger, eventId) {
         ledger.sellsOfEvent(eventId).sortedByDescending { it.createdAt }
+    }
+
+    // The same search the other three lists carry, in the same words: a good giełda
+    // is a hundred rows across the two sections, and typing a name is how anything
+    // is found in this app. It filters both sections at once, because a thing bought
+    // and sold on the same day honestly appears in each and one box must find it in
+    // both.
+    var query by remember(eventId) { mutableStateOf("") }
+    val bought = remember(boughtThatDay, query) {
+        boughtThatDay.filter { query.isBlank() || it.matchesQuery(query) }
+    }
+    // A sale is found by the thing it was, so it is the item's name that is matched.
+    // A sale whose item has been deleted has no name left to match and drops out of
+    // a search — it is still there, unsearched, the moment the box is cleared.
+    val sold = remember(ledger, soldThatDay, query) {
+        soldThatDay.filter {
+            query.isBlank() || ledger.itemById(it.itemId)?.matchesQuery(query) == true
+        }
     }
 
     ScreenColumn {
@@ -129,9 +153,26 @@ fun SellingSessionDetailScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        // Below the day's figures rather than above them, and that is the whole
+        // reason they are not computed over what the search found: they answer for
+        // the giełda, which is what the row in the list behind this screen says too,
+        // and the two must not disagree because somebody is looking for a lamp.
+        if (boughtThatDay.isNotEmpty() || soldThatDay.isNotEmpty()) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                placeholder = { Text("Czego szukasz?") },
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(12.dp))
+        }
+
         if (bought.isEmpty() && sold.isEmpty()) {
             Text(
-                "Nic tu jeszcze nie ma.",
+                if (query.isBlank()) "Nic tu jeszcze nie ma." else "Nic takiego tu nie ma.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),

@@ -503,13 +503,13 @@ addresses one person — "Sprzedajesz to jako jedną pozycję? Wróć i wybierz 
 It is not the notebook saying what we did; it is the app catching somebody about to
 take the wrong door, and "Wróć" is the same imperative a button uses.
 
-The other is **the search placeholder, "Czego szukasz?"**, in all three lists — the
-magazyn, the sold list and the giełdy. It is the same exception a different way
-round: a search box is not a record of anything we did, it is the app asking the
-person holding the phone what they want, so it is second person the way a button is
-imperative. It is **one string in three places** and has to stay that way; three
-lists asking the same question in two different voices is exactly the small
-wrongness that makes an app feel unfinished.
+The other is **the search placeholder, "Czego szukasz?"**, over every list there
+is — the magazyn, the sold list, the giełdy and one giełda's own two sections. It is
+the same exception a different way round: a search box is not a record of anything we
+did, it is the app asking the person holding the phone what they want, so it is
+second person the way a button is imperative. It is **one string in four places** and
+has to stay that way; two lists asking the same question in two different voices is
+exactly the small wrongness that makes an app feel unfinished.
 
 Everything else is "we", and a third exception is drift rather than a pattern.
 
@@ -770,6 +770,17 @@ write nothing until their main button is pressed.
   own share of the cost, so a lot that went across three giełdy shows a third of
   itself at each; a sale whose item has been deleted reads "—" for the thing and
   opens nothing, its profit being the whole price like any other uncosted sale.
+  That screen carries **the same search box as the three lists, under the day's
+  figures**, and it narrows both sections at once — a thing bought and sold on one day
+  is honestly in each, so one box has to find it in both. It is under the figures
+  rather than over them because those figures are **the day's and stay the day's**:
+  they are what the row in the list behind says as well, and the two must not
+  disagree because somebody is looking for a lamp. That is the opposite of the
+  magazyn and the sold list, whose totals *are* computed over what was found — there
+  the heading answers for the list, here it answers for the giełda. A sale is matched
+  on its item's name, so a deleted thing's sale has nothing left to match and drops
+  out of a search; it is back the moment the box is cleared. The box only appears
+  once the day holds something, there being nothing to search in an empty one.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
