@@ -234,6 +234,8 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         // A giełda that has already happened is the one place it is missing: those
         // rows are a record of a day, and a sale started from one would be dated
         // today and land in today's takings, which is not the day you are reading.
+        // Today's giełda is not that case — there the two days are the same one, and
+        // a stall we are standing at is exactly where selling has to be a tap away.
         if (selling) {
             Button(
                 onClick = {

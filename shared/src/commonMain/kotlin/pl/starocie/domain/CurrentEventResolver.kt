@@ -22,4 +22,16 @@ class CurrentEventResolver(
     fun eventIdFor(date: LocalDate): String = date.toString()
 
     fun eventIdFor(instant: Instant): String = eventIdFor(dateOf(instant))
+
+    /**
+     * Whether something recorded at [now] would land in [eventId] — which is the
+     * question a screen showing one giełda has to answer before it offers to sell
+     * into it.
+     *
+     * It is id equality rather than a date comparison on purpose: every write
+     * resolves to *this* id, so an extra event somebody created by hand on today's
+     * date has a UUID and would not receive the sale. Asking whether the days match
+     * would put the button on a day the proceeds were never going to reach.
+     */
+    fun isCurrent(eventId: String, now: Instant): Boolean = eventId == eventIdFor(now)
 }

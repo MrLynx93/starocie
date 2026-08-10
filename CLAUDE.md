@@ -629,6 +629,13 @@ write nothing until their main button is pressed.
   not that button: a sale started there would be dated today and counted in today's
   takings, not in the day being read. The route carries the flag (`StockItemRoute`'s
   `selling`, defaulting to true), the way the magazyn's two doors already do.
+  **Today's giełda keeps the button**, because there the two days are the same one
+  and that screen is the stall we are standing at — the day's own list is a perfectly
+  good way to reach the next thing to sell. The test is
+  `CurrentEventResolver.isCurrent`, and it is **id equality, not a matching date**:
+  every write resolves to the dated id, so an extra event created by hand on today's
+  date would never receive the sale, and offering to sell into it would put the
+  proceeds in a day nobody was reading.
   **A lot is the one exception, and the only thing the sell dialog is still for**:
   a piece goes at its own price, so "Sprzedaj" opens the dialog instead. The
   **count leads it** — a stepper starting at 1, reading "z 9" beside it — because

@@ -26,8 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
@@ -46,11 +49,18 @@ import pl.starocie.domain.format
  * They are two lists rather than one because a giełda is two different days' work at
  * once: what we bought there is still ours, and what we sold there was mostly bought
  * somewhere else. A thing can honestly appear in both.
+ *
+ * The day being *today* changes one thing: a sale started from here would be dated
+ * today and counted in today's takings, which is the whole reason a day that has been
+ * and gone offers no "Sprzedaj". When the day on screen is the one every write
+ * resolves to, that objection is gone and the button belongs — this is the giełda we
+ * are standing at.
  */
+@OptIn(ExperimentalTime::class)
 @Composable
 fun SellingSessionDetailScreen(
     eventId: String,
-    onOpenStockItem: (String) -> Unit,
+    onOpenStockItem: (itemId: String, selling: Boolean) -> Unit,
     onOpenSoldItem: (String) -> Unit,
     onDone: () -> Unit,
 ) {
@@ -59,6 +69,15 @@ fun SellingSessionDetailScreen(
 
     val scope = rememberCoroutineScope()
     val event = ledger.eventById(eventId)
+
+    // Asked once, when the day is opened: a screen left open across midnight would
+    // still offer the button, and the sale it wrote would go to the new day's event
+    // rather than this one. Reopening the giełda is what puts that right, and a phone
+    // that sat unlocked at a stall through midnight is not the case to complicate
+    // this for.
+    val sellingToday = remember(eventId) {
+        CurrentEventResolver().isCurrent(eventId, Clock.System.now())
+    }
 
     // Seeded once the day actually arrives, and left alone after: following the
     // ledger into the field would fight the keyboard, since every write comes back.
@@ -130,6 +149,7 @@ fun SellingSessionDetailScreen(
                             cost = ledger.sellCost(sell),
                             onOpen = openItemOrNull(
                                 ledger.itemById(sell.itemId),
+                                sellingToday,
                                 onOpenStockItem,
                                 onOpenSoldItem,
                             ),
@@ -150,7 +170,12 @@ fun SellingSessionDetailScreen(
                             item = item,
                             stats = ledger.itemStats(item),
                             piecesLeft = ledger.piecesLeft(item),
-                            onClick = openItemOrNull(item, onOpenStockItem, onOpenSoldItem) ?: {},
+                            onClick = openItemOrNull(
+                                item,
+                                sellingToday,
+                                onOpenStockItem,
+                                onOpenSoldItem,
+                            ) ?: {},
                         )
                         HorizontalDivider()
                     }
@@ -276,13 +301,18 @@ private fun sellCostLabel(cost: SellCost?): String {
  * in stock it is still ours to price, sell and delete; sold it is a record with four
  * numbers left to correct. A deleted one, and a `REMOVED` one written before removing
  * became a delete, belong to neither and open nothing.
+ *
+ * [sellingToday] travels with the item id rather than being decided over there: it is
+ * a fact about the day this row was opened from, and only this screen knows which day
+ * that is.
  */
 private fun openItemOrNull(
     item: Item?,
-    onOpenStockItem: (String) -> Unit,
+    sellingToday: Boolean,
+    onOpenStockItem: (itemId: String, selling: Boolean) -> Unit,
     onOpenSoldItem: (String) -> Unit,
 ): (() -> Unit)? = when (item?.status) {
-    ItemStatus.IN_STOCK -> ({ onOpenStockItem(item.id) })
+    ItemStatus.IN_STOCK -> ({ onOpenStockItem(item.id, sellingToday) })
     ItemStatus.SOLD -> ({ onOpenSoldItem(item.id) })
     else -> null
 }

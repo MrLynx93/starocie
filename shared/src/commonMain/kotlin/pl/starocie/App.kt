@@ -49,6 +49,7 @@ import pl.starocie.ui.theme.rememberThemeChoice
 /**
  * [selling] is false only from a giełda that has been and gone: the item screen is
  * the same either way, minus the one button that would write a new sale into today.
+ * Today's own giełda keeps it — there the sale lands in the very day being read.
  */
 @Serializable private data class StockItemRoute(val itemId: String, val selling: Boolean = true)
 @Serializable private data class SoldItemRoute(val itemId: String)
@@ -134,8 +135,8 @@ private fun MainNavigation(theme: ThemeChoice) {
         composable<SellingSessionRoute> { entry ->
             SellingSessionDetailScreen(
                 eventId = entry.toRoute<SellingSessionRoute>().eventId,
-                onOpenStockItem = { itemId ->
-                    navController.navigate(StockItemRoute(itemId, selling = false))
+                onOpenStockItem = { itemId, selling ->
+                    navController.navigate(StockItemRoute(itemId, selling = selling))
                 },
                 onOpenSoldItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
                 onDone = { navController.popBackStack() },
