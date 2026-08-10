@@ -498,11 +498,20 @@ speaks as us, never at the user:
   1 / 2–4 / rest rule and the teens exception); "1 przedmiotów" is the small
   wrongness that makes an app feel like a machine
 
-**One line breaks the "we" form on purpose**: the paczka screen's last-chance hint
+**Two things break the "we" form on purpose.** The paczka screen's last-chance hint
 addresses one person — "Sprzedajesz to jako jedną pozycję? Wróć i wybierz «Kup»".
-It is the only second-person text in the app. It is not the notebook saying what we
-did; it is the app catching somebody about to take the wrong door, and "Wróć" is
-the same imperative a button uses. A second one of these is drift, not a pattern.
+It is not the notebook saying what we did; it is the app catching somebody about to
+take the wrong door, and "Wróć" is the same imperative a button uses.
+
+The other is **the search placeholder, "Czego szukasz?"**, in all three lists — the
+magazyn, the sold list and the giełdy. It is the same exception a different way
+round: a search box is not a record of anything we did, it is the app asking the
+person holding the phone what they want, so it is second person the way a button is
+imperative. It is **one string in three places** and has to stay that way; three
+lists asking the same question in two different voices is exactly the small
+wrongness that makes an app feel unfinished.
+
+Everything else is "we", and a third exception is drift rather than a pattern.
 
 ## Screens
 
