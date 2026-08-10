@@ -28,13 +28,21 @@ data class BuyOneUiState(
     val buyId: String? = null,
     val error: String? = null,
 ) {
-    val paid: Money? get() = parseMoney(paidText)
+    /** What one of them cost — the field is per piece, as the asking price is. */
+    val paidPerPiece: Money? get() = parseMoney(paidText)
 
     /** Blank or nonsense means one, so a stray edit cannot lose the record. */
     val quantity: Int get() = quantityText.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1
 
     /** More than one is a lot that sells in parts — mirrors `Item.splittable`. */
     val splittable: Boolean get() = quantity > 1
+
+    /**
+     * The buy's price, which is a total: one piece's cost taken as many times as
+     * there are pieces. `Buy.price` is what was handed over for the lot, so the
+     * multiplication happens here rather than anywhere the cost is later read.
+     */
+    val paid: Money? get() = paidPerPiece?.let { it * quantity }
 
     /** Only a standalone purchase asks what was paid; a box already knows. */
     val showPaid: Boolean get() = buyId == null
@@ -45,7 +53,7 @@ data class BuyOneUiState(
      * unknown, just a field skipped. The shortcut sale still takes an empty price,
      * which is where a genuinely unknown cost comes from.
      */
-    val canSave: Boolean get() = name.isNotBlank() && (!showPaid || paid != null)
+    val canSave: Boolean get() = name.isNotBlank() && (!showPaid || paidPerPiece != null)
 }
 
 /**
@@ -55,6 +63,11 @@ data class BuyOneUiState(
  * Attached to a box, items accumulate against that buy and the allocator splits
  * its price across them — the screen is identical either way, which is the point:
  * unpacking a box is the same motion as buying things one at a time.
+ *
+ * **A lot is priced by the piece, both times**, exactly as it is on the shortcut
+ * sale's form: what one of them cost and what one of them is to go for. That is what
+ * the person holding the thing knows, and the lot's total is the multiplication they
+ * would otherwise be doing in their head at somebody else's table.
  */
 class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
 
@@ -102,6 +115,8 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
             runCatching {
                 val buyId = current.buyId
                 if (buyId == null) {
+                    // `paid` is the lot's total, multiplied up from the piece price
+                    // that was typed — a buy holds what was handed over, not a rate.
                     repository.recordBuy(current.paid, name = null, items = listOf(draft))
                 } else {
                     repository.addItem(buyId, draft)

@@ -72,9 +72,9 @@ putting the field back would find them where they were left.
    **On a lot it is the price of one piece**, which is what makes the sell dialog
    able to multiply it by the count. Nothing stores that distinction — a lot is
    simply a `quantity` above one — so every field holding this number says which it
-   is: "Chcemy sprzedać za sztukę" against "Chcemy sprzedać za". The two differ by
-   a factor of however many there are, and a mislabelled one is a stall selling
-   twelve plates for the price of one.
+   is: "Sprzedamy po cenie za sztukę" and "Chcemy sprzedać za sztukę" against a
+   plain "Chcemy sprzedać za". The two differ by a factor of however many there are,
+   and a mislabelled one is a stall selling twelve plates for the price of one.
 2. **Unknown cost stays unknown, and what it went for is the profit.** An item with
    no `buyId` was invented at point of sale, and `Item.stats.cost` is `null` for it —
    never zero, because nothing may claim we paid nothing. **`profit` is not null**:
@@ -574,8 +574,20 @@ write nothing until their main button is pressed.
   heading: the form explains itself. Only a box ("Wpisujemy po kolei — same
   trafiają do paczki.") and a run in progress ("Zapisaliśmy w tej serii: 3") have
   anything to add.
-  The count sits beside what was paid: one lot, one price, so many things. A box
-  was paid for once, so there the count stands alone.
+  **A lot is priced by the piece, both times** — "Kupiliśmy po cenie za sztukę" and
+  "Sprzedamy po cenie za sztukę" — exactly as on the shortcut sale's form, and the
+  screen multiplies what was paid by the count to get the buy's total. What somebody
+  holding a crate of twelve plates knows is what one plate cost; the pile's total is
+  a multiplication, and doing it in your head at somebody else's table is where the
+  wrong number gets written down. The total is read back underneath ("Kupiliśmy 3
+  sztuki za 90,00 zł"), because a pile's total typed into a per-piece field is
+  otherwise invisible until the profit is wrong weeks later. `Buy.price` is still
+  what was handed over — the multiplication happens on the form, and nothing below
+  it stores a rate.
+  A single thing keeps the count beside what was paid, that being one price and how
+  many things it covered; a lot moves the price onto a line of its own, its label
+  being a phrase rather than two words. A box was paid for once and is not asked
+  again, so there the count stands alone either way.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
   the first move is as often the camera as the name. Focusing a text field *is* the
   request for the keyboard, so the two cannot be separated without hiding it again
@@ -808,8 +820,8 @@ write nothing until their main button is pressed.
   here — it was not in the app a moment ago, so there is no pile left behind for it
   to stay in the magazyn for. Unticking it is the rarer answer: we brought five, two
   went, and three are coming home.
-  **On a lot both prices are typed per piece** — "Kupiliśmy po tyle za sztukę" and
-  "Sprzedajemy po tyle za sztukę" — and the form multiplies them up: what was paid
+  **On a lot both prices are typed per piece** — "Kupiliśmy po cenie za sztukę" and
+  "Sprzedajemy po cenie za sztukę" — and the form multiplies them up: what was paid
   by the count, what it went for by the pieces actually going. Somebody standing at
   the table knows what one of them cost and what one of them is fetching; the totals
   are arithmetic done in your head while a buyer waits, which is where the wrong
@@ -822,10 +834,11 @@ write nothing until their main button is pressed.
   weeks later. A single thing keeps the short labels and the buy form's line, count
   beside price; a lot moves what was paid onto a line of its own, the label being a
   phrase rather than two words and the count no longer saying what that price
-  covers. **The buy screen still asks for the lot's total** under the same two words,
-  so the one label means different things on the two forms; if that turns out to be
-  a trap, it is the buy form that should follow this one rather than the other way
-  round.
+  covers. **The buy screen now does the same thing in the same words**, so a lot's
+  cost is typed per piece whichever door it came through and the one label cannot
+  mean two things. Only "Kup paczkę" still asks for a total, under a label that says
+  so outright — "Całą paczkę kupiliśmy za" — because a box is priced before anybody
+  knows how many things are in it.
 - **Buying splits in two, but there is only one item form.** "Kup" records one
   thing at one price and clears for the next, so its cost is exact and the
   allocator is not involved. "Kup paczkę" is a two-step wizard: the price first, which

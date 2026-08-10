@@ -55,7 +55,8 @@ import pl.starocie.domain.format
  * The same purchase should not feel like a different act depending on how quickly
  * the thing was sold on.
  *
- * **A lot is priced by the piece here, both times.** Somebody standing at the table
+ * **A lot is priced by the piece, both times, exactly as on the buy form.** Somebody
+ * standing at the table
  * knows what one of them cost and what one of them is going for; the totals are a
  * multiplication, and doing it in your head while a buyer waits is where the wrong
  * number gets written down. Both labels therefore say "za sztukę" and both totals
@@ -138,7 +139,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                 // that pairing on purpose — the price beside the count is no longer
                 // the lot's — and its label is a phrase rather than two words, which
                 // beside a number field would be ellipsised down to "Kupiliśmy po
-                // tyle za s…". Saying which price this is, is the whole job of that
+                // cenie za s…". Saying which price this is, is the whole job of that
                 // label, so it gets the width instead.
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
@@ -201,7 +202,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                     label = {
                         Text(
                             if (form.splittable) {
-                                "Sprzedajemy po tyle za sztukę"
+                                "Sprzedajemy po cenie za sztukę"
                             } else {
                                 "Sprzedajemy za"
                             },
@@ -289,7 +290,7 @@ private fun PaidField(
         onValueChange = { onChange(form.copy(paidText = it)) },
         singleLine = true,
         label = {
-            Text(if (form.splittable) "Kupiliśmy po tyle za sztukę" else "Kupiliśmy za")
+            Text(if (form.splittable) "Kupiliśmy po cenie za sztukę" else "Kupiliśmy za")
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         shape = RoundedCornerShape(14.dp),

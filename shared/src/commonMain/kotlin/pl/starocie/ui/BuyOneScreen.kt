@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
+import pl.starocie.domain.format
 
 /**
  * One thing at a time. Saving clears the form and puts the cursor back in the name
@@ -151,9 +152,16 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(10.dp))
 
-                // The count rides with what was paid: one lot, one price, and how
-                // many things are in it. A box was paid for once, so it is not
-                // asked again there and the count stands alone.
+                // A single thing keeps the count beside what was paid: one price and
+                // how many things it covered, which for one thing is the same number
+                // twice. A lot breaks that pairing on purpose — the price is no
+                // longer the lot's — and its label is a phrase rather than two words,
+                // which beside a number field would be ellipsised down to "Kupiliśmy
+                // po cenie za s…". Saying which price this is, is the whole job of
+                // that label, so it gets the width instead.
+                //
+                // A box was paid for once and is not asked again, so there the count
+                // stands alone whichever it is.
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = state.quantityText,
@@ -168,22 +176,38 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.4f),
                     )
-                    if (state.showPaid) {
-                        OutlinedTextField(
-                            value = state.paidText,
-                            onValueChange = viewModel::onPaidChange,
-                            singleLine = true,
-                            label = { Text("Kupiliśmy za") },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Next,
-                            ),
-                            keyboardActions = KeyboardActions(onNext = { moveOnToAsking() }),
-                            shape = RoundedCornerShape(14.dp),
+                    if (state.showPaid && !state.splittable) {
+                        BuyPaidField(
+                            state = state,
+                            onChange = viewModel::onPaidChange,
+                            onNext = moveOnToAsking,
                             modifier = Modifier.weight(1f).focusRequester(paidFocus),
                         )
                     } else {
                         Spacer(Modifier.weight(1f))
+                    }
+                }
+
+                if (state.showPaid && state.splittable) {
+                    Spacer(Modifier.height(10.dp))
+                    BuyPaidField(
+                        state = state,
+                        onChange = viewModel::onPaidChange,
+                        onNext = moveOnToAsking,
+                        modifier = Modifier.fillMaxWidth().focusRequester(paidFocus),
+                    )
+
+                    // What the whole lot cost, said back. Typing the pile's total into
+                    // a per-piece field is the one easy mistake here, and it is
+                    // invisible until the profit is wrong weeks later — a figure three
+                    // times what anybody remembers paying is not.
+                    state.paid?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Kupiliśmy ${sztuki(state.quantity)} za ${it.format()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
 
@@ -200,7 +224,11 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     singleLine = true,
                     label = {
                         Text(
-                            if (state.splittable) "Chcemy sprzedać za sztukę" else "Chcemy sprzedać za",
+                            if (state.splittable) {
+                                "Sprzedamy po cenie za sztukę"
+                            } else {
+                                "Chcemy sprzedać za"
+                            },
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -256,4 +284,36 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
             BackButton(onDone)
         }
     }
+}
+
+/**
+ * What it cost — one of them, on a lot.
+ *
+ * The same field in two places, because a lot moves it out of the count's line and a
+ * single thing keeps it there; the label is what differs between them, and having it
+ * in one place is what stops the two drifting into saying different things about the
+ * same number.
+ */
+@Composable
+private fun BuyPaidField(
+    state: BuyOneUiState,
+    onChange: (String) -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = state.paidText,
+        onValueChange = onChange,
+        singleLine = true,
+        label = {
+            Text(if (state.splittable) "Kupiliśmy po cenie za sztukę" else "Kupiliśmy za")
+        },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = ImeAction.Next,
+        ),
+        keyboardActions = KeyboardActions(onNext = { onNext() }),
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier,
+    )
 }
