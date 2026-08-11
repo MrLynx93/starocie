@@ -149,6 +149,10 @@ private fun MainNavigation(theme: ThemeChoice) {
                     navController.navigate(StockItemRoute(itemId, selling = selling))
                 },
                 onOpenSoldItem = { itemId -> navController.navigate(SoldItemRoute(itemId)) },
+                // The very list the home screen's "Sprzedaj" opens — what goes at a
+                // giełda is mostly what we bought at another one, so the whole
+                // magazyn is what has to be searchable from the stall.
+                onSell = { navController.navigate(SellRoute) },
                 onAddNew = { navController.navigate(SellingSessionSellNewRoute(eventId)) },
                 onDone = { navController.popBackStack() },
             )

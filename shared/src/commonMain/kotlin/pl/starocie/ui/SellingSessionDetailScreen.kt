@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +66,12 @@ import pl.starocie.domain.format
  * are standing at. The same goes for the thing that was never recorded at all: today's
  * screen carries the sell list's "Dodaj nowy przedmiot i sprzedaj", because standing
  * at the stall is exactly when something turns up that is not in the app.
+ *
+ * Today's screen carries the home screen's "Sprzedaj" too, and for the same reason it
+ * carries the other button: what is sold at a giełda is mostly what we bought at some
+ * other one, so the thing a buyer is holding is usually nowhere in these two lists.
+ * Without it, selling from the stall we are standing at meant going back out to the
+ * home screen — the one place the whole magazyn can be searched.
  */
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -72,6 +79,7 @@ fun SellingSessionDetailScreen(
     eventId: String,
     onOpenStockItem: (itemId: String, selling: Boolean) -> Unit,
     onOpenSoldItem: (String) -> Unit,
+    onSell: () -> Unit,
     onAddNew: () -> Unit,
     onDone: () -> Unit,
 ) {
@@ -236,23 +244,39 @@ fun SellingSessionDetailScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Only on the day itself, and for the same reason the rows keep "Sprzedaj":
-        // what this writes is a sale dated today, which on any other giełda would put
-        // the money in a day nobody was reading.
-        //
-        // The typing that found nothing is what seeds the name, so the search box
-        // above is handed to the view model on the way — it is the same box in the
-        // same words as the sell list's, and it has to do the same thing with what
-        // was typed into it.
+        // Both only on the day itself, and for the same reason the rows keep
+        // "Sprzedaj": what they write is a sale dated today, which on any other giełda
+        // would put the money in a day nobody was reading.
         if (sellingToday && event != null) {
+            // The magazyn, opened to sell from: these two sections are a day's own
+            // work, and the thing being handed over was most likely bought at some
+            // other giełda entirely. It is the same button the home screen leads with,
+            // in the same word, landing on the same searchable list.
             Button(
+                onClick = onSell,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Outlined under the filled one, the way the second buy button sits under
+            // the first: something that was never recorded is the rarer of the two
+            // moments at a stall, and one primary per screen is what says which is
+            // which.
+            //
+            // The typing that found nothing is what seeds the name, so the search box
+            // above is handed to the view model on the way — it is the same box in the
+            // same words as the sell list's, and it has to do the same thing with what
+            // was typed into it.
+            OutlinedButton(
                 onClick = {
                     sellViewModel.onQueryChange(query)
                     sellViewModel.startNewItem()
                     onAddNew()
                 },
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 Text(
                     if (query.isBlank()) {
@@ -260,7 +284,6 @@ fun SellingSessionDetailScreen(
                     } else {
                         "Dodaj \"${query.trim()}\" i sprzedaj"
                     },
-                    fontWeight = FontWeight.Medium,
                 )
             }
 
