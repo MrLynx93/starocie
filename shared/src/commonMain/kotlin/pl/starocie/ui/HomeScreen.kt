@@ -42,7 +42,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import org.koin.compose.koinInject
+import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.EventStats
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
@@ -50,6 +53,7 @@ import pl.starocie.domain.Money
 import pl.starocie.domain.format
 import pl.starocie.domain.sum
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun HomeScreen(
     onBuyOne: () -> Unit,
@@ -58,6 +62,7 @@ fun HomeScreen(
     onStock: () -> Unit,
     onSold: () -> Unit,
     onSessions: () -> Unit,
+    onTodaySession: (String) -> Unit,
     isDark: Boolean,
     onToggleTheme: () -> Unit,
 ) {
@@ -76,6 +81,18 @@ fun HomeScreen(
     // A day we only bought on is not a giełda, so it is not counted as one — and the
     // list behind this card leaves out exactly the same days.
     val sessionCount = remember(ledger) { ledger.sellingSessions().size }
+
+    // The giełda we are standing at, and only while we are standing at it: the day
+    // every write resolves to, once something has actually gone at it. The same rule
+    // the list and its card count by — a day we have only bought on is not a giełda,
+    // so there is nothing here to open yet. The clock is read again on every write,
+    // which is what carries the card off the screen at midnight.
+    val today = remember(ledger) {
+        val id = CurrentEventResolver().eventIdFor(Clock.System.now())
+        ledger.eventById(id)
+            ?.takeIf { ledger.sellsOfEvent(it.id).isNotEmpty() }
+            ?.let { it to ledger.eventStats(it) }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -186,6 +203,21 @@ fun HomeScreen(
                 openLabel = "Pokaż nasze giełdy",
                 onClick = onSessions,
             )
+
+            // Today's, under all of them — the day being had rather than the days we
+            // have had. It says what has gone and what that took, and nothing about
+            // profit: a giełda in progress is a stall being worked, and what a day
+            // made is a question for the day itself, on the screen behind this card.
+            today?.let { (event, stats) ->
+                Spacer(Modifier.height(10.dp))
+
+                SummaryCard(
+                    title = "Dzisiejsza giełda",
+                    subtitle = "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
+                    openLabel = "Pokaż dzisiejszą giełdę",
+                    onClick = { onTodaySession(event.id) },
+                )
+            }
 
             Spacer(Modifier.height(20.dp))
 

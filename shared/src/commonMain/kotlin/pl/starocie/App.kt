@@ -105,6 +105,9 @@ private fun MainNavigation(theme: ThemeChoice) {
                 onStock = { navController.navigate(StockRoute) },
                 onSold = { navController.navigate(SoldRoute) },
                 onSessions = { navController.navigate(SellingSessionsRoute) },
+                // Straight onto the day itself, past the list it would be found in:
+                // the card is only there while that day is the one being had.
+                onTodaySession = { eventId -> navController.navigate(SellingSessionRoute(eventId)) },
                 isDark = theme.mode.isDark,
                 onToggleTheme = theme.toggle,
             )
