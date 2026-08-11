@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +33,6 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
@@ -63,15 +61,16 @@ import pl.starocie.domain.format
  * today and counted in today's takings, which is the whole reason a day that has been
  * and gone offers no "Sprzedaj". When the day on screen is the one every write
  * resolves to, that objection is gone and the button belongs — this is the giełda we
- * are standing at. The same goes for the thing that was never recorded at all: today's
- * screen carries the sell list's "Dodaj nowy przedmiot i sprzedaj", because standing
- * at the stall is exactly when something turns up that is not in the app.
+ * are standing at. What is sold at a giełda is mostly what we bought at some other
+ * one, so the thing a buyer is holding is usually nowhere in these two lists; without
+ * that button, selling from the stall we are standing at meant going back out to the
+ * home screen, the one place the whole magazyn can be searched.
  *
- * Today's screen carries the home screen's "Sprzedaj" too, and for the same reason it
- * carries the other button: what is sold at a giełda is mostly what we bought at some
- * other one, so the thing a buyer is holding is usually nowhere in these two lists.
- * Without it, selling from the stall we are standing at meant going back out to the
- * home screen — the one place the whole magazyn can be searched.
+ * It is the *only* button, and a thing that was never recorded is reached through it
+ * rather than beside it: "Sprzedaj" opens the magazyn, and the search that fails to
+ * find the thing is what offers "Dodaj … i sprzedaj" there. A second button here
+ * would put the rarer of the two moments alongside the commoner one on a screen that
+ * is for reading a day.
  */
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -80,16 +79,10 @@ fun SellingSessionDetailScreen(
     onOpenStockItem: (itemId: String, selling: Boolean) -> Unit,
     onOpenSoldItem: (String) -> Unit,
     onSell: () -> Unit,
-    onAddNew: () -> Unit,
     onDone: () -> Unit,
 ) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
-
-    // The sell flow's own state holder, resolved against this screen's nav entry so
-    // that the form opened below is the one it hands on to — the same sharing the
-    // sell list does with that screen, search box and all.
-    val sellViewModel: SellViewModel = koinViewModel()
 
     val scope = rememberCoroutineScope()
     val event = ledger.eventById(eventId)
@@ -244,48 +237,25 @@ fun SellingSessionDetailScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Both only on the day itself, and for the same reason the rows keep
-        // "Sprzedaj": what they write is a sale dated today, which on any other giełda
-        // would put the money in a day nobody was reading.
+        // Only on the day itself, and for the same reason the rows keep "Sprzedaj":
+        // what it writes is a sale dated today, which on any other giełda would put
+        // the money in a day nobody was reading.
         if (sellingToday && event != null) {
             // The magazyn, opened to sell from: these two sections are a day's own
             // work, and the thing being handed over was most likely bought at some
             // other giełda entirely. It is the same button the home screen leads with,
             // in the same word, landing on the same searchable list.
+            //
+            // It is the only button here, and the list it opens is where the thing
+            // that was never recorded is added — the sell list's own "Dodaj … i
+            // sprzedaj" is one tap further on, from the screen whose search box has
+            // just failed to find it. Offering that door twice put a second primary
+            // decision on a day's screen for the rarer of the two moments.
             Button(
                 onClick = onSell,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Outlined under the filled one, the way the second buy button sits under
-            // the first: something that was never recorded is the rarer of the two
-            // moments at a stall, and one primary per screen is what says which is
-            // which.
-            //
-            // The typing that found nothing is what seeds the name, so the search box
-            // above is handed to the view model on the way — it is the same box in the
-            // same words as the sell list's, and it has to do the same thing with what
-            // was typed into it.
-            OutlinedButton(
-                onClick = {
-                    sellViewModel.onQueryChange(query)
-                    sellViewModel.startNewItem()
-                    onAddNew()
-                },
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) {
-                Text(
-                    if (query.isBlank()) {
-                        "Dodaj nowy przedmiot i sprzedaj"
-                    } else {
-                        "Dodaj \"${query.trim()}\" i sprzedaj"
-                    },
-                )
-            }
 
             Spacer(Modifier.height(10.dp))
         }

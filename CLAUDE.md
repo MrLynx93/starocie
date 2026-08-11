@@ -796,25 +796,22 @@ write nothing until their main button is pressed.
   on its item's name, so a deleted thing's sale has nothing left to match and drops
   out of a search; it is back the moment the box is cleared. The box only appears
   once the day holds something, there being nothing to search in an empty one.
-  **Today's giełda carries two buttons of its own**, pinned above "Wstecz", and both
-  for the reason its rows keep "Sprzedaj": the day on screen is the one every write
-  resolves to, so what they record lands in the takings being read. A day that has
-  been and gone shows neither — those sales would be dated today.
-  The first is **the home screen's "Sprzedaj"**, in the same word, opening the same
+  **Today's giełda carries one button of its own**, pinned above "Wstecz", and for
+  the reason its rows keep "Sprzedaj": the day on screen is the one every write
+  resolves to, so what it records lands in the takings being read. A day that has
+  been and gone shows none — those sales would be dated today.
+  It is **the home screen's "Sprzedaj"**, in the same word, opening the same
   searchable magazyn: these two sections are one day's own work, and what a buyer is
   holding was most likely bought at some other giełda entirely, so without it the way
-  to sell from the stall we are standing at was back out through the home screen. It
-  is the filled one, and **"Dodaj nowy przedmiot i sprzedaj" is outlined beneath it**
-  — the same pair the buy form's two buttons make, one primary saying which of the
-  two moments is the commoner.
-  That second button is the sell list's, and it opens the very same
-  `SellNewItemScreen`, sharing a `SellViewModel` resolved against the day's nav entry
-  exactly as that screen shares the sell list's, and **the search that found nothing
-  seeds the name** in the same words — "Dodaj «lampa» i sprzedaj" — because typing a
-  name and not finding it is how you learn the thing was never entered, whichever
-  list you were typing into. What was typed does not follow "Sprzedaj" across,
-  though: that box is searching the day and the list it opens is searching the
-  magazyn, and the two are different questions.
+  to sell from the stall we are standing at was back out through the home screen.
+  **The thing that was never recorded is reached through it rather than beside it.**
+  "Dodaj nowy przedmiot i sprzedaj" briefly sat outlined underneath, and it was the
+  rarer moment given equal standing on a screen whose job is reading a day — the sell
+  list it opens carries that button already, where the search that has just failed to
+  find the thing is what puts it there. One button here, one door onward. What was
+  typed into the day's box does not follow "Sprzedaj" across either: that box is
+  searching the day and the list it opens is searching the magazyn, and the two are
+  different questions.
 - **Selling a thing that was never recorded is a first-class path**, not a fallback:
   nothing is in the app to begin with, and requiring everything to be entered before
   it can be sold is exactly the friction that gets a tracker abandoned. "Add new"
