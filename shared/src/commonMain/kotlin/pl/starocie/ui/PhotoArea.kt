@@ -91,9 +91,17 @@ fun PhotoArea(
                             Icon(Icons.Filled.PhotoCamera, contentDescription = "Zmień zdjęcie")
                         }
                     }
+                    onClear?.let {
+                        FilledTonalIconButton(onClick = it) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Usuń zdjęcie")
+                        }
+                    }
                     // Asking Google what the thing is. Offered wherever there is a
                     // photo, including on something already sold — "what was that,
-                    // and what do people ask for one" outlives the sale.
+                    // and what do people ask for one" outlives the sale. It sits
+                    // last, under the bin: it is the button reached for while
+                    // looking at the picture, so the end of the stack is where a
+                    // thumb should find it.
                     search?.let { ask ->
                         FilledTonalIconButton(onClick = { photo?.let(ask) }) {
                             // Image, not Icon: an Icon tints what it draws, and
@@ -103,14 +111,6 @@ fun PhotoArea(
                                 contentDescription = "Poszukaj w Google",
                                 modifier = Modifier.size(18.dp),
                             )
-                        }
-                    }
-                    // The bin sits last, furthest from the two that only look
-                    // things up: it is the one button here that takes something
-                    // away, and a thumb reaching for the camera must not find it.
-                    onClear?.let {
-                        FilledTonalIconButton(onClick = it) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Usuń zdjęcie")
                         }
                     }
                 }

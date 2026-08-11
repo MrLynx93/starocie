@@ -289,9 +289,10 @@ this scale — so the picture rides in the document instead:
   comfortable for a few hundred photographed items, not for a few thousand. Past
   that, photos belong in Cloud Storage with only URLs in the document
 - tapping a photo opens it full-screen; buttons down its right-hand edge retake it,
-  ask Google what it is, or throw it away — stacked rather than in a row, because
-  three across the top start covering the thing in the picture, and the bin sits
-  last so a thumb reaching for the camera never finds it
+  throw it away, or ask Google what it is — stacked rather than in a row, because
+  three across the top start covering the thing in the picture, and the Google
+  button sits last, under the bin, being the one reached for while looking at the
+  picture
 - **the Google button is a search by image, and it cannot be a browser URL.**
   Google's reverse image search takes a *public* URL or an upload, and this photo is
   neither — it exists only as Base64 inside the document. So the picture is handed
