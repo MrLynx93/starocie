@@ -21,7 +21,11 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
@@ -181,6 +185,9 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
 
             SummaryCard(
+                // A warehouse, and not the box on "Kup paczkę": one icon meaning two
+                // things on one screen is worse than either of them being perfect.
+                icon = Icons.Filled.Warehouse,
                 title = if (skeleton) null else "Mamy ${przedmioty(stock.size)}",
                 subtitle = if (skeleton) null else "Chcemy sprzedać za łącznie ${stockValue.format()}",
                 openLabel = "Pokaż magazyn",
@@ -192,6 +199,9 @@ fun HomeScreen(
             Spacer(Modifier.height(10.dp))
 
             SummaryCard(
+                // Money taken, rather than the tag on "Sprzedaj": the button is the
+                // act and this is what the act came to.
+                icon = Icons.Filled.Payments,
                 title = if (skeleton) null else "Sprzedaliśmy ${przedmioty(sold.size)}",
                 subtitle = if (skeleton) null else "Sprzedaliśmy za łącznie ${soldProceeds.format()}",
                 openLabel = "Pokaż, co sprzedaliśmy",
@@ -205,6 +215,9 @@ fun HomeScreen(
             // The third card is about days rather than things: how many giełd we have
             // been to and what we made on them altogether.
             SummaryCard(
+                // A stall face-on, which is the app's own mark: this card is the door
+                // to the giełdy themselves.
+                icon = Icons.Filled.Storefront,
                 title = if (skeleton) null else "Mamy za sobą ${giełdy(sessionCount)}",
                 subtitle = when {
                     skeleton -> null
@@ -225,6 +238,10 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
 
                 SummaryCard(
+                    // The calendar rather than the stall above it: this card and that
+                    // one are the same kind of thing, and what separates them is that
+                    // this one is about now.
+                    icon = Icons.Filled.Today,
                     title = "Dzisiejsza giełda",
                     subtitle = "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
                     openLabel = "Pokaż dzisiejszą giełdę",
@@ -400,13 +417,15 @@ private fun SkeletonSellRow(nameWidth: Float, profitWidth: Float) {
  * A read-out with a list behind it.
  *
  * A null [title] or [subtitle] is a figure we do not have yet and stands in as a
- * bar. Only the read-out goes: the card keeps its shape, its colour and its
- * chevron, and stays openable — the list behind it is reachable whether or not we
- * can say what is in it, and a card that changed shape on arrival would move
- * everything below it.
+ * bar. Only the read-out goes: the card keeps its shape, its colour, its [icon] and
+ * its chevron, and stays openable — the list behind it is reachable whether or not
+ * we can say what is in it, and a card that changed shape on arrival would move
+ * everything below it. Which card this is was never something we were waiting on,
+ * so the icon is drawn for real while the figures are still bars.
  */
 @Composable
 private fun SummaryCard(
+    icon: ImageVector,
     title: String?,
     subtitle: String?,
     openLabel: String,
@@ -425,6 +444,15 @@ private fun SummaryCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Tinted like the chevron rather than like the title: a card is a
+            // read-out with a way in at each end, and a full-strength icon pulls the
+            // eye off the figure the card is for.
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 if (title == null) {
                     SkeletonLine(titleWidth, MaterialTheme.typography.titleMedium)
