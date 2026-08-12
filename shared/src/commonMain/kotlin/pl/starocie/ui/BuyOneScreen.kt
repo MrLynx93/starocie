@@ -129,40 +129,34 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
                 Spacer(Modifier.height(16.dp))
 
-                // One line: a long name scrolls sideways within it rather than
-                // giving the form a field twice the height of every other one. Enter
-                // moves on to the price — there is no second line to open.
+                // The name and the count share a line, because between them they are
+                // what the thing *is*: one of these, or twelve of them. Both are known
+                // before a price is thought about, and pairing them keeps the count out
+                // of the money's way — a stepper's worth of typing sat between the two
+                // prices and read as though it belonged to one of them.
                 //
-                // The keyboard opens shifted, the way it does for a sentence: a name
-                // is written down as a name, and a list of lowercase ones reads as
+                // The name takes the width: a long one scrolls sideways within its line
+                // rather than giving the form a field twice the height of every other,
+                // and the count is never more than two digits. Enter on either moves on
+                // to the price.
+                //
+                // The name's keyboard opens shifted, the way it does for a sentence: a
+                // name is written down as a name, and a list of lowercase ones reads as
                 // notes to self rather than a record of what we have.
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = viewModel::onNameChange,
-                    singleLine = true,
-                    label = { Text("Nazwa") },
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Next,
-                    ),
-                    keyboardActions = KeyboardActions(onNext = { moveOnToPrice() }),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                // A single thing keeps the count beside what was paid: one price and
-                // how many things it covered, which for one thing is the same number
-                // twice. A lot breaks that pairing on purpose — the price is no
-                // longer the lot's — and its label is a phrase rather than two words,
-                // which beside a number field would be ellipsised down to "Kupiliśmy
-                // po cenie za s…". Saying which price this is, is the whole job of
-                // that label, so it gets the width instead.
-                //
-                // A box was paid for once and is not asked again, so there the count
-                // stands alone whichever it is.
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = state.name,
+                        onValueChange = viewModel::onNameChange,
+                        singleLine = true,
+                        label = { Text("Nazwa") },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { moveOnToPrice() }),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f).focusRequester(nameFocus),
+                    )
                     OutlinedTextField(
                         value = state.quantityText,
                         onValueChange = viewModel::onQuantityChange,
@@ -176,24 +170,34 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.4f),
                     )
-                    if (state.showPaid && !state.splittable) {
-                        BuyPaidField(
-                            state = state,
-                            onChange = viewModel::onPaidChange,
-                            onNext = moveOnToAsking,
-                            modifier = Modifier.weight(1f).focusRequester(paidFocus),
-                        )
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                    }
                 }
 
-                if (state.showPaid && state.splittable) {
+                // What was paid gets the whole line, whether it is one thing's price or
+                // one piece's. Its label is what says which of those it is — a phrase
+                // rather than two words on a lot — and half a line ellipsised it down to
+                // "Kupiliśmy po cenie za s…", which is the one thing here that must
+                // stay readable. A box was paid for once and is not asked again.
+                if (state.showPaid) {
                     Spacer(Modifier.height(10.dp))
-                    BuyPaidField(
-                        state = state,
-                        onChange = viewModel::onPaidChange,
-                        onNext = moveOnToAsking,
+                    OutlinedTextField(
+                        value = state.paidText,
+                        onValueChange = viewModel::onPaidChange,
+                        singleLine = true,
+                        label = {
+                            Text(
+                                if (state.splittable) {
+                                    "Kupiliśmy po cenie za sztukę"
+                                } else {
+                                    "Kupiliśmy za"
+                                },
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { moveOnToAsking() }),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth().focusRequester(paidFocus),
                     )
 
@@ -201,7 +205,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     // a per-piece field is the one easy mistake here, and it is
                     // invisible until the profit is wrong weeks later — a figure three
                     // times what anybody remembers paying is not.
-                    state.paid?.let {
+                    state.paid?.takeIf { state.splittable }?.let {
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Kupiliśmy ${sztuki(state.quantity)} za ${it.format()}",
@@ -284,36 +288,4 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
             BackButton(onDone)
         }
     }
-}
-
-/**
- * What it cost — one of them, on a lot.
- *
- * The same field in two places, because a lot moves it out of the count's line and a
- * single thing keeps it there; the label is what differs between them, and having it
- * in one place is what stops the two drifting into saying different things about the
- * same number.
- */
-@Composable
-private fun BuyPaidField(
-    state: BuyOneUiState,
-    onChange: (String) -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedTextField(
-        value = state.paidText,
-        onValueChange = onChange,
-        singleLine = true,
-        label = {
-            Text(if (state.splittable) "Kupiliśmy po cenie za sztukę" else "Kupiliśmy za")
-        },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Decimal,
-            imeAction = ImeAction.Next,
-        ),
-        keyboardActions = KeyboardActions(onNext = { onNext() }),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier,
-    )
 }

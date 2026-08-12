@@ -606,10 +606,13 @@ write nothing until their main button is pressed.
   otherwise invisible until the profit is wrong weeks later. `Buy.price` is still
   what was handed over — the multiplication happens on the form, and nothing below
   it stores a rate.
-  A single thing keeps the count beside what was paid, that being one price and how
-  many things it covered; a lot moves the price onto a line of its own, its label
-  being a phrase rather than two words. A box was paid for once and is not asked
-  again, so there the count stands alone either way.
+  **The count sits beside the name**, because between them they are what the thing
+  *is* — one of these, or twelve of them — and both are known before a price is
+  thought about. What was paid then gets a whole line to itself whichever it is, its
+  label being the thing that says whether it is this thing's price or one piece's;
+  a phrase that long ellipsises down to "Kupiliśmy po cenie za s…" in half a line,
+  and it is the one label here that must stay readable. A box was paid for once and
+  is not asked again, so its line is simply absent.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
   the first move is as often the camera as the name. Focusing a text field *is* the
   request for the keyboard, so the two cannot be separated without hiding it again
@@ -861,10 +864,9 @@ write nothing until their main button is pressed.
   where the old total-priced field could only leave it blank. Both totals are read
   back under their fields ("Kupiliśmy 3 sztuki za 90,00 zł"), because a pile's total
   typed into a per-piece field is otherwise invisible until the profit is wrong
-  weeks later. A single thing keeps the short labels and the buy form's line, count
-  beside price; a lot moves what was paid onto a line of its own, the label being a
-  phrase rather than two words and the count no longer saying what that price
-  covers. **The buy screen now does the same thing in the same words**, so a lot's
+  weeks later. It is laid out as the buy form is, count beside the name and what was
+  paid on a line of its own, because the two are the same purchase and should not
+  feel like different acts. **The buy screen now does the same thing in the same words**, so a lot's
   cost is typed per piece whichever door it came through and the one label cannot
   mean two things. Only "Kup paczkę" still asks for a total, under a label that says
   so outright — "Całą paczkę kupiliśmy za" — because a box is priced before anybody
