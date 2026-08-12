@@ -177,7 +177,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                         "Na ten przedmiot wypada z niej ok. ${stats.cost.format()}."
                     isPartOfABox -> "Cena paczki dzieli się na wszystko, co w niej było."
                     item.buyId == null ->
-                        "Nie zapisaliśmy zakupu. Wpiszmy cenę, a policzymy zysk."
+                        "Wpisz cenę zakupu, żeby policzyć realny zysk"
                     else -> null
                 },
                 onSave = { viewModel.setPaidPrice(item.id, it) },
