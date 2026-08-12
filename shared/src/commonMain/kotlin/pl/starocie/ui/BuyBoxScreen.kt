@@ -45,8 +45,8 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
 
             Text("Kupujemy paczkę", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Podaj cenę za całą paczkę łącznie. Potem dodaj przedmioty, które były " +
-                    "w tej paczce. (Nie znamy cen pojedynczych przedmiotów w kupionej paczce)",
+                "Użyj tej opcji, jeżeli kupiłeś paczkę i nie znasz cen pojedynczych " +
+                    "przedmiotów w środku.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -84,19 +84,6 @@ fun BuyBoxScreen(onOpened: (String) -> Unit, onCancel: () -> Unit) {
             }
 
             Spacer(Modifier.weight(1f))
-
-            // The last cheap moment to notice the wrong choice: once the buy is
-            // opened its contents are written one by one, whereas a lot entered as
-            // a single thing can never be broken back apart. So the alternative is
-            // named here, pointing at the button that actually leads to it.
-            Text(
-                "Sprzedajesz to jako jedną pozycję? Wróć i wybierz «Kup» — " +
-                    "tam wpisujesz sztuki.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(Modifier.height(12.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(

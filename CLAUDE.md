@@ -499,10 +499,11 @@ speaks as us, never at the user:
   1 / 2–4 / rest rule and the teens exception); "1 przedmiotów" is the small
   wrongness that makes an app feel like a machine
 
-**Two things break the "we" form on purpose.** The paczka screen's last-chance hint
-addresses one person — "Sprzedajesz to jako jedną pozycję? Wróć i wybierz «Kup»".
-It is not the notebook saying what we did; it is the app catching somebody about to
-take the wrong door, and "Wróć" is the same imperative a button uses.
+**Two things break the "we" form on purpose.** The paczka screen's explanation
+addresses one person — "Użyj tej opcji, jeżeli kupiłeś paczkę i nie znasz cen
+pojedynczych przedmiotów w środku." It is not the notebook saying what we did; it is the
+app explaining which of the two doors this is, so it speaks to the person choosing
+and opens on the same imperative a button uses.
 
 The other is **the search placeholder, "Czego szukasz?"**, over every list there
 is — the magazyn, the sold list, the giełdy and one giełda's own two sections. It is
@@ -874,10 +875,16 @@ write nothing until their main button is pressed.
   opens the buy, then *the same item screen* with the price field hidden and items
   appended to that buy. Unpacking a box is deliberately the same motion as buying
   things one at a time.
-  The price step says what it is asking for and what it is giving up — "Podaj cenę
-  za całą paczkę łącznie… (Nie znamy cen pojedynczych przedmiotów w kupionej
-  paczce)" — because that is the whole difference between the two doors, and it is
-  the last cheap moment to notice you took the wrong one.
+  **The price step is one sentence, and it says which door this is** — "Użyj tej
+  opcji, jeżeli kupiłeś paczkę i nie znasz cen pojedynczych przedmiotów w środku." —
+  because not knowing the individual prices is the whole difference between the two
+  doors, and this is the last cheap moment to notice you took the wrong one. It
+  replaced two paragraphs that between them explained the price field the label
+  already names, described the step that follows before it has happened, and then
+  repeated the choice from the other side at the bottom of the screen ("Sprzedajesz
+  to jako jedną pozycję? Wróć i wybierz «Kup»"). Three explanations of one decision
+  is how a screen stops being read at all; the one that survives is the one naming
+  the condition somebody can check against what is in their hands.
 - The box's buy is created **before** its contents are known, so each item is saved
   as it is unpacked. Accumulating drafts and writing them at the end would lose the
   lot if the user backed out.
