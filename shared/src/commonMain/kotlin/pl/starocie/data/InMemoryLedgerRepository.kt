@@ -41,6 +41,9 @@ class InMemoryLedgerRepository(
     /** Nothing to sync with, so nothing can fail. */
     override val syncError: StateFlow<String?> = MutableStateFlow(null).asStateFlow()
 
+    /** The seed is here the moment this is constructed, so nothing is ever awaited. */
+    override val loading: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()
         // The buy inherits the item's date, so the two can never disagree.

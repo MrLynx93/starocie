@@ -24,6 +24,17 @@ interface LedgerRepository {
     val ledger: StateFlow<Ledger>
 
     /**
+     * True until the whole ledger has arrived once, and false ever after.
+     *
+     * [ledger] opens on an empty [Ledger], and an empty ledger before the first
+     * snapshot is the same value as an empty ledger belonging to two people who
+     * have not bought anything yet. A screen cannot tell them apart, so this says
+     * which it is — without it a skeleton would shimmer forever on a magazyn that
+     * is honestly empty.
+     */
+    val loading: StateFlow<Boolean>
+
+    /**
      * Non-null when syncing is failing. Surfaced in the UI because the alternative
      * is an app that silently records nothing, which is indistinguishable from an
      * app that is working but empty.

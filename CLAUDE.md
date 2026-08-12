@@ -551,6 +551,26 @@ write nothing until their main button is pressed.
   "Straciliśmy na nich". It is never short of an answer: a sale we know no cost for
   counts for its whole price, so there is nothing the figure has to leave out and no
   gap for a further line to admit.
+  **While the ledger is still arriving, the read-outs are bars and nothing else is.**
+  The cards keep their shape, their colour and their chevron and stay openable; the
+  title, the light/dark switch and the three round buttons are drawn for real,
+  because **a write never waits for the network** — an app that greys out "Kup" and
+  "Sprzedaj" until Firestore has answered is lying about what it can do, at exactly
+  the moment somebody is holding something out. Each bar takes the line height of the
+  text it stands in for, so nothing moves when the figures land.
+  Two things make it honest rather than decorative. It needs
+  `LedgerRepository.loading`, because `ledger` opens on an empty `Ledger()` and an
+  empty ledger still arriving is the same value as one belonging to two people who
+  have bought nothing — without the flag a genuinely empty magazyn would shimmer for
+  ever. And it **waits 150 ms before appearing**: Firestore answers from its own cache
+  on every launch but the first, so the wait is usually a frame or two, and a skeleton
+  that comes and goes inside that is a flicker rather than a state.
+  The light is **one band crossing the whole screen**, not a band per bar: every bar
+  subtracts its own `positionInWindow()` from the band's, so what it shows is the part
+  passing over it. The phase comes from the animation clock rather than an
+  `InfiniteTransition`, which counts from the frame it was composed on — two bars
+  composed a frame apart would otherwise each run a sweep of their own, and a dozen
+  of those is a screen flickering rather than a surface being read.
 - **Buy** — two ways in, "Kup" and "Kup paczkę", over a single item form. The form
   **opens with the photo**, in the order it actually happens: the thing is in your
   hand, so it is photographed and then described. One item of its own buy → exact

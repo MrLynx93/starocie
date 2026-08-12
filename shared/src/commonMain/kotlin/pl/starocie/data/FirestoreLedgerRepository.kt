@@ -58,6 +58,9 @@ class FirestoreLedgerRepository(
     private val _syncError = MutableStateFlow<String?>(null)
     override val syncError: StateFlow<String?> = _syncError.asStateFlow()
 
+    private val _loading = MutableStateFlow(true)
+    override val loading: StateFlow<Boolean> = _loading.asStateFlow()
+
     /**
      * Creates the workspace on first run, with this user as its only member. The
      * second person is added to `members` from the Firebase console.
@@ -102,6 +105,10 @@ class FirestoreLedgerRepository(
                 sellsRef.snapshots.map { s -> s.documents.map { it.data(SellDoc.serializer()).toDomain() } },
             ) { events, buys, items, sells ->
                 _syncError.value = null
+                // `combine` waits for all four listeners, so the first time this
+                // runs is the first moment the ledger is whole. From the cache that
+                // is usually the same frame the app drew on.
+                _loading.value = false
                 Ledger(events = events, buys = buys, items = items, sells = sells)
             },
         )

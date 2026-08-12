@@ -69,6 +69,12 @@ fun HomeScreen(
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
     val syncError by repository.syncError.collectAsState()
+    val loading by repository.loading.collectAsState()
+    // An empty ledger reads the same whether it is still arriving or genuinely
+    // empty, which is what the repository's own flag is for. The buttons are not
+    // in this: a write never waits for the network, so buying and selling work
+    // before a single document has landed.
+    val skeleton = rememberSkeletonVisible(loading)
 
     val stock = ledger.itemsInStock()
     val stockValue = stock.mapNotNull { it.price }.sum()
@@ -175,19 +181,23 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
 
             SummaryCard(
-                title = "Mamy ${przedmioty(stock.size)}",
-                subtitle = "Chcemy sprzedać za łącznie ${stockValue.format()}",
+                title = if (skeleton) null else "Mamy ${przedmioty(stock.size)}",
+                subtitle = if (skeleton) null else "Chcemy sprzedać za łącznie ${stockValue.format()}",
                 openLabel = "Pokaż magazyn",
                 onClick = onStock,
+                titleWidth = 0.54f,
+                subtitleWidth = 0.80f,
             )
 
             Spacer(Modifier.height(10.dp))
 
             SummaryCard(
-                title = "Sprzedaliśmy ${przedmioty(sold.size)}",
-                subtitle = "Sprzedaliśmy za łącznie ${soldProceeds.format()}",
+                title = if (skeleton) null else "Sprzedaliśmy ${przedmioty(sold.size)}",
+                subtitle = if (skeleton) null else "Sprzedaliśmy za łącznie ${soldProceeds.format()}",
                 openLabel = "Pokaż, co sprzedaliśmy",
                 onClick = onSold,
+                titleWidth = 0.62f,
+                subtitleWidth = 0.74f,
             )
 
             Spacer(Modifier.height(10.dp))
@@ -195,13 +205,16 @@ fun HomeScreen(
             // The third card is about days rather than things: how many giełd we have
             // been to and what we made on them altogether.
             SummaryCard(
-                title = "Mamy za sobą ${giełdy(sessionCount)}",
+                title = if (skeleton) null else "Mamy za sobą ${giełdy(sessionCount)}",
                 subtitle = when {
+                    skeleton -> null
                     sessionCount == 0 -> "Jeszcze nigdzie nie byliśmy"
                     else -> sessionsProfitLine(sessions)
                 },
                 openLabel = "Pokaż nasze giełdy",
                 onClick = onSessions,
+                titleWidth = 0.50f,
+                subtitleWidth = 0.68f,
             )
 
             // Today's, under all of them — the day being had rather than the days we
@@ -221,7 +234,21 @@ fun HomeScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            if (recentSells.isEmpty()) {
+            if (skeleton) {
+                // The heading is a skeleton too: whether there is anything to head
+                // is one of the things we do not know yet, and a heading that
+                // arrives certain over rows that are still guesses is a small lie.
+                SkeletonLine(fraction = 0.42f, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Varying widths, so three rows read as three things rather
+                    // than as a form waiting to be filled in.
+                    listOf(0.55f to 0.72f, 0.44f to 0.80f, 0.61f to 0.66f).forEach {
+                        SkeletonSellRow(nameWidth = it.first, profitWidth = it.second)
+                    }
+                }
+            } else if (recentSells.isEmpty()) {
                 Text(
                     "Jeszcze nic nie sprzedaliśmy.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -335,13 +362,57 @@ private fun sessionsProfitLine(stats: EventStats): String {
     }
 }
 
-/** A read-out with a list behind it. */
+/**
+ * One row of recent activity, before we know what was sold.
+ *
+ * It carries the real row's card, padding and line heights rather than a
+ * rectangle of its own, so the list does not resize under the thumb when the sales
+ * arrive.
+ */
+@Composable
+private fun SkeletonSellRow(nameWidth: Float, profitWidth: Float) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(1.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                SkeletonLine(nameWidth, MaterialTheme.typography.bodyLarge)
+                SkeletonLine(profitWidth, MaterialTheme.typography.bodySmall)
+            }
+            SkeletonLine(
+                fraction = 1f,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.width(64.dp),
+            )
+        }
+    }
+}
+
+/**
+ * A read-out with a list behind it.
+ *
+ * A null [title] or [subtitle] is a figure we do not have yet and stands in as a
+ * bar. Only the read-out goes: the card keeps its shape, its colour and its
+ * chevron, and stays openable — the list behind it is reachable whether or not we
+ * can say what is in it, and a card that changed shape on arrival would move
+ * everything below it.
+ */
 @Composable
 private fun SummaryCard(
-    title: String,
-    subtitle: String,
+    title: String?,
+    subtitle: String?,
     openLabel: String,
     onClick: () -> Unit,
+    titleWidth: Float = 0.55f,
+    subtitleWidth: Float = 0.75f,
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -355,12 +426,20 @@ private fun SummaryCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (title == null) {
+                    SkeletonLine(titleWidth, MaterialTheme.typography.titleMedium)
+                } else {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                }
+                if (subtitle == null) {
+                    SkeletonLine(subtitleWidth, MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             // The card was a read-out for long enough that nothing about it
             // suggests it opens anything; the chevron is the only cue that the
