@@ -494,7 +494,11 @@ speaks as us, never at the user:
   is "Straciliśmy 5,00 zł", not "zysk -5,00 zł". An unknown is "Nie wiemy"
 - an estimate always says so — "ok. 12,00 zł", with what makes it a guess spelled
   out underneath
-- a thing in stock is a **przedmiot**, never a "rzecz" — one word for it everywhere
+- a thing in stock is a **przedmiot**, never a "rzecz" — one word for it everywhere,
+  and **the giełda screens' two figure lines are the single exception**: there the
+  count sits beside a sum on a line that must not wrap, so the word is `rzeczy(n)`.
+  It is a width buying a shorter word, not a second name for the thing, and it goes
+  no further than those two lines
 - count words agree with the number (`przedmioty(n)`, which carries the full
   1 / 2–4 / rest rule and the teens exception); "1 przedmiotów" is the small
   wrongness that makes an app feel like a machine
@@ -783,7 +787,7 @@ write nothing until their main button is pressed.
   card counts by, so the two cannot disagree about how many giełd there have been —
   a day we only bought on is not one, and it is the magazyn that answers for what
   came home from it. A row says what the day brought in and what it cost — "Sprzedaliśmy 5
-  przedmiotów za 244,00 zł" over "Kupiliśmy 17 przedmiotów za 492,00 zł", **selling
+  rzeczy za 244,00 zł" over "Kupiliśmy 17 rzeczy za 492,00 zł", **selling
   first**, a giełda being a day of selling that we also buy on — with **what we made
   kept apart from that pair**, because it is not the gap between them: it is each
   sale against what that thing cost. A day we only bought on says nothing there
@@ -791,6 +795,12 @@ write nothing until their main button is pressed.
   we know no cost for counts for the whole of what it took.
   One composable draws these figures for the list row and for the day's own screen,
   so the two cannot fall out of step.
+  **Each of the pair is one line and stays one line**, ellipsised rather than wrapped:
+  a count and a sum are one fact, and split across two lines they read as two — which
+  is worst here, where the line underneath is the other half of the pair and four
+  lines have no obvious order left. The width is not theirs to spend, either, the
+  profit beside them taking what it needs first. That is what the shorter word is
+  for: "rzeczy" is what makes the line fit rather than a trim of one that already did.
   It carries **the same search box as the other two lists**, in the same place and
   in the same words, because typing is how anything is found in this app and days
   pile up the way things do. A giełda is matched on its name **and on its

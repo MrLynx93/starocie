@@ -145,6 +145,21 @@ internal fun przedmioty(count: Int): String {
 }
 
 /**
+ * The short word for the same thing, and the giełda screens' alone: "Sprzedaliśmy 1
+ * rzecz za …", "…2 rzeczy za…", "…12 rzeczy za…".
+ *
+ * A row there says what the day sold and what it cost on two lines that also carry
+ * money, beside a profit that has first claim on the width — "przedmiotów" is what
+ * pushes those onto a second line, and a wrapped figure is harder to read than a
+ * blunter word. Everywhere a thing has room to be named properly it is still a
+ * [przedmioty]; this is the one place the width decides.
+ *
+ * Plural is "rzeczy" for both the 2–4 tail and the rest, so only one takes a form of
+ * its own — the teens need no carving out here.
+ */
+internal fun rzeczy(count: Int): String = "$count ${if (count == 1) "rzecz" else "rzeczy"}"
+
+/**
  * The same rule again for market days, also in the accusative: "Mamy za sobą 1
  * giełdę", "…2 giełdy", "…12 giełd".
  */

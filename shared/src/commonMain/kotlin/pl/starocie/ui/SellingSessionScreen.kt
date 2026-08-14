@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import pl.starocie.domain.Event
@@ -164,18 +165,30 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
  * bought are almost never the things we sold, so the gap between these two numbers is
  * not what we made. That answer is [SessionProfit]'s, and it comes from somewhere else
  * entirely.
+ *
+ * Each is one line and stays one line. A count and a sum read as a single fact, and
+ * wrapped in half they read as two — worse here than anywhere, because the line
+ * underneath is the other half of the pair and a four-line block has no obvious order
+ * left. The width is not ours to spend either: [SessionProfit] takes what it needs
+ * first and this column lives on the remainder. That is why the things are [rzeczy]
+ * here and przedmioty everywhere else — the short word is what makes the line fit at
+ * all, rather than merely trimming one that already did.
  */
 @Composable
 internal fun SessionFigures(stats: EventStats) {
     Text(
-        "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
+        "Sprzedaliśmy ${rzeczy(stats.itemsSold)} za ${stats.earned.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
     Text(
-        "Kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}",
+        "Kupiliśmy ${rzeczy(stats.itemsBought)} za ${stats.spent.format()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
