@@ -300,6 +300,25 @@ class InMemoryLedgerRepository(
         }
     }
 
+    override suspend fun markSoldOut(itemId: String) {
+        val at = now()
+        state.update { current ->
+            val item = current.itemById(itemId) ?: return@update current
+            // No sale, nothing to close: "we have already sold everything" is a
+            // statement about a sale that turned out to be the last one.
+            val last = current.sellsOfItem(itemId).lastOrNull() ?: return@update current
+
+            current.copy(
+                items = current.items.map {
+                    if (it.id == item.id) it.copy(status = ItemStatus.SOLD, updatedAt = at) else it
+                },
+                sells = current.sells.map {
+                    if (it.id == last.id) it.copy(soldCompletely = true, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
     override suspend fun removeItem(itemId: String) {
         state.update { current ->
             val item = current.items.firstOrNull { it.id == itemId } ?: return@update current

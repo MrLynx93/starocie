@@ -369,4 +369,17 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
                 .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się usunąć") } }
         }
     }
+
+    /**
+     * The way out for a lot that has already sold some of itself: it closes rather
+     * than being deleted, so the sales it has made keep the cost they were measured
+     * against.
+     */
+    fun markSoldOut(item: Item) {
+        viewModelScope.launch {
+            runCatching { repository.markSoldOut(item.id) }
+                .onSuccess { dismiss() }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
 }

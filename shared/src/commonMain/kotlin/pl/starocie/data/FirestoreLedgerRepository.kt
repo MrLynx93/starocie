@@ -409,6 +409,29 @@ class FirestoreLedgerRepository(
         }
     }
 
+    override suspend fun markSoldOut(itemId: String) {
+        val at = now()
+        val item = ledger.value.itemById(itemId) ?: return
+        // The statement is about a sale, so there has to have been one. Without it
+        // there is nothing to close and nothing that could have closed it.
+        val last = ledger.value.sellsOfItem(itemId).lastOrNull() ?: return
+
+        // Both halves of one fact: the lot is finished, and the sale that finished
+        // it is the one that says so.
+        firestore.batch().apply {
+            update(
+                itemsRef.document(item.id),
+                "status" to ItemStatus.SOLD.name,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+            update(
+                sellsRef.document(last.id),
+                "soldCompletely" to true,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }.commitDetached()
+    }
+
     override suspend fun removeItem(itemId: String) {
         val item = ledger.value.itemById(itemId) ?: return
         // Counted before the delete, so "the last one" means the one being deleted.

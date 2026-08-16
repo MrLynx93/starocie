@@ -92,6 +92,14 @@ putting the field back would find them where they were left.
    profit follows rule 2 — the whole price, there being nothing left to set it
    against — so the day still agrees with the rows it is made of. Screens must
    degrade to an unknown *thing* here, never assume `itemById` resolves.
+   **Only a thing that has never sold can be deleted.** That accepted cost is
+   tolerable for a record that produced no money and wrong for one that did:
+   stranding a real sale drops what we paid out of `spent` and lifts the profit we
+   had already measured to meet it, rewriting a day that was right. A lot with a
+   sale behind it therefore closes instead — `markSoldOut` sets it `SOLD` and marks
+   its latest `Sell` `soldCompletely`, keeping the buy and every sale. The pieces
+   that never went keep their share of what the lot cost, which is a loss and the
+   honest reading of a box we sold three things out of and threw the rest away.
 4. **Nothing derivable is stored** — no denormalised names, no device paths, no
    cached statistics. The inline photo is an exception only in appearance: it is
    original data, not a copy of something held elsewhere.
@@ -732,9 +740,19 @@ write nothing until their main button is pressed.
   number and deleting asks about the record itself, whose button is **red and says
   only "Usuń"** — it destroys something, so it must not read like the neutral way
   out directly beneath it.
+  **A lot that has already sold some of itself gets a different button in that
+  place**, and the red one is not offered at all: "Sprzedaliśmy już wszystko",
+  outlined in the ordinary colour because it destroys nothing. It closes the lot —
+  out of the magazyn, buy and sales untouched — where deleting would strand those
+  sales and, per rule 3, quietly hand the day back a profit it never made. Its
+  dialog says where the rest went and what stays: "Zostało 9 z 12 szt. Reszty nie
+  sprzedamy — przedmiot zniknie z magazynu, a to, co już sprzedaliśmy, zostanie w
+  rachunkach." The label is one of the few read-outs standing in for a button, and
+  deliberately: it is the same sentence as the sell dialog's "Sprzedaliśmy już
+  wszystkie", which is the fact being recorded either way.
   The detail screen leaves by itself the moment its item stops being `IN_STOCK` or
-  stops existing, so a completed sale or a deletion lands back in the list; a lot
-  sold in part stays put and shows the extra sale.
+  stops existing, so a completed sale, a closing or a deletion lands back in the
+  list; a lot sold in part stays put and shows the extra sale.
 - **Sold** — the mirror of the stock list, reached from the second home card:
   everything `SOLD`, newest sale first, **with the magazyn's search over it**. It
   shares that list's predicate — the name, case-insensitive, in memory — so the

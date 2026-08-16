@@ -7,14 +7,17 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import pl.starocie.domain.DraftItem
+import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.Money
 
 /**
- * What the item screen can change after the fact: the two prices, and the deletion.
+ * What the item screen can change after the fact: the two prices, the deletion, and
+ * the closing that stands in for it once something has sold.
  *
- * Both reach past the item — a price correction lands on the buy, and a deletion
- * takes the buy with it once it is empty — so what happens to that buy is the
- * whole of the behaviour worth pinning down.
+ * They all reach past the item — a price correction lands on the buy, a deletion
+ * takes the buy with it once it is empty, and closing a lot deliberately leaves both
+ * the buy and the sales alone — so what happens around the item is the whole of the
+ * behaviour worth pinning down.
  */
 class ItemEditsTest {
 
@@ -70,6 +73,78 @@ class ItemEditsTest {
         assertNull(ledger.itemById(itemId))
         assertEquals(kept, ledger.buys.single().id)
         assertEquals(1, ledger.items.size)
+    }
+
+    /**
+     * The whole point of closing a lot rather than deleting it: a deleted item
+     * strands its sales, and a stranded sale is set against no cost at all, so what
+     * we paid drops out of the books and the profit rises to fill the gap.
+     */
+    @Test
+    fun closing_a_part_sold_lot_keeps_its_buy_and_its_sales() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(6000),
+            name = null,
+            items = listOf(DraftItem(name = "talerze", quantity = 12, price = Money(1500))),
+        )
+        val itemId = repository.ledger.value.items.single().id
+        repository.recordSell(itemId, price = Money(4500), quantity = 3)
+
+        repository.markSoldOut(itemId)
+
+        val ledger = repository.ledger.value
+        val item = ledger.itemById(itemId)!!
+        val stats = ledger.itemStats(item)
+
+        assertEquals(ItemStatus.SOLD, item.status, "out of the magazyn")
+        assertEquals(Money(6000), ledger.buys.single().price, "the box was still paid for")
+        assertEquals(Money(4500), stats.proceeds)
+        assertEquals(Money(6000), stats.cost, "the nine that never went keep their share")
+        assertEquals(Money(-1500), stats.profit, "sold three out of twelve at a loss")
+        assertEquals(12, item.quantity, "never decremented — what is left is derived")
+    }
+
+    /** The closing statement belongs to the sale that turned out to be the last. */
+    @Test
+    fun closing_a_lot_marks_its_latest_sale_as_the_end_of_it() = runTest {
+        val repository = InMemoryLedgerRepository()
+        val itemId = repository.addItem(
+            buyId = null,
+            draft = DraftItem(name = "talerze", quantity = 12),
+        )
+        repository.recordSell(itemId, price = Money(1500), quantity = 1)
+        repository.recordSell(itemId, price = Money(3000), quantity = 2)
+
+        repository.markSoldOut(itemId)
+
+        val ledger = repository.ledger.value
+        val sells = ledger.sellsOfItem(itemId)
+        assertEquals(listOf(false, true), sells.map { it.soldCompletely })
+        assertEquals(
+            sells.last().createdAt,
+            ledger.itemStats(ledger.itemById(itemId)!!).soldAt,
+            "the closing sale is where the sold date comes from",
+        )
+    }
+
+    /**
+     * Nothing sold means nothing that could have been the last sale — and such an
+     * item is [InMemoryLedgerRepository.removeItem]'s business, not this one's.
+     */
+    @Test
+    fun an_item_that_never_sold_cannot_be_closed() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(2000),
+            name = null,
+            items = listOf(DraftItem(name = "lampa")),
+        )
+        val itemId = repository.ledger.value.items.single().id
+
+        repository.markSoldOut(itemId)
+
+        assertEquals(ItemStatus.IN_STOCK, repository.ledger.value.itemById(itemId)!!.status)
     }
 
     @Test

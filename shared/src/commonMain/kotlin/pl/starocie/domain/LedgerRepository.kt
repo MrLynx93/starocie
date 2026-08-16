@@ -163,6 +163,29 @@ interface LedgerRepository {
     suspend fun setSellDate(sellId: String, date: LocalDate)
 
     /**
+     * The rest of a lot is not coming back — kept, lost, given away or simply not
+     * worth carrying home. The item closes; nothing about it is erased.
+     *
+     * This is what [removeItem] would have to be for something that has already
+     * sold: deleting it leaves its sales with nothing to resolve to, and an
+     * unresolvable sale is set against no cost at all, so money we really did pay
+     * would drop out of the books and past profit would rise to meet it. Here the
+     * buy and every sale stay exactly where they are, and the pieces that never went
+     * keep their share of what the lot cost — which is a loss, and the honest
+     * reading of a box we sold three things out of and threw the rest away.
+     *
+     * It also writes [Sell.soldCompletely] on the latest sale, which is the same
+     * record the sell dialog's own "Sprzedaliśmy już wszystkie" leaves behind — the
+     * statement belongs to the sale that turned out to be the last one, and it is
+     * where [ItemStats.soldAt] reads the closing date from.
+     *
+     * Nothing happens to an item that has never sold: with no sale to be the last
+     * one, "we have already sold everything" is not a thing that can be said, and
+     * [removeItem] is what such an item is for.
+     */
+    suspend fun markSoldOut(itemId: String)
+
+    /**
      * Broken, lost, given away or kept — and deleted outright, not flagged.
      *
      * Its buy goes with it once the buy has nothing left in it: a buy exists to say
@@ -172,7 +195,9 @@ interface LedgerRepository {
      *
      * Note this really does erase the record: proceeds already taken against the
      * item stay in [Ledger.sells] with nothing left to resolve to, which the
-     * screens show as an unknown rather than a crash.
+     * screens show as an unknown rather than a crash. That is tolerable for a thing
+     * that never sold and wrong for one that did, which is why anything with a sale
+     * against it closes with [markSoldOut] instead.
      */
     suspend fun removeItem(itemId: String)
 

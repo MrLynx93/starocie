@@ -61,6 +61,14 @@ import pl.starocie.domain.toInputText
  * to delete one instead. Here there is room to read what a thing cost before
  * deciding, and the red button is a deliberate stop rather than a near miss.
  *
+ * A lot that has already sold some of itself gets a different button in that place:
+ * deleting it would leave those sales with nothing to resolve to, so what we paid
+ * would vanish from the books and the profit we made on them would rise to fill the
+ * gap. "Sprzedaliśmy już wszystko" closes the lot instead — it leaves the magazyn,
+ * the buy and every sale stay, and the pieces that never went keep their share of
+ * the cost as the loss it is. Only a thing with nothing sold against it can be
+ * deleted, because only then is there nothing to destroy.
+ *
  * It leaves by itself the moment the item stops being in stock or stops existing,
  * so a completed sale or a deletion lands you back in the list it came from. A lot
  * sold in part is still in stock, so the screen stays and shows one more sale.
@@ -74,6 +82,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
     val item = ledger.itemById(itemId)
     var confirmingRemoval by remember { mutableStateOf(false) }
+    var confirmingSoldOut by remember { mutableStateOf(false) }
 
     // Waiting to have seen it in stock first: the ledger is empty for the instant
     // before the first snapshot arrives, and popping on that would close the screen
@@ -87,6 +96,9 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
     val stats = remember(ledger, item) { ledger.itemStats(item) }
     val buy = item.buyId?.let { ledger.buyById(it) }
+    // What is left is the number that matters when the lot is half gone: the one the
+    // sell dialog opens on, and the one that closing it writes off.
+    val left = remember(ledger, item) { ledger.piecesLeft(item) }
 
     // Straight to the record: on the buy form a photo waits with the rest of the
     // draft, but here the item already exists, so backing out of the camera is the
@@ -115,9 +127,6 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
 
             if (item.splittable) {
-                // What is left is the number that matters when the lot is half gone,
-                // and the one the dialog is about to open on.
-                val left = ledger.piecesLeft(item)
                 Text(
                     if (left < item.quantity) {
                         "Zostało $left z ${item.quantity} szt."
@@ -237,18 +246,35 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             Spacer(Modifier.height(10.dp))
         }
 
-        // Red, because it is the one button here that destroys something: it now
-        // deletes the record rather than parking it out of sight, so it must not
-        // look like the neutral way out sitting directly underneath it.
-        OutlinedButton(
-            onClick = { confirmingRemoval = true },
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error,
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) { Text("Usuń") }
+        // Two different acts in one place, and which one it is depends on whether
+        // anything has gone yet.
+        //
+        // With a sale behind it, the way out is to close the lot: the rest is not
+        // coming back, but the money that came in is real and so is what we paid for
+        // the pieces it came from. Deleting would strand those sales — an
+        // unresolvable one is set against no cost at all — so the purchase would
+        // drop out of the books and the profit would rise to meet it.
+        //
+        // With nothing sold there is nothing to strand, so the record can go, and it
+        // goes in red: it is the one button here that destroys something, and it
+        // must not look like the neutral way out sitting directly underneath it.
+        if (stats.sellCount > 0) {
+            OutlinedButton(
+                onClick = { confirmingSoldOut = true },
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) { Text("Sprzedaliśmy już wszystko") }
+        } else {
+            OutlinedButton(
+                onClick = { confirmingRemoval = true },
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) { Text("Usuń") }
+        }
 
         Spacer(Modifier.height(10.dp))
 
@@ -264,6 +290,38 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             onSoldCompletelyChange = viewModel::onSoldCompletelyChange,
             onConfirm = viewModel::confirm,
             onDismiss = viewModel::dismiss,
+        )
+    }
+
+    // It asks, like the deletion does, but about something else: this one is a
+    // statement about the lot rather than an erasure, so it says where the pieces
+    // that never went have got to and what stays behind.
+    if (confirmingSoldOut) {
+        AlertDialog(
+            onDismissRequest = { confirmingSoldOut = false },
+            title = { Text("Sprzedaliśmy już wszystko?") },
+            text = {
+                Text(
+                    buildString {
+                        if (item.splittable && left < item.quantity) {
+                            append("Zostało $left z ${item.quantity} szt. Reszty nie sprzedamy — ")
+                        } else {
+                            append("Reszty nie sprzedamy — ")
+                        }
+                        append("przedmiot zniknie z magazynu, ")
+                        append("a to, co już sprzedaliśmy, zostanie w rachunkach.")
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingSoldOut = false
+                    viewModel.markSoldOut(item)
+                }) { Text("Zapisz") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingSoldOut = false }) { Text("Anuluj") }
+            },
         )
     }
 
