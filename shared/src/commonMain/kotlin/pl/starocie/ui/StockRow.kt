@@ -67,7 +67,10 @@ internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: ()
                 )
             }
             Text(
-                boughtForLabel(stats),
+                // By the piece for a lot, which is the number beside it on the right:
+                // the ask on a lot is what one of them goes for, so a total cost
+                // against a per-piece ask would be a gap that is not there.
+                boughtForLabel(stats, pieces = item.quantity),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -91,11 +94,22 @@ internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: ()
  * A share of a box is marked "ok.", and a thing with no buy behind it says we do
  * not know rather than quietly reading as free — the whole point of tolerating a
  * shortcut sale is that the gap stays visible.
+ *
+ * [pieces] above one makes it a lot, and then the figure is what *one* of them cost,
+ * in the words the buy form and the item screen use for the same number. The cost on
+ * the record is the lot's, so this is a division — and it has to be, because the
+ * price beside it on the row is the ask for one piece. Read against a lot's whole
+ * cost that ask looks like a disaster, which is the one thing a list of things to
+ * sell must not say by accident.
  */
-internal fun boughtForLabel(stats: ItemStats): String = when {
-    stats.cost == null -> "Nie wiemy, za ile kupiliśmy"
-    stats.costIsEstimated -> "Kupiliśmy za ok. ${stats.cost.format()}"
-    else -> "Kupiliśmy za ${stats.cost.format()}"
+internal fun boughtForLabel(stats: ItemStats, pieces: Int = 1): String {
+    val cost = stats.cost ?: return "Nie wiemy, za ile kupiliśmy"
+    val approx = if (stats.costIsEstimated) "ok. " else ""
+    return if (pieces > 1) {
+        "Kupiliśmy po $approx${(cost / pieces).format()} za sztukę"
+    } else {
+        "Kupiliśmy za $approx${cost.format()}"
+    }
 }
 
 /**

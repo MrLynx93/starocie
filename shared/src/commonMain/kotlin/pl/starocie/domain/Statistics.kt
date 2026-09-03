@@ -85,6 +85,7 @@ data class Ledger(
     private val itemsById: Map<String, Item> = items.associateBy { it.id }
     private val sellsByItem: Map<String, List<Sell>> = sells.groupBy { it.itemId }
     private val sellsByEvent: Map<String, List<Sell>> = sells.groupBy { it.eventId }
+    private val buysByEvent: Map<String, List<Buy>> = buys.groupBy { it.eventId }
     private val itemsByBuy: Map<String, List<Item>> =
         items.filter { it.buyId != null }.groupBy { it.buyId!! }
 
@@ -199,7 +200,7 @@ data class Ledger(
     fun sellCost(sell: Sell): SellCost? = sellCostById[sell.id]
 
     fun eventStats(event: Event): EventStats {
-        val eventBuys = buys.filter { it.eventId == event.id }
+        val eventBuys = buysByEvent[event.id].orEmpty()
         val eventSells = sellsByEvent[event.id].orEmpty()
 
         // Sale by sale against its own cost — never earned minus spent, which is two
@@ -243,6 +244,27 @@ data class Ledger(
     fun sellingSessions(): List<Event> = events.filter { sellsByEvent.containsKey(it.id) }
 
     /**
+     * The days we only shopped on: something was bought, nothing was sold.
+     *
+     * A giełda is a day of selling that we also buy on. A day with nothing sold is a
+     * different sort of trip — somebody's garage, a flea market we came home from
+     * empty-handed of takings but full of stock — and it is worth having a name and a
+     * list of its own, because it is where a whole afternoon's spending went. It is
+     * the complement of [sellingSessions] by construction, so a day is one or the
+     * other and never both, and the two counts can be read side by side.
+     *
+     * "Dawno temu" is carved out. It is not a day we went anywhere: it is the filing
+     * cabinet a thing sold without ever being recorded as bought gets put in, dated
+     * in the year 2000 and never shown as a date at all. It holds only buys, so
+     * without this it would be the oldest shopping trip we ever made.
+     */
+    fun buyingSessions(): List<Event> = events.filter {
+        it.id != LongAgo.EVENT_ID &&
+            buysByEvent.containsKey(it.id) &&
+            !sellsByEvent.containsKey(it.id)
+    }
+
+    /**
      * Every day at once, in the shape one of them comes in.
      *
      * The home screen answers for all of them together, and the only honest way to
@@ -274,7 +296,7 @@ data class Ledger(
     /** Everything one buy covers, and everything bought at one event. */
     fun itemsOfBuy(id: String): List<Item> = itemsByBuy[id].orEmpty()
 
-    fun buysOfEvent(id: String): List<Buy> = buys.filter { it.eventId == id }
+    fun buysOfEvent(id: String): List<Buy> = buysByEvent[id].orEmpty()
 
     fun sellsOfEvent(id: String): List<Sell> = sellsByEvent[id].orEmpty()
 

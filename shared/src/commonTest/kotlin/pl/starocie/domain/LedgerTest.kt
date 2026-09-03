@@ -291,6 +291,47 @@ class LedgerTest {
     }
 
     /**
+     * It is a day of shopping instead, which is the other list — the two are
+     * complementary, so a day is in exactly one of them and none of what happened
+     * falls outside both.
+     */
+    @Test
+    fun a_day_we_only_bought_on_is_a_day_of_shopping() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-01", D0), event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 1000, eventId = "2026-08-01")),
+            items = listOf(item("lamp", buyId = "b1", status = ItemStatus.SOLD)),
+            sells = listOf(sell("s1", "lamp", 2500, eventId = "2026-08-02")),
+        )
+
+        assertEquals(listOf("2026-08-01"), ledger.buyingSessions().map { it.id })
+        assertEquals(listOf("2026-08-02"), ledger.sellingSessions().map { it.id })
+    }
+
+    /** A day we sold at is a giełda, whatever else we also did there. */
+    @Test
+    fun a_day_of_both_is_only_a_giełda() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1)),
+            buys = listOf(buy("b1", price = 1000, eventId = "2026-08-02")),
+            items = listOf(item("lamp", buyId = "b1", status = ItemStatus.SOLD)),
+            sells = listOf(sell("s1", "lamp", 2500, eventId = "2026-08-02")),
+        )
+
+        assertEquals(listOf("2026-08-02"), ledger.sellingSessions().map { it.id })
+        assertEquals(emptyList<String>(), ledger.buyingSessions().map { it.id })
+    }
+
+    /** An event nothing was ever recorded against is neither kind of day. */
+    @Test
+    fun an_empty_day_is_neither() {
+        val ledger = Ledger(events = listOf(event("2026-08-01", D0)))
+
+        assertEquals(emptyList<String>(), ledger.sellingSessions().map { it.id })
+        assertEquals(emptyList<String>(), ledger.buyingSessions().map { it.id })
+    }
+
+    /**
      * "Dawno temu" files the purchase of a thing that was never recorded until it
      * sold. It only ever holds buys, so the one rule keeps it out too.
      */
@@ -304,6 +345,11 @@ class LedgerTest {
         )
 
         assertEquals(listOf("2026-08-02"), ledger.sellingSessions().map { it.id })
+        assertEquals(
+            emptyList<String>(),
+            ledger.buyingSessions().map { it.id },
+            "a filing cabinet is not an afternoon we spent shopping",
+        )
     }
 
     @Test

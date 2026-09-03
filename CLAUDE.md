@@ -185,6 +185,8 @@ Firebase and identical on every platform.
 - `Event.stats` — `spent`, `earned`, `buyCount`, `sellCount`, `itemsBought`,
   `itemsSold`, `profit`, `profitIsEstimated`
 - `Ledger.overallStats()` — every giełda at once, in `EventStats`' own shape
+- `Ledger.sellingSessions()` / `Ledger.buyingSessions()` — the days we sold on, and
+  the days we only bought on
 - `Ledger.sellCost(sell)` — what one sale's pieces had cost, or null
 
 Buy-level profit is never an estimate — measured cost against measured proceeds.
@@ -208,6 +210,13 @@ than the sales**: an event is the sole grouping, so every sale belongs to exactl
 day and no sale can fall outside the total or land in it twice. It returns
 `EventStats` — the fields all still mean what they mean for one day — so the card and
 the giełdy list cannot disagree.
+
+`sellingSessions()` and `buyingSessions()` split the days between them: the ones with
+at least one `Sell`, and the ones with buys and no sale. **They are complementary**,
+so a day is one or the other and never both, and nothing that happened falls outside
+the pair — which is what lets the two home cards be read side by side as a count of
+all our days. "Dawno temu" is in neither: it is a filing cabinet for the purchase of a
+thing that was never recorded until it sold, not an afternoon anybody spent anywhere.
 
 `sellCost` splits an item's cost across its sales by pieces, the unsold ones holding
 their share back, using the same largest-remainder rounding a box does. That is what
@@ -546,7 +555,7 @@ write nothing until their main button is pressed.
   side invites exactly the subtraction that is never profit.
   The round buttons — "Kup paczkę", "Kup", "Sprzedaj" — align their icon and label
   to the left edge, so three labels of different lengths read as one stack rather
-  than three unrelated buttons. Three summary cards follow, each a read-out with its
+  than three unrelated buttons. Summary cards follow, each a read-out with its
   list behind it, then recent activity:
   **"Mamy 12 przedmiotów" / "Chcemy sprzedać za łącznie …"**,
   **"Sprzedaliśmy 12 przedmiotów" / "Sprzedaliśmy za łącznie …"**, and
@@ -564,6 +573,19 @@ write nothing until their main button is pressed.
   "Straciliśmy na nich". It is never short of an answer: a sale we know no cost for
   counts for its whole price, so there is nothing the figure has to leave out and no
   gap for a further line to admit.
+  **A fourth card answers for the days we only bought on** —
+  **"Mamy za sobą 3 dni zakupów" / "Kupiliśmy na nich za łącznie …"**, over
+  `buyingSessions()`, the complement of the third card's rule. A trip to somebody's
+  garage is not a giełda and must not be counted as one, but it is where a whole
+  afternoon's spending went, and until it had a card the only trace of it was the
+  things themselves in the magazyn. It says nothing about profit, nothing having been
+  sold on any of those days. It is **drawn only when there has been such a day**: a
+  card saying we have never had one is a line about nothing, and unlike the three
+  above it there is no figure we are waiting on — its own existence is the figure.
+  **Today's day sits under all of them, once anything has happened at it** — a card
+  reading "Dzisiejsza giełda" / "Sprzedaliśmy … za …" or, before the first sale,
+  "Dzisiejsze zakupy" / "Kupiliśmy … za …", turning into the other the moment the
+  first thing goes. It opens the day itself, past the list it would be found in.
   **While the ledger is still arriving, the read-outs are bars and nothing else is.**
   The cards keep their shape, their colour and their chevron and stay openable; the
   title, the light/dark switch and the three round buttons are drawn for real,
@@ -625,6 +647,15 @@ write nothing until their main button is pressed.
   a phrase that long ellipsises down to "Kupiliśmy po cenie za s…" in half a line,
   and it is the one label here that must stay readable. A box was paid for once and
   is not asked again, so its line is simply absent.
+  **Every field label is held to one line** — `FieldLabel`, used by the two forms and
+  by the item screens' `MoneyField` and `NameField` alike. A resting label is what a
+  text field sizes itself around, so a label long enough to wrap makes the field two
+  lines tall and drops the typed text a line down; stepping the count above one turned
+  "Kupiliśmy za" into the long phrase and the price field grew under the thumb that
+  was setting the count. A screen scaled far past the ordinary text size now loses the
+  last word or two rather than moving the field, which is the cheaper failure: the
+  phrase opens with the verb that says whose price it is, and the line under the field
+  reads the lot's total back anyway.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
   the first move is as often the camera as the name. Focusing a text field *is* the
   request for the keyboard, so the two cannot be separated without hiding it again
@@ -655,6 +686,11 @@ write nothing until their main button is pressed.
   **A row carries what we paid**, the way the sold list does — "Kupiliśmy za",
   "Kupiliśmy za ok." for a share of a box, "Nie wiemy, za ile kupiliśmy" — because
   the asking price alone does not say whether there is a gap worth stopping at.
+  **A lot says it by the piece**: "Kupiliśmy po 15,00 zł za sztukę", a guess reading
+  "po ok.". The figure beside it on the row is the ask for *one* of them, per
+  invariant 1, so a lot's whole cost sitting under a single piece's ask is a gap that
+  is not there — a crate of twelve read as a disaster, on the one list whose job is
+  saying what is worth selling.
   The count and the total are computed over **what is on screen**, so a search
   answers for what it found rather than for the whole magazyn.
   **The route is the only difference.** Arriving from "Sprzedaj" adds the
@@ -729,7 +765,17 @@ write nothing until their main button is pressed.
   What was paid is the **buy's** price, not the item's, and the field says which it
   is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
   "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a
-  guess. Typing a price into an item that had no buy **opens one holding only that
+  guess. **A lot alone in its buy is typed by the piece**, in the buy form's own
+  words — "Kupiliśmy po cenie za sztukę", with "Kupiliśmy 3 sztuki za 90,00 zł" read
+  back underneath — because that is the number somebody remembers paying, and one
+  label may not mean the price of a plate on one screen and the price of a crate on
+  the next. `Buy.price` is still what was handed over: the field multiplies on its way
+  in and divides on its way out, and nothing below it stores a rate. The division is
+  the reason a total that will not divide evenly loses the odd grosz to the *display*
+  and never to the record — a price shown and left alone writes nothing at all. A lot
+  out of a box is the exception: there the field is the box's price, and a box was
+  paid for once whatever was in it. The sold item screen says the same thing in the
+  same words, being the same field at a later point in the same thing's life. Typing a price into an item that had no buy **opens one holding only that
   item**, which is how a cost unknown at the point of sale becomes exact later;
   clearing that same field records nothing, because inventing an empty buy would
   turn an honest unknown into a claim that we paid zero.
@@ -803,14 +849,21 @@ write nothing until their main button is pressed.
   things; this one answers them about days, and an `Event` is the app's only notion
   of a day. **It is `sellingSessions()` rather than every event**, the same rule the
   card counts by, so the two cannot disagree about how many giełd there have been —
-  a day we only bought on is not one, and it is the magazyn that answers for what
-  came home from it. A row says what the day brought in and what it cost — "Sprzedaliśmy 5
+  a day we only bought on is not one, and it has a list of its own.
+  **"Nasze zakupy" is that list, and it is the same screen**, over
+  `buyingSessions()` and reached from the fourth card. One composable for the two,
+  because they are the same question about the same kind of thing: a second copy of
+  it would be two lists of days free to disagree about how a day is drawn. Only the
+  heading, the source and the empty line differ.
+  A row says what the day brought in and what it cost — "Sprzedaliśmy 5
   rzeczy za 244,00 zł" over "Kupiliśmy 17 rzeczy za 492,00 zł", **selling
   first**, a giełda being a day of selling that we also buy on — with **what we made
   kept apart from that pair**, because it is not the gap between them: it is each
-  sale against what that thing cost. A day we only bought on says nothing there
-  rather than claiming a nought; a day of sales always names a figure, since a sale
-  we know no cost for counts for the whole of what it took.
+  sale against what that thing cost. A day of sales always names a figure there,
+  since a sale we know no cost for counts for the whole of what it took.
+  **Each line appears only if that half of the day happened**: a day of only shopping
+  says what we bought and nothing else, a nought beside a nought being a sentence
+  with nothing in it — and on the list of those days, every row would carry one.
   One composable draws these figures for the list row and for the day's own screen,
   so the two cannot fall out of step.
   **Each of the pair is one line and stays one line**, ellipsised rather than wrapped:

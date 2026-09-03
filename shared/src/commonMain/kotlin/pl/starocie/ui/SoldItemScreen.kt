@@ -27,6 +27,7 @@ import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.Sell
 import pl.starocie.domain.format
+import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
 
 /**
@@ -76,7 +77,13 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
     // buy the field edits the price of the box, and has to say that it does.
     val isPartOfABox = item.buyId != null && ledger.itemCountOfBuy(item.buyId) > 1
 
-    var paidText by remember(item.id) { mutableStateOf(buy?.price?.toInputText() ?: "") }
+    // A lot bought on its own is priced by the piece, in the same words as the buy
+    // form and the magazyn's item screen: one label cannot mean two things. What was
+    // handed over is still what the record holds — the field is a way of typing it.
+    val pricedPerPiece = item.splittable && !isPartOfABox
+    val paidShown = buy?.price?.let { if (pricedPerPiece) it / item.quantity else it }
+
+    var paidText by remember(item.id) { mutableStateOf(paidShown?.toInputText() ?: "") }
 
     ScreenColumn {
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -125,24 +132,40 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
 
+            val typedPaid = parseMoney(paidText)
             MoneyField(
-                label = if (isPartOfABox) "Całą paczkę kupiliśmy za" else "Kupiliśmy za",
+                label = when {
+                    isPartOfABox -> "Całą paczkę kupiliśmy za"
+                    pricedPerPiece -> "Kupiliśmy po cenie za sztukę"
+                    else -> "Kupiliśmy za"
+                },
                 text = paidText,
                 onTextChange = { paidText = it },
-                saved = buy?.price,
+                saved = paidShown,
                 placeholder = "Nie wiemy",
                 // An exact cost and a guess must never look alike: with several
                 // things in one buy this is the box's price, and the item's own cost
                 // is only a share of it.
+                //
+                // A lot reads its total back instead: a pile's total typed into a
+                // per-piece field is otherwise invisible until the profit is wrong.
                 hint = when {
                     isPartOfABox && stats.cost != null ->
                         "Na ten przedmiot wypada z niej ok. ${stats.cost.format()}."
                     isPartOfABox -> "Cena paczki dzieli się na wszystko, co w niej było."
+                    pricedPerPiece && typedPaid != null ->
+                        "Kupiliśmy ${sztuki(item.quantity)} za ${(typedPaid * item.quantity).format()}"
                     item.buyId == null ->
                         "Wpisz cenę zakupu, żeby policzyć realny zysk"
                     else -> null
                 },
-                onSave = { viewModel.setPaidPrice(item.id, it) },
+                onSave = {
+                    viewModel.setPaidPrice(
+                        item.id,
+                        it,
+                        pieces = if (pricedPerPiece) item.quantity else 1,
+                    )
+                },
             )
 
             Spacer(Modifier.height(24.dp))

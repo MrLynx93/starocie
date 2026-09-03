@@ -43,7 +43,11 @@ import pl.starocie.domain.Sell
 import pl.starocie.domain.format
 
 /**
- * One giełda: what we brought back from it and what went at it.
+ * One day: what we brought back from it and what went at it.
+ *
+ * Usually a giełda, and sometimes a day we only shopped on. The screen is the same
+ * either way: a day is a day, and the difference is only that one of its two sections
+ * is empty.
  *
  * The two lists are the magazyn's and the sold list's, narrowed to a day — same rows,
  * same wording, and a row still opens the thing, so the day is a way *into* the
@@ -74,7 +78,7 @@ import pl.starocie.domain.format
  */
 @OptIn(ExperimentalTime::class)
 @Composable
-fun SellingSessionDetailScreen(
+fun SessionDetailScreen(
     eventId: String,
     onOpenStockItem: (itemId: String, selling: Boolean) -> Unit,
     onOpenSoldItem: (String) -> Unit,

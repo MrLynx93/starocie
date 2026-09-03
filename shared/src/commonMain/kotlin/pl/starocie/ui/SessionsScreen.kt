@@ -36,17 +36,30 @@ import pl.starocie.domain.Money
 import pl.starocie.domain.format
 
 /**
- * Every giełda we have been to, newest first.
+ * Our days, newest first — one list or the other of them.
  *
  * The magazyn and the sold list answer questions about things; this one answers them
- * about days. An [Event] is the app's only notion of a market day — it is what
- * everything is grouped by — so the list is simply the events, and each row says what
- * the day cost, what it brought in and what it made.
+ * about days. An [Event] is the app's only notion of a day — it is what everything is
+ * grouped by — so the list is simply the events, and each row says what the day cost,
+ * what it brought in and what it made.
+ *
+ * [buying] picks which days: the giełdy, being the days we sold something on, or the
+ * days we only shopped. They are complementary by construction, so nothing is in both
+ * lists and nothing that happened is in neither — a day of only buying is where an
+ * afternoon's spending went, and it was previously nowhere but the magazyn.
+ *
+ * One screen for the two because they are the same question about the same kind of
+ * thing, and a second copy of it would be two lists of days that could disagree about
+ * how a day is drawn.
  *
  * A row opens the day, the way a row opens a thing in the other two lists.
  */
 @Composable
-fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
+fun SessionsScreen(
+    buying: Boolean = false,
+    onOpenSession: (String) -> Unit,
+    onDone: () -> Unit,
+) {
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
@@ -55,24 +68,28 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
     // gets long the same way a list of things does.
     var query by remember { mutableStateOf("") }
 
-    // Newest first, the way both other lists run: today's giełda is the one being
+    // Newest first, the way both other lists run: the day just had is the one being
     // asked about. Two events on one day fall back to when they were made.
     //
-    // The days we sold nothing on are not here, because they are not giełdy: an
-    // event is made by buying as readily as by selling, so a trip to somebody's
-    // garage would otherwise sit in this list claiming to have been a market. It is
-    // the same rule the home card counts by, so the two cannot disagree — and it
-    // covers "Dawno temu" as well, that being a filing cabinet holding only buys.
-    // What was bought on such a day is still in the magazyn, where it is found.
-    val sessions = remember(ledger, query) {
-        ledger.sellingSessions()
+    // Which days these are is the ledger's rule, not this screen's, and it is the
+    // same rule the home card above each list counts by — so a list and its card can
+    // never disagree about how many days there have been. A day we sold nothing on is
+    // not a giełda: an event is made by buying as readily as by selling, so a trip to
+    // somebody's garage would otherwise sit in that list claiming to have been a
+    // market. It is in the other list instead, which is what that one is for.
+    // "Dawno temu" is in neither, being a filing cabinet rather than a day we had.
+    val sessions = remember(ledger, query, buying) {
+        (if (buying) ledger.buyingSessions() else ledger.sellingSessions())
             .filter { query.isBlank() || it.matchesQuery(query) }
             .sortedWith(compareByDescending<Event> { it.date }.thenByDescending { it.createdAt })
             .map { it to ledger.eventStats(it) }
     }
 
     ScreenColumn {
-        Text("Nasze giełdy", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            if (buying) "Nasze zakupy" else "Nasze giełdy",
+            style = MaterialTheme.typography.headlineSmall,
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -89,10 +106,11 @@ fun SellingSessionScreen(onOpenSession: (String) -> Unit, onDone: () -> Unit) {
 
         if (sessions.isEmpty()) {
             Text(
-                if (query.isBlank()) {
-                    "Nie byliśmy jeszcze na żadnej giełdzie."
-                } else {
-                    "Na takiej giełdzie nie byliśmy."
+                when {
+                    query.isNotBlank() && buying -> "Takiego dnia zakupów nie mieliśmy."
+                    query.isNotBlank() -> "Na takiej giełdzie nie byliśmy."
+                    buying -> "Nie mamy jeszcze dnia samych zakupów."
+                    else -> "Nie byliśmy jeszcze na żadnej giełdzie."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -155,11 +173,12 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
 }
 
 /**
- * The two things that happened that day, each with its count and its money — read one
- * under the other, because a giełda is a day of doing both.
+ * What happened that day, each half with its count and its money — read one under the
+ * other, because a giełda is a day of doing both.
  *
  * Selling leads, buying follows: a giełda is a day of selling that we also buy on, and
- * the takings are the thing being looked for.
+ * the takings are the thing being looked for. A day that did only one of the two says
+ * only that one: a count of nought beside a sum of nought is a line about nothing.
  *
  * They are never subtracted from one another here or anywhere else: the things we
  * bought are almost never the things we sold, so the gap between these two numbers is
@@ -176,20 +195,27 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
  */
 @Composable
 internal fun SessionFigures(stats: EventStats) {
-    Text(
-        "Sprzedaliśmy ${rzeczy(stats.itemsSold)} za ${stats.earned.format()}",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-    Text(
-        "Kupiliśmy ${rzeczy(stats.itemsBought)} za ${stats.spent.format()}",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    // Each line only when that half of the day happened. "Sprzedaliśmy 0 rzeczy za
+    // 0,00 zł" is not a fact about a day of shopping, it is a sentence with nothing
+    // in it — and on the days-of-buying list every row would carry one.
+    if (stats.sellCount > 0) {
+        Text(
+            "Sprzedaliśmy ${rzeczy(stats.itemsSold)} za ${stats.earned.format()}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    if (stats.buyCount > 0) {
+        Text(
+            "Kupiliśmy ${rzeczy(stats.itemsBought)} za ${stats.spent.format()}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 /**

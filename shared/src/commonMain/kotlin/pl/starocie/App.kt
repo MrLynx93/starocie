@@ -23,8 +23,8 @@ import pl.starocie.ui.BuyBoxScreen
 import pl.starocie.ui.BuyOneScreen
 import pl.starocie.ui.HomeScreen
 import pl.starocie.ui.SellNewItemScreen
-import pl.starocie.ui.SellingSessionDetailScreen
-import pl.starocie.ui.SellingSessionScreen
+import pl.starocie.ui.SessionDetailScreen
+import pl.starocie.ui.SessionsScreen
 import pl.starocie.ui.SignInScreen
 import pl.starocie.ui.SoldItemScreen
 import pl.starocie.ui.SoldScreen
@@ -44,8 +44,13 @@ import pl.starocie.ui.theme.rememberThemeChoice
 @Serializable private data object SellNewRoute
 @Serializable private data object StockRoute
 @Serializable private data object SoldRoute
-@Serializable private data object SellingSessionsRoute
-@Serializable private data class SellingSessionRoute(val eventId: String)
+/**
+ * The two lists of days, which are one screen: [buying] false is the giełdy, true the
+ * days we only shopped on. A parameter rather than a second route, because the same
+ * card in the same place on the home screen opens each of them.
+ */
+@Serializable private data class SessionsRoute(val buying: Boolean = false)
+@Serializable private data class SessionRoute(val eventId: String)
 /**
  * [selling] is false only from a giełda that has been and gone: the item screen is
  * the same either way, minus the one button that would write a new sale into today.
@@ -98,10 +103,11 @@ private fun MainNavigation(theme: ThemeChoice) {
                 onSell = { navController.navigate(SellRoute) },
                 onStock = { navController.navigate(StockRoute) },
                 onSold = { navController.navigate(SoldRoute) },
-                onSessions = { navController.navigate(SellingSessionsRoute) },
+                onSessions = { navController.navigate(SessionsRoute()) },
+                onBuyingSessions = { navController.navigate(SessionsRoute(buying = true)) },
                 // Straight onto the day itself, past the list it would be found in:
                 // the card is only there while that day is the one being had.
-                onTodaySession = { eventId -> navController.navigate(SellingSessionRoute(eventId)) },
+                onTodaySession = { eventId -> navController.navigate(SessionRoute(eventId)) },
                 isDark = theme.mode.isDark,
                 onToggleTheme = theme.toggle,
             )
@@ -126,18 +132,19 @@ private fun MainNavigation(theme: ThemeChoice) {
             )
         }
 
-        composable<SellingSessionsRoute> {
-            SellingSessionScreen(
-                onOpenSession = { eventId -> navController.navigate(SellingSessionRoute(eventId)) },
+        composable<SessionsRoute> { entry ->
+            SessionsScreen(
+                buying = entry.toRoute<SessionsRoute>().buying,
+                onOpenSession = { eventId -> navController.navigate(SessionRoute(eventId)) },
                 onDone = { navController.popBackStack() },
             )
         }
 
         // A day is a way into the records rather than a separate reading of them, so
         // its rows land on the same two item screens the other lists open.
-        composable<SellingSessionRoute> { entry ->
-            val eventId = entry.toRoute<SellingSessionRoute>().eventId
-            SellingSessionDetailScreen(
+        composable<SessionRoute> { entry ->
+            val eventId = entry.toRoute<SessionRoute>().eventId
+            SessionDetailScreen(
                 eventId = eventId,
                 onOpenStockItem = { itemId, selling ->
                     navController.navigate(StockItemRoute(itemId, selling = selling))

@@ -32,6 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.format
+import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
 
 /**
@@ -111,11 +112,21 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     // buy the field edits the price of the box, and has to say that it does.
     val isPartOfABox = item.buyId != null && ledger.itemCountOfBuy(item.buyId) > 1
 
+    // A lot bought on its own is priced by the piece here, in the buy form's own
+    // words: what one of them cost is the number somebody remembers paying, and the
+    // total is a multiplication they did at the stall. The record still holds what
+    // was handed over — the field is a way of typing it, not a second number.
+    //
+    // A lot out of a box is the exception, because there the field is the box's
+    // price and a box was paid for once, whatever was in it.
+    val pricedPerPiece = item.splittable && !isPartOfABox
+    val paidShown = buy?.price?.let { if (pricedPerPiece) it / item.quantity else it }
+
     // Both fields are held here rather than inside them, so "Sprzedaj" can hand the
     // dialog what has been *typed*: the field saves half a second after the typing
     // stops, and a price entered and sold on in one motion must not open the dialog
     // on the old number.
-    var paidText by remember(item.id) { mutableStateOf(buy?.price?.toInputText() ?: "") }
+    var paidText by remember(item.id) { mutableStateOf(paidShown?.toInputText() ?: "") }
     var askingText by remember(item.id) { mutableStateOf(item.price?.toInputText() ?: "") }
 
     ScreenColumn {
@@ -172,24 +183,41 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             // Both prices are still decisions rather than records — one was mistyped
             // or forgotten, the other changes every time a thing sits unsold — so
             // they are fields, and they sit together under the facts.
+            val typedPaid = parseMoney(paidText)
             MoneyField(
-                label = if (isPartOfABox) "Całą paczkę kupiliśmy za" else "Kupiliśmy za",
+                label = when {
+                    isPartOfABox -> "Całą paczkę kupiliśmy za"
+                    pricedPerPiece -> "Kupiliśmy po cenie za sztukę"
+                    else -> "Kupiliśmy za"
+                },
                 text = paidText,
                 onTextChange = { paidText = it },
-                saved = buy?.price,
+                saved = paidShown,
                 placeholder = "Nie wiemy",
                 // An exact cost and a guess must never look alike: with several
                 // things in one buy, this field is the box's price and the item's
                 // own cost is only a share of it.
+                //
+                // A lot reads its total back instead, the way the buy form does: a
+                // pile's total typed into a per-piece field is otherwise invisible
+                // until the profit is wrong weeks later.
                 hint = when {
                     isPartOfABox && stats.cost != null ->
                         "Na ten przedmiot wypada z niej ok. ${stats.cost.format()}."
                     isPartOfABox -> "Cena paczki dzieli się na wszystko, co w niej było."
+                    pricedPerPiece && typedPaid != null ->
+                        "Kupiliśmy ${sztuki(item.quantity)} za ${(typedPaid * item.quantity).format()}"
                     item.buyId == null ->
                         "Wpisz cenę zakupu, żeby policzyć realny zysk"
                     else -> null
                 },
-                onSave = { viewModel.setPaidPrice(item.id, it) },
+                onSave = {
+                    viewModel.setPaidPrice(
+                        item.id,
+                        it,
+                        pieces = if (pricedPerPiece) item.quantity else 1,
+                    )
+                },
             )
 
             Spacer(Modifier.height(10.dp))

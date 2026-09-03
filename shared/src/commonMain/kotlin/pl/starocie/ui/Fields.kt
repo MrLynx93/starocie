@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -51,6 +52,27 @@ import pl.starocie.domain.parseMoney
  * saves itself in one place and waits for a button in the other would be two
  * different promises about the same gesture.
  */
+
+/**
+ * A field's label, kept to one line.
+ *
+ * A resting label is what a text field sizes itself around, so one long enough to
+ * wrap makes the field two lines tall and drops the typed text a line down the
+ * moment it appears — which is exactly what happens when a count above one turns
+ * "Kupiliśmy za" into "Kupiliśmy po cenie za sztukę". A field that changes size
+ * because of its own label is a form rearranging itself under the thumb, and the
+ * count is stepped precisely while somebody is looking at the price.
+ *
+ * So the label stays on its line. At the ordinary text size the longest of these
+ * phrases fits across a phone with room to spare; a screen scaled well past that
+ * loses the last word or two instead of moving the field, which is the cheaper of
+ * the two failures — the label still opens with the verb that says whose price it
+ * is, and the line under the field reads the whole lot's total back anyway.
+ */
+@Composable
+internal fun FieldLabel(text: String) {
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
 
 /**
  * A price you can correct, saved without being asked to confirm it.
@@ -87,7 +109,7 @@ internal fun MoneyField(
             value = text,
             onValueChange = onTextChange,
             singleLine = true,
-            label = { Text(label) },
+            label = { FieldLabel(label) },
             placeholder = { Text(placeholder) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             shape = RoundedCornerShape(14.dp),
@@ -127,7 +149,7 @@ internal fun NameField(
             value = text,
             onValueChange = onTextChange,
             singleLine = true,
-            label = { Text(label) },
+            label = { FieldLabel(label) },
             placeholder = { Text(placeholder) },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             shape = RoundedCornerShape(14.dp),

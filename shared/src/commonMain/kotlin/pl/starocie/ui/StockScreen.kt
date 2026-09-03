@@ -175,6 +175,18 @@ internal fun giełdy(count: Int): String {
 }
 
 /**
+ * Days we only went shopping on, counted: "1 dzień zakupów", "2 dni zakupów", "12
+ * dni zakupów".
+ *
+ * Only the one takes a form of its own here, "dni" covering both the 2–4 tail and
+ * the rest, so there is no teens exception to carve out. It is a whole phrase rather
+ * than a word because "3 zakupy" would be three purchases, which is not what is being
+ * counted: a day of them is.
+ */
+internal fun dniZakupów(count: Int): String =
+    "$count ${if (count == 1) "dzień" else "dni"} zakupów"
+
+/**
  * The same rule for pieces of a lot, in the accusative — this one is always read as
  * the object of something we are doing: "Sprzedajemy 1 sztukę za", "…3 sztuki za",
  * "…12 sztuk za".

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Warehouse
@@ -66,6 +67,7 @@ fun HomeScreen(
     onStock: () -> Unit,
     onSold: () -> Unit,
     onSessions: () -> Unit,
+    onBuyingSessions: () -> Unit,
     onTodaySession: (String) -> Unit,
     isDark: Boolean,
     onToggleTheme: () -> Unit,
@@ -92,16 +94,28 @@ fun HomeScreen(
     // list behind this card leaves out exactly the same days.
     val sessionCount = remember(ledger) { ledger.sellingSessions().size }
 
-    // The giełda we are standing at, and only while we are standing at it: the day
-    // every write resolves to, once something has actually gone at it. The same rule
-    // the list and its card count by — a day we have only bought on is not a giełda,
-    // so there is nothing here to open yet. The clock is read again on every write,
-    // which is what carries the card off the screen at midnight.
+    // Those days are not nothing, though: a trip to somebody's garage is where a
+    // whole afternoon's spending went, and until now the only trace of it was the
+    // things themselves in the magazyn. They get a card of their own, counted and
+    // totted up the way the giełdy are — and the two cannot overlap, a day being one
+    // or the other by construction.
+    val buyingDays = remember(ledger) {
+        ledger.buyingSessions().map { ledger.eventStats(it) }
+    }
+    val buyingSpent = remember(buyingDays) { buyingDays.map { it.spent }.sum() }
+
+    // The day we are standing in, and only while we are standing in it: the one every
+    // write resolves to, once anything at all has happened at it. Which kind of day
+    // it is follows the same rule the two cards above count by — sold something and
+    // it is a giełda, only bought and it is a day's shopping — so the card says
+    // whichever it currently is and changes to the other the moment the first thing
+    // goes. The clock is read again on every write, which is what carries the card
+    // off the screen at midnight.
     val today = remember(ledger) {
         val id = CurrentEventResolver().eventIdFor(Clock.System.now())
         ledger.eventById(id)
-            ?.takeIf { ledger.sellsOfEvent(it.id).isNotEmpty() }
             ?.let { it to ledger.eventStats(it) }
+            ?.takeIf { (_, stats) -> stats.sellCount > 0 || stats.buyCount > 0 }
     }
 
     Scaffold(
@@ -230,21 +244,54 @@ fun HomeScreen(
                 subtitleWidth = 0.68f,
             )
 
+            // The days we only shopped on, under the giełdy and counted the same way:
+            // both cards are a number of days and what those days came to. Only ever
+            // drawn when there has been one — a card saying we have never had a day
+            // of only buying is a line about nothing, and this is already the fourth
+            // read-out on the screen.
+            if (buyingDays.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+
+                SummaryCard(
+                    // The basket rather than the stall: this is the other half of
+                    // what a day can be, and what we did on these days is carry
+                    // things home.
+                    icon = Icons.Filled.ShoppingBasket,
+                    title = "Mamy za sobą ${dniZakupów(buyingDays.size)}",
+                    // What they cost, and nothing about profit: nothing was sold on
+                    // any of them, so there is no profit to have an opinion about —
+                    // what came home from them is in the magazyn, at the card above.
+                    subtitle = "Kupiliśmy na nich za łącznie ${buyingSpent.format()}",
+                    openLabel = "Pokaż dni zakupów",
+                    onClick = onBuyingSessions,
+                    titleWidth = 0.56f,
+                    subtitleWidth = 0.72f,
+                )
+            }
+
             // Today's, under all of them — the day being had rather than the days we
-            // have had. It says what has gone and what that took, and nothing about
-            // profit: a giełda in progress is a stall being worked, and what a day
-            // made is a question for the day itself, on the screen behind this card.
+            // have had. It says what has happened so far and what that came to, and
+            // nothing about profit: a giełda in progress is a stall being worked, and
+            // what a day made is a question for the day itself, on the screen behind
+            // this card. A day we have only bought on so far says so in the other
+            // half's words, and turns into the giełda card the moment anything goes.
             today?.let { (event, stats) ->
                 Spacer(Modifier.height(10.dp))
+
+                val selling = stats.sellCount > 0
 
                 SummaryCard(
                     // The calendar rather than the stall above it: this card and that
                     // one are the same kind of thing, and what separates them is that
                     // this one is about now.
                     icon = Icons.Filled.Today,
-                    title = "Dzisiejsza giełda",
-                    subtitle = "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}",
-                    openLabel = "Pokaż dzisiejszą giełdę",
+                    title = if (selling) "Dzisiejsza giełda" else "Dzisiejsze zakupy",
+                    subtitle = if (selling) {
+                        "Sprzedaliśmy ${przedmioty(stats.itemsSold)} za ${stats.earned.format()}"
+                    } else {
+                        "Kupiliśmy ${przedmioty(stats.itemsBought)} za ${stats.spent.format()}"
+                    },
+                    openLabel = if (selling) "Pokaż dzisiejszą giełdę" else "Pokaż dzisiejsze zakupy",
                     onClick = { onTodaySession(event.id) },
                 )
             }

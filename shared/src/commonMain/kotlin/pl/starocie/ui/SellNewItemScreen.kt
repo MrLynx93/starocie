@@ -153,12 +153,14 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                 // one piece's — the buy form's rule, in the same place. Its label is
                 // what says which of those it is, a phrase rather than two words on a
                 // lot, and half a line ellipsised it down to "Kupiliśmy po cenie za s…".
+                // FieldLabel holds it to one line, so the field cannot grow around a
+                // wrapped label when the count goes above one.
                 OutlinedTextField(
                     value = form.paidText,
                     onValueChange = { viewModel.onNewItemChange(form.copy(paidText = it)) },
                     singleLine = true,
                     label = {
-                        Text(
+                        FieldLabel(
                             if (form.splittable) {
                                 "Kupiliśmy po cenie za sztukę"
                             } else {
@@ -208,7 +210,7 @@ fun SellNewItemScreen(viewModel: SellViewModel, onDone: () -> Unit) {
                     onValueChange = { viewModel.onNewItemChange(form.copy(priceText = it)) },
                     singleLine = true,
                     label = {
-                        Text(
+                        FieldLabel(
                             if (form.splittable) {
                                 "Sprzedajemy po cenie za sztukę"
                             } else {

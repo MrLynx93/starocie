@@ -177,6 +177,12 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                 // rather than two words on a lot — and half a line ellipsised it down to
                 // "Kupiliśmy po cenie za s…", which is the one thing here that must
                 // stay readable. A box was paid for once and is not asked again.
+                //
+                // The phrase is held to its line by FieldLabel, because a wrapping
+                // label is what a text field grows around: the field went two lines
+                // tall and dropped its own text a line the moment the count went past
+                // one, which is a form rearranging itself under a thumb that is
+                // stepping the count and looking at the price.
                 if (state.showPaid) {
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
@@ -184,7 +190,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                         onValueChange = viewModel::onPaidChange,
                         singleLine = true,
                         label = {
-                            Text(
+                            FieldLabel(
                                 if (state.splittable) {
                                     "Kupiliśmy po cenie za sztukę"
                                 } else {
@@ -227,7 +233,7 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
                     onValueChange = viewModel::onAskingChange,
                     singleLine = true,
                     label = {
-                        Text(
+                        FieldLabel(
                             if (state.splittable) {
                                 "Sprzedamy po cenie za sztukę"
                             } else {

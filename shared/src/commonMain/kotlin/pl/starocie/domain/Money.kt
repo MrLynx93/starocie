@@ -26,6 +26,17 @@ value class Money(val minor: Long) : Comparable<Money> {
     /** A price per piece taken a whole number of times. Exact — grosze, not floats. */
     operator fun times(count: Int): Money = Money(minor * count)
 
+    /**
+     * What one piece of a lot went for, back out of the total.
+     *
+     * Integer division, so a total that does not divide evenly loses the odd grosz —
+     * which is why this is only ever read *back* to somebody, never stored: the
+     * record keeps what was handed over, and a per-piece field is a way of typing it,
+     * not a second number to be kept in step. A price shown this way and saved
+     * unchanged writes nothing, so the remainder cannot leak into the books.
+     */
+    operator fun div(count: Int): Money = Money(minor / count.coerceAtLeast(1))
+
     override fun compareTo(other: Money): Int = minor.compareTo(other.minor)
 
     companion object {

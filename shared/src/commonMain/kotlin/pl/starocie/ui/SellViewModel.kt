@@ -320,10 +320,19 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         }
     }
 
-    /** What was paid, corrected the same way — it is the item's buy that changes. */
-    fun setPaidPrice(itemId: String, text: String) {
+    /**
+     * What was paid, corrected the same way — it is the item's buy that changes.
+     *
+     * [pieces] is how many the typed price covers, which is one for a single thing
+     * and the whole lot for a lot: the field there asks what *one* of them cost,
+     * exactly as the buy form does, and `Buy.price` is what was handed over. So the
+     * multiplication happens here rather than anywhere the cost is later read —
+     * nothing below this stores a rate. A blank stays blank whatever it is
+     * multiplied by, so an honest unknown cannot become a zero.
+     */
+    fun setPaidPrice(itemId: String, text: String, pieces: Int = 1) {
         viewModelScope.launch {
-            runCatching { repository.setPaidPrice(itemId, parseMoney(text)) }
+            runCatching { repository.setPaidPrice(itemId, parseMoney(text)?.times(pieces)) }
                 .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
         }
     }
