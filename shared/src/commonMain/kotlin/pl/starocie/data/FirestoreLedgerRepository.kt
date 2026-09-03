@@ -313,6 +313,27 @@ class FirestoreLedgerRepository(
         }
     }
 
+    override suspend fun setQuantity(itemId: String, quantity: Int) {
+        val at = now()
+        val item = ledger.value.itemById(itemId) ?: return
+        // Nothing may have gone yet: a sale was measured against this count, so
+        // moving it now would move the cost that sale was set against. A lot with a
+        // sale behind it corrects itself by being oversold instead.
+        if (ledger.value.sellsOfItem(itemId).isNotEmpty()) return
+
+        val pieces = quantity.coerceAtLeast(1)
+        if (pieces == item.quantity) return
+
+        // The buy is untouched on purpose: more things in the box than we counted is
+        // not more money handed over, so the total stands and the shares shrink.
+        detached {
+            itemsRef.document(itemId).update(
+                "quantity" to pieces,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
+    }
+
     override suspend fun setPhoto(itemId: String, photo: String?) {
         val at = now()
         detached {

@@ -310,6 +310,21 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
     }
 
     /**
+     * How many there are, corrected while nothing has gone yet — a crate counted in
+     * a hurry, or a lot entered as the one thing it looked like.
+     *
+     * The repository is what refuses it once something has sold, rather than this or
+     * the screen: a count a sale was measured against is not a typed opinion any
+     * more.
+     */
+    fun setQuantity(itemId: String, quantity: Int) {
+        viewModelScope.launch {
+            runCatching { repository.setQuantity(itemId, quantity) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
+    /**
      * A new photo for a thing already in stock, or none. Written straight through:
      * there is nothing to confirm about a picture that was just taken.
      */

@@ -112,6 +112,29 @@ interface LedgerRepository {
     suspend fun setAskingPrice(itemId: String, price: Money?)
 
     /**
+     * How many pieces the record covers, corrected while nothing has gone yet.
+     *
+     * A count typed at a stall comes out wrong the same way a price does — a crate
+     * counted in a hurry, or a lot entered as the one thing it looked like — and
+     * until something has sold there is nothing the number has to agree with, so it
+     * can simply be put right.
+     *
+     * **Once a piece has gone it is no longer this operation's to change**, and the
+     * call does nothing: what has been sold is measured against the count, so moving
+     * it would move the cost every one of those sales was set against. The lot still
+     * corrects itself the one way it always has — selling more pieces than the record
+     * holds raises it to meet them, which is a fact rather than a typed opinion.
+     *
+     * The buy is left alone. What was handed over is what was handed over; finding
+     * more things in the box than we counted does not mean we paid more for it, so
+     * the total stands and each piece's share of it simply gets smaller.
+     *
+     * Never below one, and refused where the count would be a guess: a blank is a
+     * half-typed number rather than an answer, the way a blank sale price is.
+     */
+    suspend fun setQuantity(itemId: String, quantity: Int)
+
+    /**
      * A Base64 JPEG replacing whatever the item had, or null to drop it.
      *
      * The photo is the picture itself, not a path to one, so this is the whole of

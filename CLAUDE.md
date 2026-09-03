@@ -110,9 +110,18 @@ putting the field back would find them where they were left.
    **A lot leaves stock when its last piece goes**, worked out in the repository
    from the ledger rather than trusted from the caller, so two offline phones
    selling the last pieces converge. Selling **more** pieces than the record holds
-   raises `Item.quantity` to meet the total instead of being refused — that is the
-   one thing that ever writes it after creation, and it is a correction of a
-   miscount, not a stock movement. `Sell.soldCompletely` stays as the override
+   raises `Item.quantity` to meet the total instead of being refused — a correction
+   of a miscount, not a stock movement.
+   **Two things write it after creation, and both are corrections**: that oversell,
+   and `setQuantity` while nothing has gone yet. Until the first sale the number
+   agrees with nothing, so it can simply be put right — a crate counted in a hurry,
+   or a lot entered as the one thing it looked like. After a sale it is refused:
+   `sellCost` measures that sale against the count, so moving it would move the cost
+   it was set against, and the oversell is then the only thing that may — being a
+   fact about pieces in a hand rather than a number somebody typed. Correcting it
+   leaves the **buy** alone: more things in the box is not more money handed over, so
+   the total stands and each piece's share of it gets smaller.
+   `Sell.soldCompletely` stays as the override
    for "and the rest is not coming back" — kept, lost or given away — and it
    **defaults to false** on `recordSell`: a default of true would close a lot on
    every partial sale by a caller that had no opinion. For something that only ever
@@ -762,6 +771,16 @@ write nothing until their main button is pressed.
   sale is how we find out — so it is the correction, not an error.
   A half-sold lot shows what is left rather than what it started as, in the list
   ("Zostało 9 z 12 szt.") in the list and above the item alike.
+  **How many there are is a field too, until the first piece goes** — "Sztuki", the
+  buy form's own word, sitting above the two prices because it is what says whether
+  either of them is this thing's price or one piece's. A count typed at a stall is
+  wrong the same way a price is: a crate counted in a hurry, or a lot entered as the
+  one thing it looked like, which is why one thing can become six here. It saves on
+  the same half-second pause, and **a count that does not parse writes nothing** —
+  a field caught halfway between 1 and 12 is not an answer. While it is a field the
+  line under the name goes: one number in two places is one of them disagreeing
+  while it is being typed. A lot with a sale behind it keeps that line and loses the
+  field, per invariant 5.
   What was paid is the **buy's** price, not the item's, and the field says which it
   is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
   "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a

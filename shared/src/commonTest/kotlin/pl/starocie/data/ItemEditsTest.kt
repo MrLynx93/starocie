@@ -11,8 +11,9 @@ import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.Money
 
 /**
- * What the item screen can change after the fact: the two prices, the deletion, and
- * the closing that stands in for it once something has sold.
+ * What the item screen can change after the fact: the two prices, the count while
+ * nothing has gone yet, the deletion, and the closing that stands in for it once
+ * something has sold.
  *
  * They all reach past the item — a price correction lands on the buy, a deletion
  * takes the buy with it once it is empty, and closing a lot deliberately leaves both
@@ -145,6 +146,78 @@ class ItemEditsTest {
         repository.markSoldOut(itemId)
 
         assertEquals(ItemStatus.IN_STOCK, repository.ledger.value.itemById(itemId)!!.status)
+    }
+
+    /**
+     * A crate counted in a hurry comes out wrong, and until a piece has gone there is
+     * nothing the number has to agree with — so it is simply put right.
+     */
+    @Test
+    fun the_count_can_be_corrected_while_nothing_has_sold() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(9000),
+            name = null,
+            items = listOf(DraftItem(name = "talerze", quantity = 3)),
+        )
+        val itemId = repository.ledger.value.items.single().id
+
+        repository.setQuantity(itemId, 4)
+
+        val ledger = repository.ledger.value
+        assertEquals(4, ledger.itemById(itemId)!!.quantity)
+        assertEquals(
+            Money(9000),
+            ledger.buys.single().price,
+            "more things in the box is not more money handed over",
+        )
+        assertEquals(4, ledger.piecesLeft(ledger.itemById(itemId)!!))
+    }
+
+    /** A single thing entered as one, which it turns out there were six of. */
+    @Test
+    fun a_single_thing_can_become_a_lot() = runTest {
+        val repository = InMemoryLedgerRepository()
+        val itemId = repository.addItem(buyId = null, draft = DraftItem(name = "kubek"))
+
+        repository.setQuantity(itemId, 6)
+
+        assertTrue(repository.ledger.value.itemById(itemId)!!.splittable)
+    }
+
+    /** Never below one: a record of no things is not a record of anything. */
+    @Test
+    fun the_count_never_goes_below_one() = runTest {
+        val repository = InMemoryLedgerRepository()
+        val itemId = repository.addItem(
+            buyId = null,
+            draft = DraftItem(name = "talerze", quantity = 3),
+        )
+
+        repository.setQuantity(itemId, 0)
+
+        assertEquals(1, repository.ledger.value.itemById(itemId)!!.quantity)
+    }
+
+    /**
+     * A sale was measured against the count, so moving it afterwards would move the
+     * cost that sale was set against. The lot still corrects itself by being
+     * oversold, which is a fact rather than a typed opinion.
+     */
+    @Test
+    fun the_count_stops_being_ours_to_type_once_something_has_sold() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(9000),
+            name = null,
+            items = listOf(DraftItem(name = "talerze", quantity = 3)),
+        )
+        val itemId = repository.ledger.value.items.single().id
+        repository.recordSell(itemId, Money(4000), quantity = 1, soldCompletely = false)
+
+        repository.setQuantity(itemId, 9)
+
+        assertEquals(3, repository.ledger.value.itemById(itemId)!!.quantity)
     }
 
     @Test

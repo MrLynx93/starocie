@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -157,6 +158,45 @@ internal fun NameField(
         )
         hint?.let { FieldHint(it) }
     }
+}
+
+/**
+ * How many pieces a record covers, corrected the same way its prices are.
+ *
+ * Same bargain again — no save button, the write going out once the typing stops —
+ * and the same word the buy form asks for it with, because it is the same number
+ * about the same thing. Narrow, because it is never more than two digits.
+ *
+ * **A count that does not parse writes nothing**, the way a blank sale price does:
+ * a lot is *some* number of things, and a field caught halfway between 1 and 12 is
+ * not an answer about how many there are. Nothing here is what stops a count moving
+ * once something has sold — that is the repository's, being a fact about the record
+ * rather than about this screen.
+ */
+@Composable
+internal fun CountField(
+    label: String,
+    text: String,
+    onTextChange: (String) -> Unit,
+    saved: Int,
+    onSave: (Int) -> Unit,
+) {
+    LaunchedEffect(text) {
+        val count = text.trim().toIntOrNull()?.takeIf { it >= 1 } ?: return@LaunchedEffect
+        if (count == saved) return@LaunchedEffect
+        delay(SAVE_AFTER_TYPING_MS)
+        onSave(count)
+    }
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = onTextChange,
+        singleLine = true,
+        label = { FieldLabel(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.width(120.dp),
+    )
 }
 
 /**

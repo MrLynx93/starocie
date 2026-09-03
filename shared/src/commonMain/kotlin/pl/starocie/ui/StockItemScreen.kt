@@ -122,12 +122,27 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     val pricedPerPiece = item.splittable && !isPartOfABox
     val paidShown = buy?.price?.let { if (pricedPerPiece) it / item.quantity else it }
 
+    // How many there are is a correction like the prices are, right up until the
+    // first piece goes: a crate counted in a hurry comes out wrong, and a lot
+    // entered as the one thing it looked like is wrong from the start. After a sale
+    // it is no longer ours to type — that sale was measured against this count — and
+    // the lot corrects itself the one way it always has, by being oversold.
+    val countIsOurs = stats.sellCount == 0
+
     // Both fields are held here rather than inside them, so "Sprzedaj" can hand the
     // dialog what has been *typed*: the field saves half a second after the typing
     // stops, and a price entered and sold on in one motion must not open the dialog
     // on the old number.
-    var paidText by remember(item.id) { mutableStateOf(paidShown?.toInputText() ?: "") }
+    //
+    // The paid field follows the count as well as the item, because on a lot it is
+    // the count that says what the number in it means: correcting three to four
+    // leaves the same money spread thinner, and the field has to say the new figure
+    // rather than the one it was opened with.
+    var paidText by remember(item.id, item.quantity) {
+        mutableStateOf(paidShown?.toInputText() ?: "")
+    }
     var askingText by remember(item.id) { mutableStateOf(item.price?.toInputText() ?: "") }
+    var quantityText by remember(item.id) { mutableStateOf(item.quantity.toString()) }
 
     ScreenColumn {
         // What the item is scrolls; what you can do about it stays put at the
@@ -137,7 +152,10 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         ) {
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
 
-            if (item.splittable) {
+            // Only where the count is a read-out. Where it is a field it says the
+            // same thing further down and can put it right, and one number in two
+            // places on one screen is one of them disagreeing while it is typed.
+            if (item.splittable && !countIsOurs) {
                 Text(
                     if (left < item.quantity) {
                         "Zostało $left z ${item.quantity} szt."
@@ -179,6 +197,23 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             }
 
             Spacer(Modifier.height(20.dp))
+
+            // The count leads the two prices, because it is what says whether either
+            // of them is this thing's price or one piece's — the labels underneath
+            // change as it moves. Same word the buy form asks for it with, and the
+            // same hint under it, a lot being the same thing on both screens.
+            if (countIsOurs) {
+                CountField(
+                    label = "Sztuki",
+                    text = quantityText,
+                    onTextChange = { quantityText = it },
+                    saved = item.quantity,
+                    onSave = { viewModel.setQuantity(item.id, it) },
+                )
+                SplittableHint(visible = item.splittable)
+
+                Spacer(Modifier.height(10.dp))
+            }
 
             // Both prices are still decisions rather than records — one was mistyped
             // or forgotten, the other changes every time a thing sits unsold — so

@@ -206,6 +206,23 @@ class InMemoryLedgerRepository(
         }
     }
 
+    override suspend fun setQuantity(itemId: String, quantity: Int) {
+        val at = now()
+        state.update { current ->
+            val item = current.itemById(itemId) ?: return@update current
+            // A sale was measured against this count, so it stops being ours to
+            // change the moment one exists; being oversold is how it moves after that.
+            if (current.sellsOfItem(itemId).isNotEmpty()) return@update current
+
+            val pieces = quantity.coerceAtLeast(1)
+            current.copy(
+                items = current.items.map {
+                    if (it.id == item.id) it.copy(quantity = pieces, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
     override suspend fun setPhoto(itemId: String, photo: String?) {
         val at = now()
         state.update { current ->
