@@ -324,14 +324,31 @@ class FirestoreLedgerRepository(
         val pieces = quantity.coerceAtLeast(1)
         if (pieces == item.quantity) return
 
-        // The buy is untouched on purpose: more things in the box than we counted is
-        // not more money handed over, so the total stands and the shares shrink.
-        detached {
-            itemsRef.document(itemId).update(
+        // A buy holding only this item is priced by the piece, so it moves with the
+        // count: four at what one cost, rather than three things' money spread over
+        // four. A box is not — it was paid for once, whatever was in it — so its
+        // price stands and the shares of it redistribute.
+        val soleBuy = item.buyId
+            ?.takeIf { ledger.value.itemCountOfBuy(it) <= 1 }
+            ?.let { ledger.value.buyById(it) }
+        val scaled = soleBuy?.price?.atSameRate(was = item.quantity, now = pieces)
+
+        // One batch: the count and what it says we paid are one correction, and a
+        // half-written one would leave a price per piece nobody ever paid.
+        firestore.batch().apply {
+            update(
+                itemsRef.document(itemId),
                 "quantity" to pieces,
                 "updatedAt" to at.toEpochMilliseconds(),
             )
-        }
+            if (soleBuy != null && scaled != null) {
+                update(
+                    buysRef.document(soleBuy.id),
+                    "price" to scaled.minor,
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+            }
+        }.commitDetached()
     }
 
     override suspend fun setPhoto(itemId: String, photo: String?) {

@@ -119,8 +119,18 @@ putting the field back would find them where they were left.
    `sellCost` measures that sale against the count, so moving it would move the cost
    it was set against, and the oversell is then the only thing that may — being a
    fact about pieces in a hand rather than a number somebody typed. Correcting it
-   leaves the **buy** alone: more things in the box is not more money handed over, so
-   the total stands and each piece's share of it gets smaller.
+   **moves the buy with it**, where that buy holds only this item: the price there is
+   per piece, so a lot of three at 30,00 zł corrected to four is four at 30,00 zł and
+   a total of 120,00. What one of them cost is the figure somebody remembers; the
+   total is the multiplication, and a count and a price disagreeing about how many
+   pieces they cover would be a cost per piece nobody ever paid. A **box** is the
+   exception and never moves: it was paid for once, whatever turned out to be inside,
+   so its shares simply redistribute.
+   **The oversell moves no money either**, and the two are not in conflict: there
+   nobody typed a price, the money left the hand long ago, and what is discovered is
+   that the total covered more pieces than we wrote down. Typing a count beside a
+   per-piece price is the opposite — the price is the anchor and the total is the
+   multiplication.
    `Sell.soldCompletely` stays as the override
    for "and the rest is not coming back" — kept, lost or given away — and it
    **defaults to false** on `recordSell`: a default of true would close a lot on
@@ -777,7 +787,10 @@ write nothing until their main button is pressed.
   wrong the same way a price is: a crate counted in a hurry, or a lot entered as the
   one thing it looked like, which is why one thing can become six here. It saves on
   the same half-second pause, and **a count that does not parse writes nothing** —
-  a field caught halfway between 1 and 12 is not an answer. While it is a field the
+  a field caught halfway between 1 and 12 is not an answer.
+  **What was paid follows it**, per invariant 5, so the price field's own number does
+  not move: it holds what one piece cost, and that is exactly what a count correction
+  leaves alone. Only the label above it and the total read back below it change. While it is a field the
   line under the name goes: one number in two places is one of them disagreeing
   while it is being typed. A lot with a sale behind it keeps that line and loses the
   field, per invariant 5.

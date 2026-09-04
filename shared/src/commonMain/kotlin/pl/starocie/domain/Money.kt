@@ -37,6 +37,24 @@ value class Money(val minor: Long) : Comparable<Money> {
      */
     operator fun div(count: Int): Money = Money(minor / count.coerceAtLeast(1))
 
+    /**
+     * The same money per piece, over a different number of pieces.
+     *
+     * What one of them cost is the figure somebody remembers and the total is the
+     * multiplication, so correcting a lot of three to a lot of four is four at that
+     * money rather than the same money spread thinner.
+     *
+     * Scaled whole rather than divided out and multiplied back: the rate is not a
+     * number anything holds, so dividing first would drop the odd grosz on every
+     * correction and never give it back. Rounded to the nearest grosz, which is what
+     * makes a count moved and moved back land on the price it started at.
+     */
+    fun atSameRate(was: Int, now: Int): Money {
+        val from = was.coerceAtLeast(1)
+        val to = now.coerceAtLeast(1)
+        return Money((minor * to + from / 2) / from)
+    }
+
     override fun compareTo(other: Money): Int = minor.compareTo(other.minor)
 
     companion object {

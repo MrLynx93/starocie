@@ -42,6 +42,24 @@ class MoneyTest {
         assertEquals(Money(9000), Money(9000) / 0, "nothing is divided by no pieces")
     }
 
+    /**
+     * The same money per piece over a different count — what a corrected lot is
+     * worth. Rounded rather than divided out and multiplied back, so a count moved
+     * and moved back lands on the price it started at.
+     */
+    @Test
+    fun scales_a_total_to_a_new_count_at_the_same_rate() {
+        assertEquals(Money(12000), Money(9000).atSameRate(was = 3, now = 4))
+        assertEquals(Money(9000), Money(9000).atSameRate(was = 3, now = 3))
+        assertEquals(Money(9000), Money(1500).atSameRate(was = 1, now = 6))
+
+        // 100,00 over three does not divide evenly, and the odd grosz must survive
+        // the trip out and back rather than being lost on the way.
+        val there = Money(10000).atSameRate(was = 3, now = 4)
+        assertEquals(Money(13333), there)
+        assertEquals(Money(10000), there.atSameRate(was = 4, now = 3))
+    }
+
     /** A price typed then re-read must survive the round trip unchanged. */
     @Test
     fun input_text_round_trips_through_parsing() {

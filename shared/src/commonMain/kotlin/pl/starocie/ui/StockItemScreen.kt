@@ -134,13 +134,12 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     // stops, and a price entered and sold on in one motion must not open the dialog
     // on the old number.
     //
-    // The paid field follows the count as well as the item, because on a lot it is
-    // the count that says what the number in it means: correcting three to four
-    // leaves the same money spread thinner, and the field has to say the new figure
-    // rather than the one it was opened with.
-    var paidText by remember(item.id, item.quantity) {
-        mutableStateOf(paidShown?.toInputText() ?: "")
-    }
+    // The paid field is keyed on the item alone, count changes included: what it
+    // holds is a price per piece, and correcting the count moves the buy's total to
+    // match rather than the money each piece cost. So the number in it is the same
+    // number afterwards — a lot of three at 30,00 zł becoming a lot of four still
+    // reads 30,00 zł, and only the label above and the total below it change.
+    var paidText by remember(item.id) { mutableStateOf(paidShown?.toInputText() ?: "") }
     var askingText by remember(item.id) { mutableStateOf(item.price?.toInputText() ?: "") }
     var quantityText by remember(item.id) { mutableStateOf(item.quantity.toString()) }
 

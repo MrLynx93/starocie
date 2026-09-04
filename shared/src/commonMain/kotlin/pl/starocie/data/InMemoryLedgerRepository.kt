@@ -215,9 +215,24 @@ class InMemoryLedgerRepository(
             if (current.sellsOfItem(itemId).isNotEmpty()) return@update current
 
             val pieces = quantity.coerceAtLeast(1)
+            // Priced by the piece where the buy holds only this item, so what was
+            // paid moves with the count. A box was paid for once, whatever was in
+            // it, so its price stands and the shares of it redistribute.
+            val soleBuyId = item.buyId?.takeIf { current.itemCountOfBuy(it) <= 1 }
+
             current.copy(
                 items = current.items.map {
                     if (it.id == item.id) it.copy(quantity = pieces, updatedAt = at) else it
+                },
+                buys = current.buys.map {
+                    if (it.id == soleBuyId && it.price != null) {
+                        it.copy(
+                            price = it.price.atSameRate(was = item.quantity, now = pieces),
+                            updatedAt = at,
+                        )
+                    } else {
+                        it
+                    }
                 },
             )
         }

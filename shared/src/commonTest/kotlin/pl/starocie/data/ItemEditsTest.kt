@@ -151,6 +151,9 @@ class ItemEditsTest {
     /**
      * A crate counted in a hurry comes out wrong, and until a piece has gone there is
      * nothing the number has to agree with — so it is simply put right.
+     *
+     * The buy is priced by the piece, so it follows: three at 30,00 zł corrected to
+     * four is four at 30,00 zł, not three things' money spread over four.
      */
     @Test
     fun the_count_can_be_corrected_while_nothing_has_sold() = runTest {
@@ -167,22 +170,74 @@ class ItemEditsTest {
         val ledger = repository.ledger.value
         assertEquals(4, ledger.itemById(itemId)!!.quantity)
         assertEquals(
-            Money(9000),
+            Money(12000),
             ledger.buys.single().price,
-            "more things in the box is not more money handed over",
+            "what one of them cost is what stays; the total is the multiplication",
         )
         assertEquals(4, ledger.piecesLeft(ledger.itemById(itemId)!!))
     }
 
-    /** A single thing entered as one, which it turns out there were six of. */
+    /** Moved and moved back lands on the price it started at, odd grosz and all. */
+    @Test
+    fun correcting_the_count_back_again_restores_what_we_paid() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(10000),
+            name = null,
+            items = listOf(DraftItem(name = "talerze", quantity = 3)),
+        )
+        val itemId = repository.ledger.value.items.single().id
+
+        repository.setQuantity(itemId, 4)
+        repository.setQuantity(itemId, 3)
+
+        assertEquals(Money(10000), repository.ledger.value.buys.single().price)
+    }
+
+    /** A box was paid for once, whatever turned out to be inside it. */
+    @Test
+    fun correcting_a_count_inside_a_box_leaves_the_box_price_alone() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(6000),
+            name = "pudło",
+            items = listOf(
+                DraftItem(name = "talerze", quantity = 3, price = Money(1000)),
+                DraftItem(name = "kubek", price = Money(1000)),
+            ),
+        )
+        val plates = repository.ledger.value.items.first { it.name == "talerze" }
+
+        repository.setQuantity(plates.id, 12)
+
+        val ledger = repository.ledger.value
+        assertEquals(12, ledger.itemById(plates.id)!!.quantity)
+        assertEquals(
+            Money(6000),
+            ledger.buys.single().price,
+            "finding more in the box moves no money",
+        )
+    }
+
+    /**
+     * A single thing entered as one, which it turns out there were six of — and what
+     * was typed as its price was a price per piece all along.
+     */
     @Test
     fun a_single_thing_can_become_a_lot() = runTest {
         val repository = InMemoryLedgerRepository()
-        val itemId = repository.addItem(buyId = null, draft = DraftItem(name = "kubek"))
+        repository.recordBuy(
+            price = Money(1500),
+            name = null,
+            items = listOf(DraftItem(name = "kubek")),
+        )
+        val itemId = repository.ledger.value.items.single().id
 
         repository.setQuantity(itemId, 6)
 
-        assertTrue(repository.ledger.value.itemById(itemId)!!.splittable)
+        val ledger = repository.ledger.value
+        assertTrue(ledger.itemById(itemId)!!.splittable)
+        assertEquals(Money(9000), ledger.buys.single().price)
     }
 
     /** Never below one: a record of no things is not a record of anything. */
@@ -217,7 +272,9 @@ class ItemEditsTest {
 
         repository.setQuantity(itemId, 9)
 
-        assertEquals(3, repository.ledger.value.itemById(itemId)!!.quantity)
+        val ledger = repository.ledger.value
+        assertEquals(3, ledger.itemById(itemId)!!.quantity)
+        assertEquals(Money(9000), ledger.buys.single().price, "and the buy stays with it")
     }
 
     @Test

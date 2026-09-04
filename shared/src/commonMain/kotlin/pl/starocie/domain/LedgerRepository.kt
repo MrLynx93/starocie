@@ -125,9 +125,21 @@ interface LedgerRepository {
      * corrects itself the one way it always has — selling more pieces than the record
      * holds raises it to meet them, which is a fact rather than a typed opinion.
      *
-     * The buy is left alone. What was handed over is what was handed over; finding
-     * more things in the box than we counted does not mean we paid more for it, so
-     * the total stands and each piece's share of it simply gets smaller.
+     * **The buy follows, where that buy holds only this item.** The price there is
+     * per piece — what one of them cost is the figure somebody remembers, and the
+     * total is the multiplication — so a lot of three corrected to four is four at
+     * that same money, not the same money spread thinner. A count and a price that
+     * disagreed about how many pieces they covered would be a cost per piece nobody
+     * ever paid.
+     *
+     * A box is the exception, and it is left alone: it was paid for once, whatever
+     * turned out to be inside, so finding a fourth plate in it moves no money. The
+     * shares of it simply redistribute.
+     *
+     * The oversell moves no money either, and the two do not contradict each other:
+     * nobody typed a price there, the money left the hand long ago, and what the sale
+     * discovers is that the total covered more pieces than we wrote down. Here a
+     * count is typed beside a price per piece, so the price is the anchor instead.
      *
      * Never below one, and refused where the count would be a guess: a blank is a
      * half-typed number rather than an answer, the way a blank sale price is.
