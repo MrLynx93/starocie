@@ -16,6 +16,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.sp
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.delay
@@ -54,25 +57,66 @@ import pl.starocie.domain.parseMoney
  */
 
 /**
- * A field's label, kept to one line.
+ * A field's label, kept to one line — and shrunk until that line holds all of it.
  *
  * A resting label is what a text field sizes itself around, so one long enough to
  * wrap makes the field two lines tall and drops the typed text a line down the
  * moment it appears — which is exactly what happens when a count above one turns
- * "Kupiliśmy za" into "Kupiliśmy po cenie za sztukę". A field that changes size
+ * "Kupiliśmy za" into "Kupiliśmy po cenie za szt.". A field that changes size
  * because of its own label is a form rearranging itself under the thumb, and the
  * count is stepped precisely while somebody is looking at the price.
  *
- * So the label stays on its line. At the ordinary text size the longest of these
- * phrases fits across a phone with room to spare; a screen scaled well past that
- * loses the last word or two instead of moving the field, which is the cheaper of
- * the two failures — the label still opens with the verb that says whose price it
- * is, and the line under the field reads the whole lot's total back anyway.
+ * Holding it to one line alone only moved the failure: a narrow field, a lot's long
+ * phrase or a screen scaled past the ordinary text size, and the tail went instead —
+ * "Kupiliśmy po cenie za sz…", which is exactly the half that says whose price it is
+ * and per what. **So a label that will not fit is drawn smaller rather than cut.**
+ * A point or so of type is a cheap thing to spend; the words are not, and neither is
+ * the field's height.
+ *
+ * It steps down rather than solving for a size, because what the label is measured
+ * against is only known once it has been laid out. Each pass that still overflows
+ * takes [LABEL_SHRINK_STEP] off and lays out again, which lands inside a few frames
+ * and stops for good at [LABEL_FLOOR] — past that the field is too narrow for the
+ * phrase at any readable size, and an ellipsis is the honest end of it.
+ *
+ * The size it settles on is a **ceiling, not a size**: what is drawn is the smaller
+ * of it and whatever the text field is currently providing, so the label still
+ * shrinks to its small self as it floats up to the border and still animates the
+ * whole way. Only what was too big for the line is taken off.
  */
 @Composable
 internal fun FieldLabel(text: String) {
-    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val provided = LocalTextStyle.current
+    val given = provided.fontSize
+    // Ems and an unspecified size are nothing to measure against, and neither ever
+    // reaches here — the field provides its label style in sp. Left alone if it does.
+    val scalable = given.isSpecified && given.isSp
+
+    // Reset with the text: a count crossing one swaps a short label for a long one,
+    // and the long one's size must not be inherited by whatever replaces it.
+    var ceiling by remember(text) { mutableStateOf(LABEL_CEILING) }
+    val size = if (scalable) minOf(given, ceiling) else given
+
+    Text(
+        text = text,
+        style = provided.copy(fontSize = size),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { laid ->
+            if (scalable && laid.hasVisualOverflow && size > LABEL_FLOOR) {
+                ceiling = maxOf(size * LABEL_SHRINK_STEP, LABEL_FLOOR)
+            }
+        },
+    )
 }
+
+/** Higher than any label style, so the first pass draws at the size it was given. */
+private val LABEL_CEILING = 100.sp
+
+/** Where shrinking stops and the tail goes instead. */
+private val LABEL_FLOOR = 9.sp
+
+private const val LABEL_SHRINK_STEP = 0.92f
 
 /**
  * A price you can correct, saved without being asked to confirm it.

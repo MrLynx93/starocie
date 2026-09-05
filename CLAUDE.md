@@ -666,15 +666,23 @@ write nothing until their main button is pressed.
   a phrase that long ellipsises down to "Kupiliśmy po cenie za s…" in half a line,
   and it is the one label here that must stay readable. A box was paid for once and
   is not asked again, so its line is simply absent.
-  **Every field label is held to one line** — `FieldLabel`, used by the two forms and
-  by the item screens' `MoneyField` and `NameField` alike. A resting label is what a
-  text field sizes itself around, so a label long enough to wrap makes the field two
-  lines tall and drops the typed text a line down; stepping the count above one turned
-  "Kupiliśmy za" into the long phrase and the price field grew under the thumb that
-  was setting the count. A screen scaled far past the ordinary text size now loses the
-  last word or two rather than moving the field, which is the cheaper failure: the
-  phrase opens with the verb that says whose price it is, and the line under the field
-  reads the lot's total back anyway.
+  **Every field label is held to one line, and shrunk until that line holds all of
+  it** — `FieldLabel`, used by the two forms and by the item screens' `MoneyField`,
+  `CountField` and `NameField` alike. A resting label is what a text field sizes
+  itself around, so a label long enough to wrap makes the field two lines tall and
+  drops the typed text a line down; stepping the count above one turned "Kupiliśmy za"
+  into the long phrase and the price field grew under the thumb that was setting the
+  count. One line alone only moved the failure — a narrow field or a scaled-up screen
+  took the tail instead, and "Kupiliśmy po cenie za sz…" loses exactly the half that
+  says per what. **A label that will not fit is therefore drawn smaller rather than
+  cut**: a point of type is cheap, the words and the field's height are not.
+  It steps down rather than solving for a size, what the label is measured against
+  being known only once it has been laid out — each overflowing pass takes 8% off and
+  lays out again, landing inside a few frames and stopping for good at 9 sp, past
+  which an ellipsis is the honest end of it. What it settles on is a **ceiling, not a
+  size**: the label draws at the smaller of it and whatever the field is currently
+  providing, so it still shrinks and animates its way up to the border as the field
+  takes focus.
   **Nothing is focused on arrival** — the screen opens whole, keyboard down, since
   the first move is as often the camera as the name. Focusing a text field *is* the
   request for the keyboard, so the two cannot be separated without hiding it again
@@ -796,7 +804,10 @@ write nothing until their main button is pressed.
   its width. The full phrase wants about 208 dp and the shared row leaves about 197,
   so this is the `rzeczy(n)` exception again — a width buying a shorter word, not a
   second name for the thing. The sold item screen carries the abbreviation too,
-  being the same field later in the same thing's life.
+  being the same field later in the same thing's life. `FieldLabel` would fit the long
+  one by shrinking it, so this is not what keeps the label whole; it is what keeps it
+  **full size**, the short phrase clearing the line with room where the long one would
+  have to give up a point or two of type to do it.
   **Nothing here explains what a lot is.** The buy form's "Sprzedaje się po kawałku"
   hint belongs where the lot is being created and the choice is still open; on a
   thing we already own it is a paragraph explaining a decision that was made weeks
