@@ -76,8 +76,12 @@ import pl.starocie.domain.parseMoney
  * It steps down rather than solving for a size, because what the label is measured
  * against is only known once it has been laid out. Each pass that still overflows
  * takes [LABEL_SHRINK_STEP] off and lays out again, which lands inside a few frames
- * and stops for good at [LABEL_FLOOR] — past that the field is too narrow for the
+ * and stops for good at [LABEL_FLOOR_SP] — past that the field is too narrow for the
  * phrase at any readable size, and an ellipsis is the honest end of it.
+ *
+ * The ceiling is kept in plain sp as a `Float`: `TextUnit` carries its unit packed
+ * alongside the number and compares through an operator rather than `Comparable`, so
+ * `minOf` and `maxOf` do not take one.
  *
  * The size it settles on is a **ceiling, not a size**: what is drawn is the smaller
  * of it and whatever the text field is currently providing, so the label still
@@ -92,29 +96,27 @@ internal fun FieldLabel(text: String) {
     // reaches here — the field provides its label style in sp. Left alone if it does.
     val scalable = given.isSpecified && given.isSp
 
+    // No ceiling to begin with, so the first pass draws at the size it was given.
     // Reset with the text: a count crossing one swaps a short label for a long one,
     // and the long one's size must not be inherited by whatever replaces it.
-    var ceiling by remember(text) { mutableStateOf(LABEL_CEILING) }
-    val size = if (scalable) minOf(given, ceiling) else given
+    var ceiling by remember(text) { mutableStateOf(Float.MAX_VALUE) }
+    val size = if (scalable) given.value.coerceAtMost(ceiling) else 0f
 
     Text(
         text = text,
-        style = provided.copy(fontSize = size),
+        style = if (scalable) provided.copy(fontSize = size.sp) else provided,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         onTextLayout = { laid ->
-            if (scalable && laid.hasVisualOverflow && size > LABEL_FLOOR) {
-                ceiling = maxOf(size * LABEL_SHRINK_STEP, LABEL_FLOOR)
+            if (scalable && laid.hasVisualOverflow && size > LABEL_FLOOR_SP) {
+                ceiling = (size * LABEL_SHRINK_STEP).coerceAtLeast(LABEL_FLOOR_SP)
             }
         },
     )
 }
 
-/** Higher than any label style, so the first pass draws at the size it was given. */
-private val LABEL_CEILING = 100.sp
-
 /** Where shrinking stops and the tail goes instead. */
-private val LABEL_FLOOR = 9.sp
+private const val LABEL_FLOOR_SP = 9f
 
 private const val LABEL_SHRINK_STEP = 0.92f
 
