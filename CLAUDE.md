@@ -782,12 +782,25 @@ write nothing until their main button is pressed.
   A half-sold lot shows what is left rather than what it started as, in the list
   ("Zostało 9 z 12 szt.") in the list and above the item alike.
   **How many there are is a field too, until the first piece goes** — "Sztuki", the
-  buy form's own word, sitting above the two prices because it is what says whether
-  either of them is this thing's price or one piece's. A count typed at a stall is
+  buy form's own word, **sharing its line with what was paid** exactly as it shares
+  one with the name over there: a narrow box at the end of a wide one, rather than a
+  stub alone on a row of its own. The row is drawn whether or not the count is in it,
+  a lone weighted field being a full line, so there is one paid field here and never
+  two to keep in step. A count typed at a stall is
   wrong the same way a price is: a crate counted in a hurry, or a lot entered as the
   one thing it looked like, which is why one thing can become six here. It saves on
   the same half-second pause, and **a count that does not parse writes nothing** —
   a field caught halfway between 1 and 12 is not an answer.
+  Sharing the line is what shortens the label beside it: **"Kupiliśmy po cenie za
+  szt." on the item screens**, against the buy form's "za sztukę" where the field owns
+  its width. The full phrase wants about 208 dp and the shared row leaves about 197,
+  so this is the `rzeczy(n)` exception again — a width buying a shorter word, not a
+  second name for the thing. The sold item screen carries the abbreviation too,
+  being the same field later in the same thing's life.
+  **Nothing here explains what a lot is.** The buy form's "Sprzedaje się po kawałku"
+  hint belongs where the lot is being created and the choice is still open; on a
+  thing we already own it is a paragraph explaining a decision that was made weeks
+  ago, above the fields somebody came here to correct.
   **What was paid follows it**, per invariant 5, so the price field's own number does
   not move: it holds what one piece cost, and that is exactly what a count correction
   leaves alone. Only the label above it and the total read back below it change. While it is a field the
@@ -798,7 +811,7 @@ write nothing until their main button is pressed.
   is editing: alone in its buy it reads "Kupiliśmy za", and with siblings it reads
   "Całą paczkę kupiliśmy za" with this item's share spelled out underneath as a
   guess. **A lot alone in its buy is typed by the piece**, in the buy form's own
-  words — "Kupiliśmy po cenie za sztukę", with "Kupiliśmy 3 sztuki za 90,00 zł" read
+  words — "Kupiliśmy po cenie za szt.", with "Kupiliśmy 3 sztuki za 90,00 zł" read
   back underneath — because that is the number somebody remembers paying, and one
   label may not mean the price of a plate on one screen and the price of a crate on
   the next. `Buy.price` is still what was handed over: the field multiplies on its way

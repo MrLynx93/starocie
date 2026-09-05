@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -98,6 +97,7 @@ internal fun MoneyField(
     placeholder: String,
     onSave: (String) -> Unit,
     hint: String? = null,
+    modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(text) {
         if (parseMoney(text) == saved) return@LaunchedEffect
@@ -105,7 +105,10 @@ internal fun MoneyField(
         onSave(text)
     }
 
-    Column {
+    // Bare by default, which is the whole width: the field inside fills whatever it
+    // is given, so a caller that says nothing gets a line of its own and one that
+    // hands it a weight gets its share of a row.
+    Column(modifier) {
         OutlinedTextField(
             value = text,
             onValueChange = onTextChange,
@@ -165,7 +168,9 @@ internal fun NameField(
  *
  * Same bargain again — no save button, the write going out once the typing stops —
  * and the same word the buy form asks for it with, because it is the same number
- * about the same thing. Narrow, because it is never more than two digits.
+ * about the same thing. The caller places it: on the buy form it takes a slice of
+ * the row it shares with the name, and on the item screen a slice of the one it
+ * shares with the price. Never more than two digits either way.
  *
  * **A count that does not parse writes nothing**, the way a blank sale price does:
  * a lot is *some* number of things, and a field caught halfway between 1 and 12 is
@@ -180,6 +185,7 @@ internal fun CountField(
     onTextChange: (String) -> Unit,
     saved: Int,
     onSave: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(text) {
         val count = text.trim().toIntOrNull()?.takeIf { it >= 1 } ?: return@LaunchedEffect
@@ -195,7 +201,7 @@ internal fun CountField(
         label = { FieldLabel(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.width(120.dp),
+        modifier = modifier,
     )
 }
 

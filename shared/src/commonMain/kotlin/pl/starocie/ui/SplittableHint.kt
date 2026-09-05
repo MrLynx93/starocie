@@ -19,6 +19,11 @@ import androidx.compose.ui.unit.dp
  *
  * It appears only once the quantity is more than one, so the ordinary single
  * purchase never has to read it.
+ *
+ * **It belongs to the two buy forms and nowhere else.** The item screen carries the
+ * same count field and used to carry this under it, but there the choice is weeks
+ * old and cannot be unmade — a paragraph explaining a decision already taken, above
+ * the fields somebody opened the screen to correct.
  */
 @Composable
 internal fun SplittableHint(visible: Boolean) {

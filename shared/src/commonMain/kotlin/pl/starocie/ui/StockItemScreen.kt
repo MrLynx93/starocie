@@ -1,7 +1,9 @@
 package pl.starocie.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -154,13 +156,13 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
             // Only where the count is a read-out. Where it is a field it says the
             // same thing further down and can put it right, and one number in two
             // places on one screen is one of them disagreeing while it is typed.
+            //
+            // What is left, and nothing about selling by the piece: this line is only
+            // ever drawn once a piece has gone, so it is a lot that is plainly being
+            // sold that way and saying so is telling somebody what they just did.
             if (item.splittable && !countIsOurs) {
                 Text(
-                    if (left < item.quantity) {
-                        "Zostało $left z ${item.quantity} szt."
-                    } else {
-                        "${item.quantity} szt. · sprzedaje się po kawałku"
-                    },
+                    "Zostało $left z ${item.quantity} szt.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -197,62 +199,72 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
 
             Spacer(Modifier.height(20.dp))
 
-            // The count leads the two prices, because it is what says whether either
-            // of them is this thing's price or one piece's — the labels underneath
-            // change as it moves. Same word the buy form asks for it with, and the
-            // same hint under it, a lot being the same thing on both screens.
-            if (countIsOurs) {
-                CountField(
-                    label = "Sztuki",
-                    text = quantityText,
-                    onTextChange = { quantityText = it },
-                    saved = item.quantity,
-                    onSave = { viewModel.setQuantity(item.id, it) },
-                )
-                SplittableHint(visible = item.splittable)
-
-                Spacer(Modifier.height(10.dp))
-            }
-
             // Both prices are still decisions rather than records — one was mistyped
             // or forgotten, the other changes every time a thing sits unsold — so
             // they are fields, and they sit together under the facts.
+            //
+            // The count shares the line with what was paid, the way it shares one
+            // with the name on the buy form: a narrow box at the end of a wide one,
+            // rather than a stub sitting alone on a row of its own. The row is drawn
+            // whether or not the count is in it — a lone weighted field is a full
+            // line — so there is one paid field here and not two to keep in step.
             val typedPaid = parseMoney(paidText)
-            MoneyField(
-                label = when {
-                    isPartOfABox -> "Całą paczkę kupiliśmy za"
-                    pricedPerPiece -> "Kupiliśmy po cenie za sztukę"
-                    else -> "Kupiliśmy za"
-                },
-                text = paidText,
-                onTextChange = { paidText = it },
-                saved = paidShown,
-                placeholder = "Nie wiemy",
-                // An exact cost and a guess must never look alike: with several
-                // things in one buy, this field is the box's price and the item's
-                // own cost is only a share of it.
-                //
-                // A lot reads its total back instead, the way the buy form does: a
-                // pile's total typed into a per-piece field is otherwise invisible
-                // until the profit is wrong weeks later.
-                hint = when {
-                    isPartOfABox && stats.cost != null ->
-                        "Na ten przedmiot wypada z niej ok. ${stats.cost.format()}."
-                    isPartOfABox -> "Cena paczki dzieli się na wszystko, co w niej było."
-                    pricedPerPiece && typedPaid != null ->
-                        "Kupiliśmy ${sztuki(item.quantity)} za ${(typedPaid * item.quantity).format()}"
-                    item.buyId == null ->
-                        "Wpisz cenę zakupu, żeby policzyć realny zysk"
-                    else -> null
-                },
-                onSave = {
-                    viewModel.setPaidPrice(
-                        item.id,
-                        it,
-                        pieces = if (pricedPerPiece) item.quantity else 1,
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MoneyField(
+                    // "za szt." rather than "za sztukę", and only here: sharing the
+                    // line leaves the label about 197 dp where the full phrase wants
+                    // 208, so the word that survives is the one the width can afford.
+                    // It is the same exception `rzeczy(n)` is on the giełda rows —
+                    // a width buying a shorter word, not a second name for the thing.
+                    label = when {
+                        isPartOfABox -> "Całą paczkę kupiliśmy za"
+                        pricedPerPiece -> "Kupiliśmy po cenie za szt."
+                        else -> "Kupiliśmy za"
+                    },
+                    text = paidText,
+                    onTextChange = { paidText = it },
+                    saved = paidShown,
+                    placeholder = "Nie wiemy",
+                    // An exact cost and a guess must never look alike: with several
+                    // things in one buy, this field is the box's price and the item's
+                    // own cost is only a share of it.
+                    //
+                    // A lot reads its total back instead, the way the buy form does: a
+                    // pile's total typed into a per-piece field is otherwise invisible
+                    // until the profit is wrong weeks later.
+                    hint = when {
+                        isPartOfABox && stats.cost != null ->
+                            "Na ten przedmiot wypada z niej ok. ${stats.cost.format()}."
+                        isPartOfABox -> "Cena paczki dzieli się na wszystko, co w niej było."
+                        pricedPerPiece && typedPaid != null ->
+                            "Kupiliśmy ${sztuki(item.quantity)} za ${(typedPaid * item.quantity).format()}"
+                        item.buyId == null ->
+                            "Wpisz cenę zakupu, żeby policzyć realny zysk"
+                        else -> null
+                    },
+                    onSave = {
+                        viewModel.setPaidPrice(
+                            item.id,
+                            it,
+                            pieces = if (pricedPerPiece) item.quantity else 1,
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+
+                // A shade narrower than the buy form's share of its row, because the
+                // field it sits beside carries a phrase where that one carries a name.
+                if (countIsOurs) {
+                    CountField(
+                        label = "Sztuki",
+                        text = quantityText,
+                        onTextChange = { quantityText = it },
+                        saved = item.quantity,
+                        onSave = { viewModel.setQuantity(item.id, it) },
+                        modifier = Modifier.weight(0.35f),
                     )
-                },
-            )
+                }
+            }
 
             Spacer(Modifier.height(10.dp))
 

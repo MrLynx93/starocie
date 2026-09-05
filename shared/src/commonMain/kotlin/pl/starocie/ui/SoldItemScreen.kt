@@ -136,7 +136,10 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
             MoneyField(
                 label = when {
                     isPartOfABox -> "Całą paczkę kupiliśmy za"
-                    pricedPerPiece -> "Kupiliśmy po cenie za sztukę"
+                    // Abbreviated to match the magazyn's item screen, where sharing a
+                    // line with the count is what shortens it. Same field, later in
+                    // the same thing's life, so it has to read the same.
+                    pricedPerPiece -> "Kupiliśmy po cenie za szt."
                     else -> "Kupiliśmy za"
                 },
                 text = paidText,
