@@ -120,6 +120,21 @@ interface LedgerRepository {
     ): String
 
     /**
+     * What the thing is called, put right after the fact.
+     *
+     * A name is typed while somebody is holding the thing and waiting to be paid,
+     * so it comes out as "lampa" or as a thumb's worth of nonsense — and it is the
+     * one field the app cannot shrug at, being how the thing is found when it is
+     * sold. So it is correctable everywhere the prices are.
+     *
+     * **A blank writes nothing.** The name is the item's identity rather than one
+     * of its unknowns: there is no "we do not know" to fall back to the way a cost
+     * has one, and clearing the field is a half-typed correction rather than an
+     * answer. The old name stands until a new one is typed.
+     */
+    suspend fun nameItem(itemId: String, name: String)
+
+    /**
      * The asking price, changed after the fact — a thing that has sat around gets
      * marked down. Null puts it back to "we do not know yet".
      */

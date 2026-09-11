@@ -751,6 +751,18 @@ write nothing until their main button is pressed.
   hold it in — so backing out of the camera is the only way not to change it, and
   the bin drops the picture in one tap without a confirmation, a photo being
   supplementary rather than a number anything depends on.
+  **The name is a field, and it is the heading** — "Nazwa", where the title used to
+  be, exactly as a giełda names itself on its own screen. A thing is named
+  one-handed while somebody waits to be paid, so it comes out as "lampa" or as a
+  thumb's worth of nonsense, and it is the one field that is worth more than a
+  figure: it is how the thing is found when it is finally sold, so a wrong one
+  costs the sale rather than the arithmetic. A **heading with the field somewhere
+  below it would be the name in two places**, disagreeing with itself while it is
+  typed — the same reason the count's read-out goes when the count is a field.
+  **A blank writes nothing**: a name is the item's identity rather than one of its
+  unknowns, so there is no "Nie wiemy" to fall back to the way a cost has one, and
+  a cleared field is a half-typed correction. The old name stands, and the field
+  says so while it is empty.
   The read-outs come next, **the date at the top** — the one fact here that was
   never a choice — then what it has already taken. **Both prices are
   editable fields** below them, because both are still decisions: one gets mistyped
@@ -909,7 +921,10 @@ write nothing until their main button is pressed.
   decide about but plenty left to correct. Four numbers make the whole record and
   every one of them can be mistyped or dated a day late, so **the buying date, what
   we paid, the selling date and what it went for are all fields**, saving themselves
-  half a second after the typing stops exactly as the magazyn's prices do. The profit
+  half a second after the typing stops exactly as the magazyn's prices do.
+  **The name is a field here too**, in the heading and in the same words as the
+  magazyn's, being the same thing later in its life — and here it is what this list
+  is searched by. A blank writes nothing there either. The profit
   sits at the top and is recomputed from them as they change, which is what says the
   correction landed; it is the only figure on the screen nobody entered.
   A **date is picked from a calendar, never typed** — it is the one value the

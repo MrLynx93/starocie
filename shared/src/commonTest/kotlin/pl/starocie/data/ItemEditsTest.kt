@@ -11,9 +11,9 @@ import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.Money
 
 /**
- * What the item screen can change after the fact: the two prices, the count while
- * nothing has gone yet, the deletion, and the closing that stands in for it once
- * something has sold.
+ * What the item screen can change after the fact: the name, the two prices, the
+ * count while nothing has gone yet, the deletion, and the closing that stands in
+ * for it once something has sold.
  *
  * They all reach past the item — a price correction lands on the buy, a deletion
  * takes the buy with it once it is empty, and closing a lot deliberately leaves both
@@ -328,6 +328,46 @@ class ItemEditsTest {
             listOf(Money(2000), Money(2000)),
             ledger.items.map { ledger.itemStats(it).cost },
         )
+    }
+
+    @Test
+    fun a_thing_can_be_renamed() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(1000),
+            name = null,
+            items = listOf(DraftItem(name = "lampa")),
+        )
+        val itemId = repository.ledger.value.items.single().id
+
+        repository.nameItem(itemId, "  lampa naftowa  ")
+
+        assertEquals(
+            "lampa naftowa",
+            repository.ledger.value.itemById(itemId)!!.name,
+            "trimmed, the way a name typed at a stall arrives",
+        )
+    }
+
+    /**
+     * A name is the item's identity rather than one of its unknowns: there is no
+     * "we do not know" to fall back to the way a cost has one, and it is how the
+     * thing is found when somebody wants to buy it. So a cleared field is a
+     * half-typed correction and the old name stands.
+     */
+    @Test
+    fun a_blank_name_writes_nothing() = runTest {
+        val repository = InMemoryLedgerRepository()
+        repository.recordBuy(
+            price = Money(1000),
+            name = null,
+            items = listOf(DraftItem(name = "lampa")),
+        )
+        val itemId = repository.ledger.value.items.single().id
+
+        repository.nameItem(itemId, "   ")
+
+        assertEquals("lampa", repository.ledger.value.itemById(itemId)!!.name)
     }
 
     @Test

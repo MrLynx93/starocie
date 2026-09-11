@@ -46,6 +46,11 @@ import pl.starocie.domain.toInputText
  * One gets mistyped or skipped in a hurry; the other changes every time a thing
  * sits around unsold. Neither has a save button.
  *
+ * The name is a field too, and it is the heading: a thing named in a hurry at a
+ * stall is exactly what wants correcting later, and it is the one field that has to
+ * hold something, being how the thing is found when it is finally sold. So a blank
+ * writes nothing and the old name stands.
+ *
  * Selling opens one question, seeded with the asking price standing in that second
  * field: what does it actually go for? A stall haggles, so the number agreed across
  * the table is not always the one written down — and correcting the ask first and
@@ -137,7 +142,11 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     // the lot corrects itself the one way it always has, by being oversold.
     val countIsOurs = stats.sellCount == 0
 
-    // Both fields are held here rather than inside them, so "Sprzedaj" can hand the
+    // Every field's text is held by the screen rather than by the field itself, so
+    // it survives the ledger echoing each write back.
+    var nameText by remember(item.id) { mutableStateOf(item.name) }
+
+    // The two prices are held here for a second reason, so "Sprzedaj" can hand the
     // dialog what has been *typed*: the field saves half a second after the typing
     // stops, and a price entered and sold on in one motion must not open the dialog
     // on the old number.
@@ -157,7 +166,30 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         Column(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
         ) {
-            Text(item.name, style = MaterialTheme.typography.headlineSmall)
+            // The name is the field rather than a heading with the field somewhere
+            // below it: one name in two places on one screen is one of them
+            // disagreeing with the other while it is being typed. A giełda names
+            // itself the same way on its own screen.
+            //
+            // It is correctable for the same reason the prices under it are — it is
+            // typed one-handed while somebody waits to be paid, and it comes out as
+            // "lampa" or as a thumb's worth of nonsense. Unlike them it is the one
+            // thing the app cannot shrug at, being how the thing is found when it is
+            // finally sold, so a wrong one costs a sale rather than a figure.
+            NameField(
+                label = "Nazwa",
+                text = nameText,
+                onTextChange = { nameText = it },
+                saved = item.name,
+                placeholder = "Jak to nazwiemy?",
+                // Only while it is empty, and it says why nothing was written: there
+                // is no honest blank here the way there is for a cost we never knew.
+                hint = "Bez nazwy nie znajdziemy przedmiotu przy sprzedaży — zostawiamy starą."
+                    .takeIf { nameText.isBlank() },
+                onSave = { viewModel.nameItem(item.id, it) },
+            )
+
+            Spacer(Modifier.height(4.dp))
 
             // Only where the count is a read-out. Where it is a field it says the
             // same thing further down and can put it right, and one number in two

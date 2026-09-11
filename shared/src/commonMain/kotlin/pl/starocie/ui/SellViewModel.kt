@@ -298,6 +298,22 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
     }
 
     /**
+     * What the thing is called, corrected on either item screen — the same
+     * half-second save the prices there get, and for the same reason: a name typed
+     * one-handed at a stall is exactly what gets put right later, and a correction
+     * that waits for a button is one that gets lost.
+     *
+     * The repository is what refuses a blank, not this: a name is the item's
+     * identity rather than a fact about this screen.
+     */
+    fun nameItem(itemId: String, name: String) {
+        viewModelScope.launch {
+            runCatching { repository.nameItem(itemId, name) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
+        }
+    }
+
+    /**
      * The asking price, edited on the item screen. There is no save button — the
      * screen writes what has been typed once the typing stops, because a price
      * marked down at a stall must not depend on remembering to confirm it.

@@ -200,6 +200,22 @@ class InMemoryLedgerRepository(
         return item.id
     }
 
+    override suspend fun nameItem(itemId: String, name: String) {
+        // A blank is a cleared field rather than a new name, and an item has to keep
+        // one: it is what the thing is found by when somebody wants to buy it.
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+
+        val at = now()
+        state.update { current ->
+            current.copy(
+                items = current.items.map {
+                    if (it.id == itemId) it.copy(name = trimmed, updatedAt = at) else it
+                },
+            )
+        }
+    }
+
     override suspend fun setAskingPrice(itemId: String, price: Money?) {
         val at = now()
         state.update { current ->

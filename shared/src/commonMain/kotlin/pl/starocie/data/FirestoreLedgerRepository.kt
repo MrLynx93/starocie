@@ -337,6 +337,21 @@ class FirestoreLedgerRepository(
         return item.id
     }
 
+    override suspend fun nameItem(itemId: String, name: String) {
+        // A blank is a cleared field rather than a new name, and an item has to keep
+        // one: it is what the thing is found by when somebody wants to buy it.
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+
+        val at = now()
+        detached {
+            itemsRef.document(itemId).update(
+                "name" to trimmed,
+                "updatedAt" to at.toEpochMilliseconds(),
+            )
+        }
+    }
+
     override suspend fun setAskingPrice(itemId: String, price: Money?) {
         val at = now()
         detached {

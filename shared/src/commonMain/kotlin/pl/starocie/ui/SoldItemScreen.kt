@@ -43,6 +43,11 @@ import pl.starocie.domain.toInputText
  * it is still a correction — so the four are fields rather than read-outs, and they
  * save themselves the way the prices in the magazyn do, with nothing to press.
  *
+ * The name is a field as well, and it is the heading — the same one the magazyn's
+ * screen carries. A thing typed in one-handed is as mistypeable as a price, and
+ * here it is what this list is searched by; a blank writes nothing, a name being
+ * the one thing an item has to have.
+ *
  * The profit sits at the top and is recomputed from those fields as they change,
  * which is what tells you the correction landed. It is the only thing on the screen
  * that is not editable, because it is not a fact anybody entered.
@@ -97,11 +102,29 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
     val pricedPerPiece = item.splittable && !isPartOfABox
     val paidShown = buy?.price?.let { if (pricedPerPiece) it / item.quantity else it }
 
+    var nameText by remember(item.id) { mutableStateOf(item.name) }
     var paidText by remember(item.id) { mutableStateOf(paidShown?.toInputText() ?: "") }
 
     ScreenColumn {
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            Text(item.name, style = MaterialTheme.typography.headlineSmall)
+            // The same field the magazyn's screen carries, for the same reason and
+            // in the same place: a name typed at a stall is as correctable as the
+            // prices under it, and here it is what the sold list is searched by.
+            // It is the thing's own name, so the heading is the field rather than a
+            // second copy of it sitting above one.
+            NameField(
+                label = "Nazwa",
+                text = nameText,
+                onTextChange = { nameText = it },
+                saved = item.name,
+                placeholder = "Jak to nazwiemy?",
+                hint = "Bez nazwy nie znajdziemy przedmiotu na liście — zostawiamy starą."
+                    .takeIf { nameText.isBlank() },
+                onSave = { viewModel.nameItem(item.id, it) },
+            )
+
+            Spacer(Modifier.height(8.dp))
+
             Text(
                 profitLabel(stats),
                 style = MaterialTheme.typography.titleMedium,
