@@ -332,6 +332,27 @@ class InMemoryLedgerRepository(
         }
     }
 
+    override suspend fun undoSell(sellId: String) {
+        val at = now()
+        state.update { current ->
+            val sell = current.sells.firstOrNull { it.id == sellId } ?: return@update current
+            // Decided over the sales that remain, so a lot another sale still closes
+            // stays closed, and anything else comes back.
+            val status = current.statusAfterUndoing(sell)
+
+            current.copy(
+                sells = current.sells.filterNot { it.id == sellId },
+                items = current.items.map {
+                    if (it.id == sell.itemId && status != null && status != it.status) {
+                        it.copy(status = status, updatedAt = at)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
+    }
+
     override suspend fun markSoldOut(itemId: String) {
         val at = now()
         state.update { current ->

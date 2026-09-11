@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
+import pl.starocie.domain.Sell
 import pl.starocie.domain.format
 import pl.starocie.domain.parseMoney
 import pl.starocie.domain.toInputText
@@ -75,6 +77,10 @@ import pl.starocie.domain.toInputText
  * It leaves by itself the moment the item stops being in stock or stops existing,
  * so a completed sale or a deletion lands you back in the list it came from. A lot
  * sold in part is still in stock, so the screen stays and shows one more sale.
+ *
+ * Each of those sales is a line with "Cofnij" beside it. A lot sold in part never
+ * reaches the sold list, so a sale recorded against it by mistake — the wrong lot
+ * tapped, a buyer who walked away — can only be taken back from here.
  */
 @Composable
 fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true) {
@@ -86,6 +92,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     val item = ledger.itemById(itemId)
     var confirmingRemoval by remember { mutableStateOf(false) }
     var confirmingSoldOut by remember { mutableStateOf(false) }
+    var undoing by remember { mutableStateOf<Sell?>(null) }
 
     // Waiting to have seen it in stock first: the ledger is empty for the instant
     // before the first snapshot arrives, and popping on that would close the screen
@@ -102,6 +109,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
     // What is left is the number that matters when the lot is half gone: the one the
     // sell dialog opens on, and the one that closing it writes off.
     val left = remember(ledger, item) { ledger.piecesLeft(item) }
+    val sells = remember(ledger, item) { ledger.sellsOfItem(item.id) }
 
     // Straight to the record: on the buy form a photo waits with the rest of the
     // draft, but here the item already exists, so backing out of the camera is the
@@ -195,6 +203,17 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                         "${stats.sellCount} × · ${stats.proceeds.format()}"
                     },
                 )
+
+                // The sales themselves, so one recorded by mistake can be taken back:
+                // a lot sold in part is not on the sold list, and this is the only
+                // screen it is on.
+                sells.forEach { sell ->
+                    SaleLine(
+                        sell = sell,
+                        splittable = item.splittable,
+                        onUndo = { undoing = sell },
+                    )
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -399,6 +418,19 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         )
     }
 
+    undoing?.let { sell ->
+        UndoSellDialog(
+            sell = sell,
+            splittable = item.splittable,
+            backInStock = ledger.statusAfterUndoing(sell) == ItemStatus.IN_STOCK,
+            onConfirm = {
+                undoing = null
+                viewModel.undoSell(sell.id)
+            },
+            onDismiss = { undoing = null },
+        )
+    }
+
     if (confirmingRemoval) {
         AlertDialog(
             onDismissRequest = { confirmingRemoval = false },
@@ -414,5 +446,32 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 TextButton(onClick = { confirmingRemoval = false }) { Text("Anuluj") }
             },
         )
+    }
+}
+
+/**
+ * One sale of a thing still in stock — the day, the pieces, the money — with the way
+ * to take it back beside it.
+ *
+ * "Cofnij" alone, where the sold screen says "Cofnij sprzedaż": this line is plainly a
+ * sale already, and the longer label would take the width the figures need.
+ */
+@Composable
+private fun SaleLine(sell: Sell, splittable: Boolean, onUndo: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            buildString {
+                append(sell.date.asText())
+                if (splittable) append(" · ${sell.quantity} szt.")
+                append(" · ${sell.price.format()}")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        UndoSellButton(label = "Cofnij", onClick = onUndo)
     }
 }

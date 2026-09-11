@@ -319,6 +319,28 @@ data class Ledger(
         return if (item.status == ItemStatus.IN_STOCK) left.coerceAtLeast(1) else left.coerceAtLeast(0)
     }
 
+    /**
+     * What an item's status becomes once [sell] is taken back, or null when the sale
+     * has no item left to change.
+     *
+     * The rule a sale closes a lot by, run over the sales that remain: it stays sold
+     * only while one of them still says the rest is not coming back, or their pieces
+     * still cover the whole lot. Otherwise it is in stock again — which is where a
+     * thing whose only sale was a mistake belongs, it never having left our hands.
+     *
+     * It lives here rather than in each repository so the two cannot disagree.
+     */
+    fun statusAfterUndoing(sell: Sell): ItemStatus? {
+        val item = itemsById[sell.itemId] ?: return null
+        // Written before removing became a delete, and not a statement about sales.
+        if (item.status == ItemStatus.REMOVED) return item.status
+
+        val remaining = sellsByItem[item.id].orEmpty().filterNot { it.id == sell.id }
+        val closed = remaining.any { it.soldCompletely } ||
+            remaining.sumOf { it.quantity } >= item.quantity
+        return if (closed) ItemStatus.SOLD else ItemStatus.IN_STOCK
+    }
+
     fun itemById(id: String): Item? = itemsById[id]
 
     /**

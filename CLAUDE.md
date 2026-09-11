@@ -131,6 +131,10 @@ putting the field back would find them where they were left.
    that the total covered more pieces than we wrote down. Typing a count beside a
    per-piece price is the opposite — the price is the anchor and the total is the
    multiplication.
+   **Taking a sale back moves it neither way.** If that sale was the oversell, what
+   the count said before is recorded nowhere, and lowering it to a guess would be a
+   number nobody typed; with no sale left against it, `setQuantity` takes the
+   correction again.
    `Sell.soldCompletely` stays as the override
    for "and the rest is not coming back" — kept, lost or given away — and it
    **defaults to false** on `recordSell`: a default of true would close a lot on
@@ -855,6 +859,13 @@ write nothing until their main button is pressed.
   The detail screen leaves by itself the moment its item stops being `IN_STOCK` or
   stops existing, so a completed sale, a closing or a deletion lands back in the
   list; a lot sold in part stays put and shows the extra sale.
+  **Those sales are lines, each with a red "Cofnij"** — the date, the pieces, the
+  price, under "Sprzedaliśmy do tej pory". A lot sold in part never reaches the sold
+  list, so a sale recorded against the wrong lot can only be taken back from here.
+  With no sale left the count is a field again and "Usuń" is back. The label is
+  "Cofnij" on these lines and "Cofnij sprzedaż" on the sold screen: a line reading as
+  a sale already says what is undone, while a button alone under a price field and
+  saying only "Cofnij" reads as undoing the typing.
 - **Sold** — the mirror of the stock list, reached from the second home card:
   everything `SOLD`, newest sale first, **with the magazyn's search over it**. It
   shares that list's predicate — the name, case-insensitive, in memory — so the
@@ -896,6 +907,18 @@ write nothing until their main button is pressed.
   happening on its own day for its own money.
   There is **no "Usuń"** here — deleting belongs where a thing still exists to be got
   rid of, and erasing a sold item would only lose the proceeds it is the record of.
+  **Under each sale sits "Cofnij sprzedaż"** instead, for the one mistake no field can
+  correct: a sale that should not exist at all — the wrong row tapped at the stall, or
+  a buyer who changed their mind once the button had been pressed. It is red and it
+  asks first, since it erases a record and that day's takings drop by it, and the
+  dialog says both halves: "Przedmiot wróci do magazynu, a sprzedaż za 45,00 zł
+  zniknie z naszych rachunków." The sale is **deleted rather than flagged** — every
+  figure it fed is computed, so nothing else needs telling — and nothing is written
+  into today. The item goes back into stock unless the sales that remain still close
+  it, which `Ledger.statusAfterUndoing` decides so the two repositories cannot differ.
+  A thing recorded at the point of sale comes back as well, buy and all: it never left
+  our hands, so the magazyn is where it is. The screen leaves with it, exactly as the
+  magazyn's does when a thing stops being in stock.
   The photo shows if there is one, with the bin but **no camera**: an empty capture
   target on something that is no longer ours would invite photographing somebody
   else's. The Google button stays, though — "what was that, and what do people ask

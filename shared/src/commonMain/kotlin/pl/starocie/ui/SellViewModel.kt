@@ -386,6 +386,17 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         }
     }
 
+    /**
+     * A sale taken back. The screen asks first, since it erases what the sale said;
+     * after that it is written straight through like every other correction.
+     */
+    fun undoSell(sellId: String) {
+        viewModelScope.launch {
+            runCatching { repository.undoSell(sellId) }
+                .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się cofnąć") } }
+        }
+    }
+
     fun remove(item: Item) {
         viewModelScope.launch {
             runCatching { repository.removeItem(item.id) }

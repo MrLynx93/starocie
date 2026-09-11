@@ -447,6 +447,29 @@ class FirestoreLedgerRepository(
         }
     }
 
+    override suspend fun undoSell(sellId: String) {
+        val at = now()
+        val sell = ledger.value.sells.firstOrNull { it.id == sellId } ?: return
+        // Only written when it changes: a lot another sale still closes stays closed,
+        // and a sale whose item is gone has nothing to hand its pieces back to.
+        val status = ledger.value.statusAfterUndoing(sell)
+            ?.takeIf { it != ledger.value.itemById(sell.itemId)?.status }
+
+        // One batch: the sale going and its pieces coming back are one correction,
+        // and a half-written one would leave a thing sold on no sale at all.
+        // No event stub either — nothing here happened today.
+        firestore.batch().apply {
+            delete(sellsRef.document(sellId))
+            if (status != null) {
+                update(
+                    itemsRef.document(sell.itemId),
+                    "status" to status.name,
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+            }
+        }.commitDetached()
+    }
+
     override suspend fun markSoldOut(itemId: String) {
         val at = now()
         val item = ledger.value.itemById(itemId) ?: return

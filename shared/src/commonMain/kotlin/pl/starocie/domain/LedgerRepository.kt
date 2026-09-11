@@ -198,6 +198,27 @@ interface LedgerRepository {
     suspend fun setSellDate(sellId: String, date: LocalDate)
 
     /**
+     * A sale that should never have been recorded — the wrong row tapped at the
+     * stall, or a buyer who changed their mind after the button was pressed. The sale
+     * goes, and the pieces it took come back.
+     *
+     * Deleted rather than flagged: a sale that did not happen has nothing left to
+     * say, and every figure it fed is computed, so the item, the day and the totals
+     * simply stop counting it. Nothing is written into today, and the event stays
+     * where it is — it may hold other things, and an empty day is harmless.
+     *
+     * The item goes back into stock unless the sales that remain still close it (see
+     * [Ledger.statusAfterUndoing]). That includes a thing recorded at the point of
+     * sale: it was in our hands, so the magazyn is where it is, with its buy.
+     *
+     * [Item.quantity] is left alone, even when this sale was the oversell that raised
+     * it: what it said before is recorded nowhere, and a guess would be a count nobody
+     * typed. With no sale left against it [setQuantity] takes corrections again, so
+     * the item screen can put it right.
+     */
+    suspend fun undoSell(sellId: String)
+
+    /**
      * The rest of a lot is not coming back — kept, lost, given away or simply not
      * worth carrying home. The item closes; nothing about it is erased.
      *

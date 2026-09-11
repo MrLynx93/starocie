@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +24,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.datetime.LocalDate
 import pl.starocie.domain.ItemStats
+import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.Sell
@@ -49,6 +51,11 @@ import pl.starocie.domain.toInputText
  * happened on its own day for its own money. There is no "Usuń" here: deleting
  * belongs to the magazyn, where a thing still exists to be got rid of, and erasing
  * a sold item would only lose the proceeds it is the record of.
+ *
+ * What there is instead is "Cofnij sprzedaż", under each sale: the answer to a sale
+ * that should never have been recorded at all, which no field here can correct. The
+ * sale goes, its pieces come back into the magazyn, and the screen leaves with them
+ * unless another sale still closes the lot.
  */
 @Composable
 fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
@@ -62,10 +69,14 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
     // The ledger is empty for the instant before the first snapshot arrives, so the
     // screen waits to have seen the item before treating its absence as a deletion
     // from the other phone — otherwise it would close itself as it opens.
+    //
+    // Going back into stock lands here too: once a sale is taken back there is
+    // nothing sold left to correct, and the thing has its own screen in the magazyn.
     var seen by remember { mutableStateOf(false) }
-    LaunchedEffect(item != null) {
-        if (item != null) seen = true else if (seen) onDone()
+    LaunchedEffect(item?.status) {
+        if (item != null && item.status != ItemStatus.IN_STOCK) seen = true else if (seen) onDone()
     }
+    var undoing by remember { mutableStateOf<Sell?>(null) }
 
     if (item == null) return
 
@@ -208,6 +219,7 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                     },
                     onDateChange = { viewModel.setSellDate(sell.id, it) },
                     onPriceSave = { viewModel.setSellPrice(sell.id, it) },
+                    onUndo = { undoing = sell },
                 )
             }
 
@@ -227,6 +239,19 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
 
         BackButton(onDone)
     }
+
+    undoing?.let { sell ->
+        UndoSellDialog(
+            sell = sell,
+            splittable = item.splittable,
+            backInStock = ledger.statusAfterUndoing(sell) == ItemStatus.IN_STOCK,
+            onConfirm = {
+                undoing = null
+                viewModel.undoSell(sell.id)
+            },
+            onDismiss = { undoing = null },
+        )
+    }
 }
 
 /**
@@ -242,6 +267,7 @@ private fun SaleFields(
     caption: String?,
     onDateChange: (LocalDate) -> Unit,
     onPriceSave: (String) -> Unit,
+    onUndo: () -> Unit,
 ) {
     var priceText by remember(sell.id) { mutableStateOf(sell.price.toInputText()) }
 
@@ -270,6 +296,15 @@ private fun SaleFields(
             saved = sell.price,
             placeholder = "Za ile poszło",
             onSave = onPriceSave,
+        )
+
+        // Under the sale it takes back, so each of a lot's sales carries its own and
+        // nothing has to ask which one was meant. It names what it undoes, because
+        // beneath a price field a bare "Cofnij" reads as undoing the typing.
+        UndoSellButton(
+            label = "Cofnij sprzedaż",
+            onClick = onUndo,
+            modifier = Modifier.align(Alignment.End),
         )
     }
 }
