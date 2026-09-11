@@ -13,8 +13,10 @@ abandoned at the market stall. Partial records are first-class:
   typing. Photos are optional and supplementary; they never carry identity
 - costs may be unknown, and unknown must stay unknown rather than being guessed —
   an unknown cost comes from the shortcut sale, where there may genuinely have been
-  no purchase to record; the buy form itself asks for the price, because at the
-  moment of buying you know it
+  no purchase to record; the buy form asks for the price too, because at the moment
+  of buying you usually know it, but it **opens at zero and waits for nobody**: a
+  thing can be free, and a price nobody got round to is not worth a button that
+  will not go
 - adding must never block on the network
 - the buy and sell paths are a handful of taps each
 
@@ -651,13 +653,24 @@ write nothing until their main button is pressed.
   which is nearly always the day it happened; the field earned a tap on every
   purchase to correct the rare one. `Buy.date` and `Item.date` stay editable in the
   model for a later edit screen — the entry forms simply do not ask.
-  **A name and a price are both required**, and both buy buttons are disabled
-  without them: the price is the one number you cannot fail to know while buying,
-  and a blank there would be a skipped field rather than an honest unknown. Neither
-  stays enabled on an untouched form — one of them used to be the only way back
-  out, and "Wstecz" is that now, so nothing here has to double as an exit. Filling
-  a box is the exception the same rule makes: the price field is not on screen, so
-  it is not waited for.
+  **The name is required and nothing else is**, so both buy buttons are disabled
+  only on a form with no name: that is what the thing is found by when it comes to
+  sell it, and without it there is no record worth writing. Neither stays enabled
+  on an untouched form — one of them used to be the only way back out, and "Wstecz"
+  is that now, so nothing here has to double as an exit.
+  **What was paid opens at zero**, which is both a real answer — things are given
+  away, thrown in with something else, carried home from a clear-out — and a number
+  somebody in a hurry can accept and move past. The buttons used to hold out for it
+  on the grounds that the price is the one figure you cannot fail to know while
+  buying; that is true of most purchases and it was still a stall standing over a
+  disabled button, which is the friction rule losing to a field. Clearing the zero
+  is the honest unknown the shortcut sale already writes — no price at all rather
+  than a claim we paid nothing — and it does not hold the purchase up either.
+  A zero sitting in a field is typed *over*, not into, so what lands there is "015";
+  `typedPrice` drops the leading zero as it is typed, keeping "0,50" and a lone "0"
+  exactly as they were written. The box's price step opens on the same zero for the
+  same reason. Filling a box is the exception the name rule makes on its own: the
+  price field is not on screen there, so it is not waited for.
   **Two buy buttons, and they differ only in what happens next.** "Kup i kupuj
   dalej" records the thing and clears the form for the following one, its arrow
   pointing the opposite way from "Wstecz"'s; "Kup" records it and leaves. A run of

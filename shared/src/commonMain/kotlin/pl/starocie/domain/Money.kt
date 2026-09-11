@@ -82,6 +82,22 @@ fun Money.toInputText(): String {
 }
 
 /**
+ * What a price field that opens at zero does with what is typed into it. The zero
+ * is there to be written straight over, and the digits land after it, so a 15 zł
+ * purchase reads "015" until this drops the leading zero. A zero in front of a
+ * separator is part of the number and stays ("0,50"), and so does a zero on its
+ * own, that being a price somebody may well mean.
+ */
+fun typedPrice(input: String): String {
+    val rest = input.trimStart('0')
+    return when {
+        rest.firstOrNull()?.isDigit() == true -> rest
+        input.length > 1 && rest.isEmpty() -> "0"
+        else -> input
+    }
+}
+
+/**
  * Parses user input such as "12", "12,50" or "12.5". Returns null when it is not a
  * number, so the caller can simply leave the value unset rather than guess.
  */

@@ -60,6 +60,23 @@ class MoneyTest {
         assertEquals(Money(10000), there.atSameRate(was = 4, now = 3))
     }
 
+    /**
+     * The buy forms open their price at zero, so almost every price is typed on top
+     * of one. Losing that zero is what keeps "015" from being what a 15 zł purchase
+     * looks like, and keeping it is what leaves "0,50" a price.
+     */
+    @Test
+    fun typing_over_a_zero_drops_it() {
+        assertEquals("15", typedPrice("015"))
+        assertEquals("1", typedPrice("01"))
+        assertEquals("0,50", typedPrice("0,50"))
+        assertEquals("0.5", typedPrice("0.5"))
+        assertEquals("0", typedPrice("0"))
+        assertEquals("0", typedPrice("00"))
+        assertEquals("", typedPrice(""))
+        assertEquals("12", typedPrice("12"))
+    }
+
     /** A price typed then re-read must survive the round trip unchanged. */
     @Test
     fun input_text_round_trips_through_parsing() {

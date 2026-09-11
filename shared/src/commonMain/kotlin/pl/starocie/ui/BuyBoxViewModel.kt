@@ -10,9 +10,11 @@ import kotlinx.coroutines.launch
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
+import pl.starocie.domain.typedPrice
 
 data class BuyBoxUiState(
-    val totalText: String = "",
+    /** Zero to begin with, as the item form's price is — a box can be free too. */
+    val totalText: String = "0",
     val name: String = "",
     /** Set once the buy exists; the screen then hands off to item entry. */
     val openedBuyId: String? = null,
@@ -35,7 +37,9 @@ class BuyBoxViewModel(private val repository: LedgerRepository) : ViewModel() {
     private val _state = MutableStateFlow(BuyBoxUiState())
     val state: StateFlow<BuyBoxUiState> = _state.asStateFlow()
 
-    fun onTotalChange(value: String) = _state.update { it.copy(totalText = value, error = null) }
+    /** Opens at zero like the item form's price, so the same typing rule applies. */
+    fun onTotalChange(value: String) =
+        _state.update { it.copy(totalText = typedPrice(value), error = null) }
 
     fun onNameChange(value: String) = _state.update { it.copy(name = value) }
 

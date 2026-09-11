@@ -278,10 +278,10 @@ fun BuyOneScreen(buyId: String? = null, onDone: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
 
-            // Buys what is on screen and leaves — and does nothing else. It used to
-            // stay enabled on an untouched form because it was also the only way
-            // out; "Wstecz" is that now, so it can hold out for the name and the
-            // price like the button above it.
+            // Buys what is on screen and leaves — and does nothing else. It waits
+            // for the name, which is how the thing is found again, and for nothing
+            // else: the price is already a zero somebody can accept, and an emptied
+            // one is an honest unknown. "Wstecz" is the way out of an untouched form.
             OutlinedButton(
                 onClick = { viewModel.saveAndLeave(onDone) },
                 enabled = state.canSave,

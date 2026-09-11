@@ -11,10 +11,17 @@ import pl.starocie.domain.DraftItem
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
+import pl.starocie.domain.typedPrice
 
 data class BuyOneUiState(
     val name: String = "",
-    val paidText: String = "",
+    /**
+     * Opens at zero rather than blank. Free is a real answer here — things are
+     * given away, thrown in with something else, or carried home from a clear-out —
+     * and it is also the number somebody who does not want to stop and think can
+     * accept and move on from. Clearing it is still the honest unknown.
+     */
+    val paidText: String = "0",
     val askingText: String = "",
     val quantityText: String = "1",
     /** Base64 JPEG of the thing in front of you, if a photo was taken. */
@@ -48,12 +55,13 @@ data class BuyOneUiState(
     val showPaid: Boolean get() = buyId == null
 
     /**
-     * A name and, when one is asked for, what was paid. The price is required here
-     * because at the moment of buying you know it — a blank would not be an honest
-     * unknown, just a field skipped. The shortcut sale still takes an empty price,
-     * which is where a genuinely unknown cost comes from.
+     * The name, and nothing else. It is what the thing is found by when selling, so
+     * it is the one field a record cannot do without — the price opens at zero and
+     * an emptied one is the honest unknown the shortcut sale already writes, neither
+     * of which is a reason to refuse the purchase. A button that will not go while
+     * somebody is holding the thing out is the friction this app exists to avoid.
      */
-    val canSave: Boolean get() = name.isNotBlank() && (!showPaid || paidPerPiece != null)
+    val canSave: Boolean get() = name.isNotBlank()
 }
 
 /**
@@ -81,7 +89,8 @@ class BuyOneViewModel(private val repository: LedgerRepository) : ViewModel() {
 
     fun onNameChange(value: String) = _state.update { it.copy(name = value, error = null) }
 
-    fun onPaidChange(value: String) = _state.update { it.copy(paidText = value) }
+    /** The field opens at zero, so what is typed over it goes through `typedPrice`. */
+    fun onPaidChange(value: String) = _state.update { it.copy(paidText = typedPrice(value)) }
 
     fun onAskingChange(value: String) = _state.update { it.copy(askingText = value) }
 
