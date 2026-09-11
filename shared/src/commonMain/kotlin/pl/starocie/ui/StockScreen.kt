@@ -3,11 +3,16 @@ package pl.starocie.ui
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -57,9 +62,18 @@ fun StockScreen(
 
     ScreenColumn {
         Text("Nasz magazyn", style = MaterialTheme.typography.headlineSmall)
+        // The asking total is what the list is worth, and with the unpriced ones on
+        // their own there is no such number — every one of them is the gap. "Chcemy
+        // sprzedać za łącznie 0,00 zł" would be the app answering a question it has
+        // just been told nobody can answer yet.
+        val summary = if (state.onlyUnpriced) {
+            "Jeszcze ${if (state.inStock.size == 1) "go" else "ich"} nie wyceniliśmy"
+        } else {
+            "Chcemy sprzedać za łącznie ${shownValue.format()}"
+        }
+
         Text(
-            "Mamy ${przedmioty(state.inStock.size)} · " +
-                "Chcemy sprzedać za łącznie ${shownValue.format()}",
+            "Mamy ${przedmioty(state.inStock.size)} · $summary",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -75,11 +89,44 @@ fun StockScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // The one thing the search box cannot find: a thing with no asking price has
+        // nothing to type. It sits under the box because it narrows the same list in
+        // the same way, and it is only drawn while there is something to find — a
+        // switch that can only ever empty the list is a line about nothing.
+        if (state.offersUnpricedFilter) {
+            Spacer(Modifier.height(10.dp))
+
+            // A tick while it is on, and the slot empty while it is off: the chip's
+            // colour alone says "selected" to somebody who already knows chips, and
+            // this list is read in daylight by two people who are counting plates.
+            val tick: @Composable () -> Unit = {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+
+            FilterChip(
+                selected = state.onlyUnpriced,
+                onClick = { viewModel.onOnlyUnpricedChange(!state.onlyUnpriced) },
+                label = { Text("Niewycenione przedmioty") },
+                leadingIcon = if (state.onlyUnpriced) tick else null,
+                shape = RoundedCornerShape(14.dp),
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
 
         if (state.inStock.isEmpty()) {
             Text(
-                if (state.query.isBlank()) "Nic tu jeszcze nie mamy." else "Nic takiego nie mamy.",
+                when {
+                    state.query.isNotBlank() -> "Nic takiego nie mamy."
+                    // Reachable only by pricing the last one with the filter on, and
+                    // then it is the answer rather than an empty list.
+                    state.onlyUnpriced -> "Wszystko mamy już wycenione."
+                    else -> "Nic tu jeszcze nie mamy."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),

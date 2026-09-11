@@ -738,6 +738,17 @@ write nothing until their main button is pressed.
   saying what is worth selling.
   The count and the total are computed over **what is on screen**, so a search
   answers for what it found rather than for the whole magazyn.
+  **One filter sits under that box, "Niewycenione przedmioty"**, and it is the one
+  question the typing cannot ask: a thing we have not decided a price for has no
+  name to type. It is what the magazyn is read for between giełdy — what still has
+  to be settled before the next one — and it narrows *alongside* the search rather
+  than instead of it, so a name typed with the filter on still answers about the
+  unpriced ones. It is **drawn only while there is something for it to find**, and
+  kept while it is on: pricing the last one would otherwise take the switch away
+  with the list still narrowed to nothing. With it on the second figure changes —
+  "Mamy 3 przedmioty · Jeszcze ich nie wyceniliśmy" — because the asking total of
+  things that are asked at nothing is 0,00 zł, which would be the app answering the
+  very question it has just been told nobody can answer yet.
   **The route is the only difference.** Arriving from "Sprzedaj" adds the
   "Dodaj … i sprzedaj" button, pinned at the bottom above "Wstecz" rather than
   sitting under the search box where it used to shove the list down a line every

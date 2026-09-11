@@ -90,6 +90,16 @@ data class StockEntry(val item: Item, val stats: ItemStats, val piecesLeft: Int)
 
 data class SellUiState(
     val query: String = "",
+    /**
+     * Narrows the list to the things we have not decided a price for yet.
+     *
+     * It is a question about the magazyn rather than about a thing — "what still
+     * needs doing before the next giełda" — and it is the one question the search
+     * box cannot answer, a missing price having no name to type. It sits beside the
+     * query rather than inside it because the two narrow independently: a filter
+     * left on while a name is typed still answers about the unpriced ones.
+     */
+    val onlyUnpriced: Boolean = false,
     val inStock: List<StockEntry> = emptyList(),
     val selected: Item? = null,
     val priceText: String = "",
@@ -106,6 +116,12 @@ data class SellUiState(
     /** How many have already gone, so an overshoot can be turned into a new total. */
     val soldSoFar: Int = 0,
     val soldCompletely: Boolean = true,
+    /**
+     * Whether anything in the whole magazyn is still unpriced — over every item in
+     * stock, not over what the search left, so the filter does not disappear from
+     * under the thumb that turned it on.
+     */
+    val hasUnpriced: Boolean = false,
     /** Non-null while the "never recorded" form is open. */
     val newItem: NewItemForm? = null,
     val error: String? = null,
@@ -131,6 +147,13 @@ data class SellUiState(
         get() = selected?.let { (soldSoFar + sellQuantity).takeIf { total -> total > it.quantity } }
 
     /**
+     * The filter is drawn when there is something for it to find, and kept while it
+     * is on: pricing the last unpriced thing must not take the switch away with the
+     * list still narrowed to nothing.
+     */
+    val offersUnpricedFilter: Boolean get() = hasUnpriced || onlyUnpriced
+
+    /**
      * Offered whenever the typed name is not already in stock — including with an
      * empty search, because at the start nothing is recorded and the on-the-fly
      * path is then the *only* path.
@@ -142,6 +165,21 @@ data class SellUiState(
 /** One search rule for both lists: the magazyn's and the sold one's. */
 internal fun Item.matchesQuery(query: String): Boolean =
     name.contains(query, ignoreCase = true)
+
+/**
+ * The magazyn list as it is read: narrowed by the typing and by the unpriced filter,
+ * newest first.
+ *
+ * The two narrowings are independent and both are optional, which is exactly how a
+ * pair of `if`s scattered over a screen ends up applying one without the other. They
+ * are one function so the list is one list however it was arrived at — and so the
+ * order is the same one every time, newest first, the thing you are least sure about
+ * usually being the thing you bought last.
+ */
+internal fun List<Item>.narrowedForStock(query: String, onlyUnpriced: Boolean): List<Item> =
+    filter { !onlyUnpriced || it.price == null }
+        .filter { query.isBlank() || it.matchesQuery(query) }
+        .sortedByDescending { it.createdAt }
 
 class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
 
@@ -156,14 +194,17 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
      * you bought last.
      */
     val state: StateFlow<SellUiState> = combine(local, repository.ledger) { ui, ledger ->
-        val stock = ledger.itemsInStock()
-            .filter { ui.query.isBlank() || it.matchesQuery(ui.query) }
-            .sortedByDescending { it.createdAt }
+        val everything = ledger.itemsInStock()
+        val stock = everything
+            .narrowedForStock(ui.query, ui.onlyUnpriced)
             .map { StockEntry(it, ledger.itemStats(it), ledger.piecesLeft(it)) }
-        ui.copy(inStock = stock)
+        ui.copy(inStock = stock, hasUnpriced = everything.any { it.price == null })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SellUiState())
 
     fun onQueryChange(value: String) = local.update { it.copy(query = value) }
+
+    /** The unpriced filter, on or off. It narrows alongside the search, not instead. */
+    fun onOnlyUnpricedChange(value: Boolean) = local.update { it.copy(onlyUnpriced = value) }
 
     /**
      * Opens the sell dialog on an item.
