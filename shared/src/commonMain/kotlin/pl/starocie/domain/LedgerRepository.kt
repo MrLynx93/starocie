@@ -42,6 +42,20 @@ interface LedgerRepository {
     val syncError: StateFlow<String?>
 
     /**
+     * The last write the server refused, held until somebody dismisses it.
+     *
+     * Kept apart from [syncError] because the two end differently. A listener that
+     * recovers is fixed by its next snapshot, so that error clears itself there. A
+     * refused write is not fixed by anything: Firestore rolls it back, and the
+     * rollback *is* the next snapshot — so an error cleared there vanished in the
+     * instant it was raised, and the change quietly undid itself on screen. That is
+     * how a sale taken back four times stayed exactly where it was without a word.
+     */
+    val writeError: StateFlow<String?>
+
+    fun dismissWriteError()
+
+    /**
      * Records one payment and the items it covered. A single item means its cost is
      * exactly [price]; several mean [price] is a box total to be allocated.
      */

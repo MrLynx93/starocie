@@ -58,6 +58,13 @@ class FirestoreLedgerRepository(
     private val _syncError = MutableStateFlow<String?>(null)
     override val syncError: StateFlow<String?> = _syncError.asStateFlow()
 
+    private val _writeError = MutableStateFlow<String?>(null)
+    override val writeError: StateFlow<String?> = _writeError.asStateFlow()
+
+    override fun dismissWriteError() {
+        _writeError.value = null
+    }
+
     private val _loading = MutableStateFlow(true)
     override val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
@@ -600,18 +607,22 @@ class FirestoreLedgerRepository(
      * completes once the *server* acknowledges — which never happens offline.
      * Awaiting it leaves a save silently doing nothing at a market stall, which is
      * precisely the situation this app is built for.
+     *
+     * A refusal goes to [writeError], never [syncError]: Firestore rolls the write
+     * back, the rollback arrives as a snapshot, and every snapshot clears
+     * [syncError] — so it used to be gone before anything could draw it.
      */
     private fun WriteBatch.commitDetached() {
         scope.launch {
             runCatching { commit() }
-                .onFailure { _syncError.value = it.message ?: "Nie udało się zapisać" }
+                .onFailure { _writeError.value = it.message ?: "Nie udało się zapisać" }
         }
     }
 
     private fun detached(block: suspend () -> Unit) {
         scope.launch {
             runCatching { block() }
-                .onFailure { _syncError.value = it.message ?: "Nie udało się zapisać" }
+                .onFailure { _writeError.value = it.message ?: "Nie udało się zapisać" }
         }
     }
 

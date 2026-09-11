@@ -280,6 +280,15 @@ Security rules are a single predicate: the caller's uid is in the workspace's
 - **Writes never block on the network.** Firestore's local cache echoes the write
   immediately and the UI reflects that optimistic state. Never show a spinner while
   saving.
+- **A write the server refuses must be said, over whatever screen is open.**
+  Not waiting for the server means the refusal arrives later — and Firestore rolls
+  the write back, so on screen the change simply undoes itself. It goes to
+  `writeError` and a banner at the top of every screen, held until "Zamknij".
+  **Never to `syncError`**: that one is cleared by every snapshot, the rollback is a
+  snapshot, and so it vanished the instant it was raised. That is how rules that
+  still refused deletes on the server turned "Cofnij sprzedaż" into a button that
+  did nothing — `firestore.rules` in git is not the rules that are live until
+  `firebase deploy --only firestore:rules` has been run.
 
 ### Events are automatic but real
 

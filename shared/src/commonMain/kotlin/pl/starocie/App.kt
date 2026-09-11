@@ -30,6 +30,7 @@ import pl.starocie.ui.SoldItemScreen
 import pl.starocie.ui.SoldScreen
 import pl.starocie.ui.StockItemScreen
 import pl.starocie.ui.StockScreen
+import pl.starocie.ui.WriteErrorOverlay
 import pl.starocie.ui.theme.AppTheme
 import pl.starocie.ui.theme.ThemeChoice
 import pl.starocie.ui.theme.rememberThemeChoice
@@ -83,7 +84,7 @@ fun App(workspaceId: String) {
                 // rather than leaving repositories pointed at the previous user.
                 key(signedIn.uid) {
                     KoinApplication(application = { modules(appModule(signedIn.uid, workspaceId)) }) {
-                        MainNavigation(theme)
+                        WriteErrorOverlay { MainNavigation(theme) }
                     }
                 }
             }

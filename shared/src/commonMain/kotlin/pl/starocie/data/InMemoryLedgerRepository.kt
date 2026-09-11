@@ -41,6 +41,11 @@ class InMemoryLedgerRepository(
     /** Nothing to sync with, so nothing can fail. */
     override val syncError: StateFlow<String?> = MutableStateFlow(null).asStateFlow()
 
+    /** No server to refuse anything. */
+    override val writeError: StateFlow<String?> = MutableStateFlow(null).asStateFlow()
+
+    override fun dismissWriteError() = Unit
+
     /** The seed is here the moment this is constructed, so nothing is ever awaited. */
     override val loading: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
