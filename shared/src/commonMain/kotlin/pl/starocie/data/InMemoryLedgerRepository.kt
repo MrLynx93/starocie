@@ -268,10 +268,12 @@ class InMemoryLedgerRepository(
         // Nothing paid and no buy to correct — leave the cost honestly unknown.
         if (price == null) return
 
-        val eventId = ensureEvent(at)
+        // Filed with the shortcut sale's own stated prices, never on today: a thing
+        // with no buy came in through a sale, and was not bought here.
+        ensureLongAgoEvent(at)
         val buy = Buy(
             id = newId(),
-            eventId = eventId,
+            eventId = LongAgo.EVENT_ID,
             date = item.date,
             price = price,
             createdBy = userId,

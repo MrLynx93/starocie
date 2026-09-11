@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.days
 
 class LedgerTest {
 
@@ -359,6 +360,50 @@ class LedgerTest {
             .map { it.id }
 
         assertEquals(listOf("candle"), inStock)
+    }
+
+    /**
+     * The shortcut sale writes the thing and its sale in one instant, so a buy holding
+     * such a thing alone on a real day is a purchase filed where it never happened.
+     * One already in "Dawno temu" is where it belongs.
+     */
+    @Test
+    fun a_buy_behind_a_thing_sold_as_it_came_in_is_misfiled_on_a_real_day() {
+        val ledger = Ledger(
+            buys = listOf(
+                buy("late", price = 1200, eventId = "2026-08-02"),
+                buy("filed", price = 500, eventId = LongAgo.EVENT_ID),
+            ),
+            items = listOf(
+                item("wazon", buyId = "late", status = ItemStatus.SOLD),
+                item("kubek", buyId = "filed", status = ItemStatus.SOLD),
+            ),
+            sells = listOf(sell("s1", "wazon", 3000), sell("s2", "kubek", 900)),
+        )
+
+        assertEquals(listOf("late"), ledger.misfiledShortcutBuys().map { it.id })
+    }
+
+    /**
+     * Bought first and sold later is simply a purchase, and a box was bought somewhere
+     * whatever came out of it — neither is the shortcut's to refile.
+     */
+    @Test
+    fun an_ordinary_purchase_and_a_box_are_not_misfiled() {
+        val ledger = Ledger(
+            buys = listOf(buy("b1", price = 1200), buy("box", price = 3000)),
+            items = listOf(
+                item("lamp", buyId = "b1", status = ItemStatus.SOLD),
+                item("cup", buyId = "box", status = ItemStatus.SOLD),
+                item("plate", buyId = "box"),
+            ),
+            sells = listOf(
+                sell("s1", "lamp", 3000).copy(createdAt = T0 + 1.days),
+                sell("s2", "cup", 900),
+            ),
+        )
+
+        assertTrue(ledger.misfiledShortcutBuys().isEmpty())
     }
 
     /**

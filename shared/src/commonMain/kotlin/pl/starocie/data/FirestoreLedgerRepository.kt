@@ -123,6 +123,36 @@ class FirestoreLedgerRepository(
         }
         .stateIn(scope, SharingStarted.Eagerly, Ledger())
 
+    /** Refiled once per session, so a write the rules refuse is not retried on every snapshot. */
+    private val refiled = mutableSetOf<String>()
+
+    init {
+        // Buys an older build put on a real day — see [Ledger.misfiledShortcutBuys].
+        // Moving the buy is what takes the thing out of that day's "Co kupiliśmy" and
+        // its money out of that day's spend at once, the event being all either reads.
+        // Every phone writes the same value, so two doing it offline converge.
+        scope.launch {
+            ledger.collect { current ->
+                if (_loading.value) return@collect
+                val misfiled = current.misfiledShortcutBuys().filter { it.id !in refiled }
+                if (misfiled.isEmpty()) return@collect
+                refiled += misfiled.map { it.id }
+
+                val at = now()
+                firestore.batch().apply {
+                    setLongAgoEvent(this, at)
+                    misfiled.forEach {
+                        update(
+                            buysRef.document(it.id),
+                            "eventId" to LongAgo.EVENT_ID,
+                            "updatedAt" to at.toEpochMilliseconds(),
+                        )
+                    }
+                }.commitDetached()
+            }
+        }
+    }
+
     override suspend fun recordBuy(price: Money?, name: String?, items: List<DraftItem>): String {
         val at = now()
         // The buy inherits the item's date, so the two can never disagree.
@@ -381,9 +411,13 @@ class FirestoreLedgerRepository(
 
         // The buy takes the item's date, so the two can never disagree, and holds
         // only this item, which makes the cost exact rather than an allocated share.
+        //
+        // It is filed where the shortcut sale files a stated price, never on today:
+        // a thing with no buy came in through a sale, and a price remembered for it
+        // at the stall would otherwise list it among what we bought here.
         val buy = Buy(
             id = newId(),
-            eventId = events.eventIdFor(at),
+            eventId = LongAgo.EVENT_ID,
             date = item.date,
             price = price,
             createdBy = userId,
@@ -392,7 +426,7 @@ class FirestoreLedgerRepository(
         )
 
         firestore.batch().apply {
-            setEvent(this, at)
+            setLongAgoEvent(this, at)
             set(buysRef.document(buy.id), buy.toDoc())
             update(
                 itemsRef.document(itemId),

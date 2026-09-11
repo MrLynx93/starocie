@@ -838,7 +838,14 @@ write nothing until their main button is pressed.
   same words, being the same field at a later point in the same thing's life. Typing a price into an item that had no buy **opens one holding only that
   item**, which is how a cost unknown at the point of sale becomes exact later;
   clearing that same field records nothing, because inventing an empty buy would
-  turn an honest unknown into a claim that we paid zero.
+  turn an honest unknown into a claim that we paid zero. **That buy is filed under
+  "Dawno temu"**, exactly where the shortcut sale files a stated price, and never on
+  the day the price is typed: only a shortcut sale leaves a thing with no buy, and
+  typed in at the stall it would list the thing in that giełda's "Co kupiliśmy" and
+  add it to the day's spend. Buys an older build filed on a real day are refiled by
+  the Firestore repository as the ledger arrives — `Ledger.misfiledShortcutBuys`
+  finds them as a buy holding one thing written in the same instant as one of its
+  sales, which only the shortcut sale ever does.
   **Removing lives here and nowhere else.** It used to sit inside the sell dialog,
   a thumb-width from the price field, where the one screen you reach by hunting
   for something to sell also offered the button that resolves an item with no

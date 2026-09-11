@@ -354,4 +354,28 @@ data class Ledger(
 
     /** How many things that buy covers — one means its price is that item's cost. */
     fun itemCountOfBuy(id: String): Int = itemsByBuy[id]?.size ?: 0
+
+    /**
+     * Buys behind a thing that came in through a shortcut sale, filed on a real day
+     * rather than in "Dawno temu".
+     *
+     * That purchase never happened at the giełda it sits on, and there it lists the
+     * thing among what we bought that day and adds to the day's spend. Two writes used
+     * to put it there — the shortcut sale itself, before the bucket existed, and a
+     * price typed in after the sale, which opened its buy on whatever day the typing
+     * happened — and the records they left are still in Firestore. This is how the
+     * repository finds them to refile.
+     *
+     * A thing came in through a shortcut sale when one of its sales was written in the
+     * same instant it was: that write stamps both with one clock reading, and nothing
+     * else writes an item and a sale together. Only a buy holding that thing alone
+     * counts — a box was bought somewhere, whatever came out of it.
+     */
+    fun misfiledShortcutBuys(): List<Buy> = buys.filter { buy ->
+        buy.eventId != LongAgo.EVENT_ID &&
+            itemsByBuy[buy.id]?.singleOrNull()?.let { cameInThroughASale(it) } == true
+    }
+
+    private fun cameInThroughASale(item: Item): Boolean =
+        sellsByItem[item.id].orEmpty().any { it.createdAt == item.createdAt }
 }

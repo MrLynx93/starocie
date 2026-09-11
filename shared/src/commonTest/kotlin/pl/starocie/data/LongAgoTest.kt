@@ -58,6 +58,31 @@ class LongAgoTest {
         )
     }
 
+    /**
+     * A cost remembered after the sale is the same purchase the shortcut would have
+     * filed, so it goes to the same place — typed in at the stall, it used to land on
+     * today's giełda among what we bought there.
+     */
+    @Test
+    fun a_price_typed_in_after_the_sale_is_filed_there_too() = runTest {
+        val repository = InMemoryLedgerRepository()
+        val itemId = repository.recordBuyAndSell(
+            paid = null,
+            draft = DraftItem(name = "wazon"),
+            price = Money(3000),
+        )
+
+        repository.setPaidPrice(itemId, Money(1200))
+
+        val ledger = repository.ledger.value
+        val today = ledger.eventById(ledger.sellsOfItem(itemId).single().eventId)!!
+
+        assertEquals(LongAgo.EVENT_ID, ledger.buys.single().eventId)
+        assertTrue(ledger.buysOfEvent(today.id).isEmpty(), "not among what we bought that day")
+        assertEquals(Money.ZERO, ledger.eventStats(today).spent)
+        assertTrue(ledger.misfiledShortcutBuys().isEmpty())
+    }
+
     /** No price paid means no buy at all, so nothing is filed anywhere. */
     @Test
     fun an_unknown_cost_files_nothing() = runTest {
