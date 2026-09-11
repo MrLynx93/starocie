@@ -325,12 +325,14 @@ fun HomeScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(recentSells, key = { it.id }) { sell ->
                         val item = ledger.itemById(sell.itemId)
-                        val stats = item?.let { ledger.itemStats(it) }
-                        // A deleted thing takes its cost with it, so what the sale
-                        // took is the whole of what it made — the same answer an
-                        // item we never recorded buying gives.
-                        val profit = stats?.profit ?: sell.price
-                        val approx = if (stats?.profitIsEstimated == true) "ok. " else ""
+                        // This sale against what its own pieces cost, as a giełda's
+                        // rows have it — not the thing's whole profit, which set three
+                        // pieces of a lot against what all of them cost. A deleted
+                        // thing, or one never recorded as bought, has no cost to set
+                        // it against, so what the sale took is what it made.
+                        val cost = ledger.sellCost(sell)
+                        val profit = ledger.sellProfit(sell)
+                        val approx = if (cost?.isEstimated == true) "ok. " else ""
 
                         Card(
                             shape = RoundedCornerShape(14.dp),

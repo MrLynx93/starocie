@@ -211,6 +211,11 @@ Firebase and identical on every platform.
 - `Ledger.sellingSessions()` / `Ledger.buyingSessions()` — the days we sold on, and
   the days we only bought on
 - `Ledger.sellCost(sell)` — what one sale's pieces had cost, or null
+- `Ledger.sellProfit(sell)` — what one sale made over that share. **Every per-sale
+  profit on screen comes from here** — the home screen's "Co ostatnio sprzedaliśmy"
+  and a giełda's rows alike — and so does a day's. The home screen once showed the
+  thing's whole `Item.stats.profit` on each sale, setting three pieces of a lot of
+  twelve against what all twelve cost
 
 Buy-level profit is never an estimate — measured cost against measured proceeds.
 Only the split beneath it is inferred.

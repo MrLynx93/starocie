@@ -237,6 +237,46 @@ class LedgerTest {
     }
 
     /** Both counts are pieces, so they answer for the same things the money does. */
+    /**
+     * The home screen's recent sales showed the thing's whole profit on each sale, so
+     * three plates out of twelve were set against what all twelve had cost.
+     */
+    @Test
+    fun a_sale_of_part_of_a_lot_made_its_price_over_its_own_share() {
+        val ledger = Ledger(
+            buys = listOf(buy("b1", price = 6000)),
+            items = listOf(item("plates", buyId = "b1", quantity = 12)),
+            sells = listOf(sell("s1", "plates", 2000, quantity = 3, soldCompletely = false)),
+        )
+        val sale = ledger.sellsOfEvent("2026-08-02").single()
+
+        assertEquals(Money(500), ledger.sellProfit(sale), "3 of 12 at 60,00 zł cost 15,00 zł")
+        assertEquals(
+            Money(-4000),
+            ledger.itemStats(ledger.itemById("plates")!!).profit,
+            "the thing as a whole is still behind, which is not what this sale did",
+        )
+    }
+
+    @Test
+    fun a_lots_sales_each_make_their_own_and_add_up_to_the_thing() {
+        val ledger = Ledger(
+            buys = listOf(buy("b1", price = 6000)),
+            items = listOf(item("plates", buyId = "b1", quantity = 12, status = ItemStatus.SOLD)),
+            sells = listOf(
+                sell("s1", "plates", 2000, quantity = 3, soldCompletely = false),
+                sell("s2", "plates", 9000, quantity = 9),
+            ),
+        )
+        val sales = ledger.sellsOfEvent("2026-08-02")
+
+        assertEquals(listOf(Money(500), Money(4500)), sales.map { ledger.sellProfit(it) })
+        assertEquals(
+            ledger.itemStats(ledger.itemById("plates")!!).profit,
+            Money(sales.sumOf { ledger.sellProfit(it).minor }),
+        )
+    }
+
     @Test
     fun a_day_counts_pieces_rather_than_records() {
         val ledger = Ledger(

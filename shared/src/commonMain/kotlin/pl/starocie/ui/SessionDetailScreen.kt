@@ -203,6 +203,7 @@ fun SessionDetailScreen(
                             sell = sell,
                             item = ledger.itemById(sell.itemId),
                             cost = ledger.sellCost(sell),
+                            profit = ledger.sellProfit(sell),
                             onOpen = openItemOrNull(
                                 ledger.itemById(sell.itemId),
                                 sellingToday,
@@ -282,6 +283,8 @@ private fun SessionSellRow(
     sell: Sell,
     item: Item?,
     cost: SellCost?,
+    /** [Ledger.sellProfit] — the one place per-sale profit is worked out. */
+    profit: Money,
     onOpen: (() -> Unit)?,
 ) {
     Row(
@@ -323,7 +326,7 @@ private fun SessionSellRow(
 
         Spacer(Modifier.width(12.dp))
 
-        SellProfit(sell = sell, cost = cost)
+        SellProfit(profit = profit, cost = cost)
     }
 }
 
@@ -334,8 +337,7 @@ private fun SessionSellRow(
  * not know what it had cost.
  */
 @Composable
-private fun SellProfit(sell: Sell, cost: SellCost?) {
-    val profit = sell.price - (cost?.cost ?: Money.ZERO)
+private fun SellProfit(profit: Money, cost: SellCost?) {
     val lost = profit.minor < 0
     val approx = if (cost?.isEstimated == true) "ok. " else ""
     val muted = MaterialTheme.colorScheme.onSurfaceVariant

@@ -199,6 +199,17 @@ data class Ledger(
      */
     fun sellCost(sell: Sell): SellCost? = sellCostById[sell.id]
 
+    /**
+     * What one sale made: its price over the share of the cost its own pieces carry.
+     *
+     * Never the item's whole profit shown against one sale — three pieces out of a lot
+     * of twelve would be set against what all twelve cost, and read as a loss they
+     * never were. A sale with nothing to measure against made its whole price. Every
+     * per-sale figure comes from here, and so does a day's, so a row and the total it
+     * adds up into cannot disagree.
+     */
+    fun sellProfit(sell: Sell): Money = sell.price - (sellCost(sell)?.cost ?: Money.ZERO)
+
     fun eventStats(event: Event): EventStats {
         val eventBuys = buysByEvent[event.id].orEmpty()
         val eventSells = sellsByEvent[event.id].orEmpty()
@@ -210,9 +221,8 @@ data class Ledger(
         var profit = Money.ZERO
         var estimated = false
         for (sell in eventSells) {
-            val cost = sellCost(sell)
-            profit += sell.price - (cost?.cost ?: Money.ZERO)
-            estimated = estimated || cost?.isEstimated == true
+            profit += sellProfit(sell)
+            estimated = estimated || sellCost(sell)?.isEstimated == true
         }
 
         return EventStats(
