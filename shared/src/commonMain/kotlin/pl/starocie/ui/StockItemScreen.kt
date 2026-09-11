@@ -1,6 +1,5 @@
 package pl.starocie.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -358,15 +356,7 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text("Sprzedaliśmy już wszystko") }
         } else {
-            OutlinedButton(
-                onClick = { confirmingRemoval = true },
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Usuń") }
+            DestructiveButton(label = "Usuń", onClick = { confirmingRemoval = true })
         }
 
         Spacer(Modifier.height(10.dp))

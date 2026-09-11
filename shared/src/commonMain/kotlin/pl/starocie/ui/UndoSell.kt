@@ -19,6 +19,10 @@ import pl.starocie.domain.format
  * existing, and that day's takings drop by as much. A text button rather than an
  * outlined one, because it belongs to one sale among what may be several, and a lot
  * sold in eight parts must not become a column of eight full-width alarms.
+ *
+ * So this is for a sale with others beside it. A thing that went in one sale is taken
+ * back from a [DestructiveButton] pinned at the bottom of the sold screen instead,
+ * exactly where and how "Usuń" sits on the magazyn's.
  */
 @Composable
 internal fun UndoSellButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {

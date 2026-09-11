@@ -923,9 +923,16 @@ write nothing until their main button is pressed.
   happening on its own day for its own money.
   There is **no "Usuń"** here — deleting belongs where a thing still exists to be got
   rid of, and erasing a sold item would only lose the proceeds it is the record of.
-  **Under each sale sits "Cofnij sprzedaż"** instead, for the one mistake no field can
+  **"Cofnij sprzedaż" is there** instead, for the one mistake no field can
   correct: a sale that should not exist at all — the wrong row tapped at the stall, or
-  a buyer who changed their mind once the button had been pressed. It is red and it
+  a buyer who changed their mind once the button had been pressed. **A thing that went
+  in one sale gets it pinned above "Wstecz", drawn exactly as "Usuń" is on the
+  magazyn's screen** — full width, outlined in red, both from one `DestructiveButton` —
+  being the same kind of act in the same place under the thumb; a small link under a
+  price field was easy to miss. A lot sold in parts gets a small one **under each
+  sale** instead, since one button at the bottom could not say which sale it meant,
+  and a lot sold in eight parts must not become a column of eight full-width alarms.
+  It is red and it
   asks first, since it erases a record and that day's takings drop by it, and the
   dialog says both halves: "Przedmiot wróci do magazynu, a sprzedaż za 45,00 zł
   zniknie z naszych rachunków." The sale is **deleted rather than flagged** — every

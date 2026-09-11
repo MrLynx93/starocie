@@ -52,10 +52,13 @@ import pl.starocie.domain.toInputText
  * belongs to the magazyn, where a thing still exists to be got rid of, and erasing
  * a sold item would only lose the proceeds it is the record of.
  *
- * What there is instead is "Cofnij sprzedaż", under each sale: the answer to a sale
- * that should never have been recorded at all, which no field here can correct. The
- * sale goes, its pieces come back into the magazyn, and the screen leaves with them
- * unless another sale still closes the lot.
+ * What there is instead is "Cofnij sprzedaż": the answer to a sale that should never
+ * have been recorded at all, which no field here can correct. A thing that went in one
+ * sale gets it pinned above "Wstecz", red and full width, exactly where and how "Usuń"
+ * sits on the magazyn's screen; a lot sold in parts gets a small one under each sale,
+ * since one button at the bottom could not say which it meant. The sale goes, its
+ * pieces come back into the magazyn, and the screen leaves with them unless another
+ * sale still closes the lot.
  */
 @Composable
 fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
@@ -219,7 +222,13 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                     },
                     onDateChange = { viewModel.setSellDate(sell.id, it) },
                     onPriceSave = { viewModel.setSellPrice(sell.id, it) },
-                    onUndo = { undoing = sell },
+                    // Only where there are several to choose between: a single sale is
+                    // taken back from the pinned button below instead.
+                    onUndo = if (sells.size > 1) {
+                        { undoing = sell }
+                    } else {
+                        null
+                    },
                 )
             }
 
@@ -236,6 +245,16 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
+
+        // A thing that went in one sale has exactly one sale to take back, so the
+        // button sits where "Usuń" sits on the magazyn's screen and looks the same:
+        // pinned above the way out, red, the one control here that erases something.
+        // A lot sold in parts keeps one under each sale instead — a single button down
+        // here could not say which of them it meant.
+        sells.singleOrNull()?.let { sell ->
+            DestructiveButton(label = "Cofnij sprzedaż", onClick = { undoing = sell })
+            Spacer(Modifier.height(10.dp))
+        }
 
         BackButton(onDone)
     }
@@ -267,7 +286,8 @@ private fun SaleFields(
     caption: String?,
     onDateChange: (LocalDate) -> Unit,
     onPriceSave: (String) -> Unit,
-    onUndo: () -> Unit,
+    /** Null when this is the only sale, which the screen's pinned button takes back. */
+    onUndo: (() -> Unit)?,
 ) {
     var priceText by remember(sell.id) { mutableStateOf(sell.price.toInputText()) }
 
@@ -301,11 +321,13 @@ private fun SaleFields(
         // Under the sale it takes back, so each of a lot's sales carries its own and
         // nothing has to ask which one was meant. It names what it undoes, because
         // beneath a price field a bare "Cofnij" reads as undoing the typing.
-        UndoSellButton(
-            label = "Cofnij sprzedaż",
-            onClick = onUndo,
-            modifier = Modifier.align(Alignment.End),
-        )
+        onUndo?.let {
+            UndoSellButton(
+                label = "Cofnij sprzedaż",
+                onClick = it,
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
     }
 }
 
