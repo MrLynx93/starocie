@@ -218,6 +218,8 @@ Firebase and identical on every platform.
   and a giełda's rows alike — and so does a day's. The home screen once showed the
   thing's whole `Item.stats.profit` on each sale, setting three pieces of a lot of
   twelve against what all twelve cost
+- `Ledger.saleGroups(sells)` — a day's sales with the repeats collapsed into one
+  line, every figure the sum of the per-sale ones above
 
 Buy-level profit is never an estimate — measured cost against measured proceeds.
 Only the split beneath it is inferred.
@@ -1036,6 +1038,18 @@ write nothing until their main button is pressed.
   own share of the cost, so a lot that went across three giełdy shows a third of
   itself at each; a sale whose item has been deleted reads "—" for the thing and
   opens nothing, its profit being the whole price like any other uncosted sale.
+  **The same thing sold again is one line, not ten.** Ten rings rung up one at a time
+  at 15,00 zł read "Pierścionek · 10 sztuk · Sprzedaliśmy po 15,00 zł za sztukę",
+  with the profit summed beside it. Sales collapse on the name (trimmed, any case),
+  what one piece cost and what one piece went for — both compared **exactly, as
+  fractions**, so two for 30,00 zł joins one for 15,00 zł — and a photo that could
+  tell them apart: none on either thing, or the very same item, a lot sold a piece at
+  a time. The cost per piece is read off the item rather than each sale's share,
+  since a lot's shares differ by a grosz on purpose and are still one purchase. It is
+  **only a reading**: every `Sell` stays its own document, the line opens its newest
+  sale's thing, and "Cofnij sprzedaż" there takes back one of the ten. A line of
+  several pieces says its prices per piece where they divide into whole grosze, and
+  as the total where they do not, rather than rounding into a price nobody paid.
   That screen carries **the same search box as the three lists, under the day's
   figures**, and it narrows both sections at once — a thing bought and sold on one day
   is honestly in each, so one box has to find it in both. It is under the figures

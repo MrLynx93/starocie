@@ -38,9 +38,10 @@ import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
+import pl.starocie.domain.SaleGroup
 import pl.starocie.domain.SellCost
-import pl.starocie.domain.Sell
 import pl.starocie.domain.format
+import pl.starocie.domain.saleGroups
 
 /**
  * One day: what we brought back from it and what went at it.
@@ -129,10 +130,15 @@ fun SessionDetailScreen(
     // A sale is found by the thing it was, so it is the item's name that is matched.
     // A sale whose item has been deleted has no name left to match and drops out of
     // a search — it is still there, unsearched, the moment the box is cleared.
+    //
+    // Then the repeats collapse: ten rings rung up one at a time at 15,00 zł are one
+    // line reading "10 sztuk", not ten identical rows to scroll past.
     val sold = remember(ledger, soldThatDay, query) {
-        soldThatDay.filter {
-            query.isBlank() || ledger.itemById(it.itemId)?.matchesQuery(query) == true
-        }
+        ledger.saleGroups(
+            soldThatDay.filter {
+                query.isBlank() || ledger.itemById(it.itemId)?.matchesQuery(query) == true
+            },
+        )
     }
 
     ScreenColumn {
@@ -198,14 +204,14 @@ fun SessionDetailScreen(
                 // home follows, and is read as the day's other half.
                 if (sold.isNotEmpty()) {
                     item { Column { SectionLabel("Co sprzedaliśmy") } }
-                    items(sold, key = { "sold-${it.id}" }) { sell ->
+                    items(sold, key = { "sold-${it.sells.first().id}" }) { group ->
                         SessionSellRow(
-                            sell = sell,
-                            item = ledger.itemById(sell.itemId),
-                            cost = ledger.sellCost(sell),
-                            profit = ledger.sellProfit(sell),
+                            group = group,
+                            // A collapsed line opens its newest sale's thing: one of
+                            // the ten is as good as another to correct, and its own
+                            // "Cofnij sprzedaż" takes back exactly one of them.
                             onOpen = openItemOrNull(
-                                ledger.itemById(sell.itemId),
+                                group.item,
                                 sellingToday,
                                 onOpenStockItem,
                                 onOpenSoldItem,
@@ -270,9 +276,10 @@ fun SessionDetailScreen(
 }
 
 /**
- * One sale as it happened that day, rather than the item's whole story: this row
- * carries what this sale took and what those pieces had cost, so a lot that went
- * across three giełdy shows a third of itself at each.
+ * One sale as it happened that day — or several that were the same thing sold again
+ * ([Ledger.saleGroups]) — rather than the item's whole story: this row carries what
+ * those sales took and what their pieces had cost, so a lot that went across three
+ * giełdy shows a third of itself at each.
  *
  * The item may be gone — deleting a thing leaves its sales unresolvable on purpose,
  * the proceeds still counting for the day. Then the row reads "—" and opens nothing,
@@ -280,13 +287,13 @@ fun SessionDetailScreen(
  */
 @Composable
 private fun SessionSellRow(
-    sell: Sell,
-    item: Item?,
-    cost: SellCost?,
-    /** [Ledger.sellProfit] — the one place per-sale profit is worked out. */
-    profit: Money,
+    group: SaleGroup,
     onOpen: (() -> Unit)?,
 ) {
+    val item = group.item
+    val cost = group.cost
+    // Summed from [Ledger.sellProfit] — the one place per-sale profit is worked out.
+    val profit = group.profit
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -302,23 +309,23 @@ private fun SessionSellRow(
         // a pair — the same shape the sold list uses, narrowed to this one sale.
         Column(Modifier.weight(1f)) {
             Text(item?.name ?: "—", fontWeight = FontWeight.Medium)
-            if (sell.quantity > 1) {
+            if (group.pieces > 1) {
                 Text(
-                    // Above one it is a piece of a lot, so it is counted in sztuki —
-                    // and the bare count avoids a verb that would have to agree with
-                    // it as well ("poszły 3 sztuki", but "poszło 12 sztuk").
-                    sztuki(sell.quantity),
+                    // Above one it is pieces, so it is counted in sztuki — and the
+                    // bare count avoids a verb that would have to agree with it as
+                    // well ("poszły 3 sztuki", but "poszło 12 sztuk").
+                    sztuki(group.pieces),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             Text(
-                text = sellCostLabel(cost),
+                text = sellCostLabel(cost, group.pieces),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Sprzedaliśmy za ${sell.price.format()}",
+                text = "Sprzedaliśmy ${byThePiece(group.proceeds, group.pieces)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -361,16 +368,28 @@ private fun SellProfit(profit: Money, cost: SellCost?) {
 }
 
 /**
- * What this sale's pieces had cost, said the same way the sold list says it for a
+ * What this row's pieces had cost, said the same way the sold list says it for a
  * whole thing — a share of a lot or of a box is a guess and says "ok.", and a thing
  * with no buy behind it says we do not know.
  */
-private fun sellCostLabel(cost: SellCost?): String {
+private fun sellCostLabel(cost: SellCost?, pieces: Int): String {
     if (cost == null) return "Nie wiemy, za ile kupiliśmy"
-    return if (cost.isEstimated) {
-        "Kupiliśmy za ok. ${cost.cost.format()}"
+    return "Kupiliśmy ${byThePiece(cost.cost, pieces, approx = cost.isEstimated)}"
+}
+
+/**
+ * The rest of a "Kupiliśmy …" or "Sprzedaliśmy …" line: per piece where there are
+ * several — "po 15,00 zł za sztukę", the way the magazyn says a lot's cost — since
+ * one ring's price is what was agreed ten times over. A total that will not divide
+ * into whole grosze is said as the total instead, rather than rounded into a price
+ * nobody ever paid.
+ */
+internal fun byThePiece(total: Money, pieces: Int, approx: Boolean = false): String {
+    val ok = if (approx) "ok. " else ""
+    return if (pieces > 1 && total.minor % pieces == 0L) {
+        "po $ok${(total / pieces).format()} za sztukę"
     } else {
-        "Kupiliśmy za ${cost.cost.format()}"
+        "za $ok${total.format()}"
     }
 }
 
