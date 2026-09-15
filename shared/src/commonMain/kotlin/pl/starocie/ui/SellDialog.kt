@@ -73,6 +73,7 @@ internal fun SellDialog(
             Column {
                 if (item.splittable) {
                     PieceCounter(
+                        label = "Ile sztuk sprzedajemy?",
                         count = state.sellQuantity,
                         left = state.piecesLeft,
                         onChange = onQuantityChange,
@@ -149,14 +150,21 @@ internal fun SellDialog(
  *
  * A stepper rather than a field, because the answer is nearly always one or two
  * away from where it starts and a keyboard over a dialog would cost more than the
- * taps it saves. Only the bottom end stops — there is no selling half a thing —
- * while the top keeps going past [left] and corrects the lot instead.
+ * taps it saves. Selling, only the bottom end stops — there is no selling half a
+ * thing — while the top keeps going past [left] and corrects the lot instead. Taking
+ * a sale back passes [max], there being no more pieces to return than it took.
  */
 @Composable
-private fun PieceCounter(count: Int, left: Int, onChange: (Int) -> Unit) {
+internal fun PieceCounter(
+    label: String,
+    count: Int,
+    left: Int,
+    onChange: (Int) -> Unit,
+    max: Int? = null,
+) {
     Column {
         Text(
-            "Ile sztuk sprzedajemy?",
+            label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -177,6 +185,7 @@ private fun PieceCounter(count: Int, left: Int, onChange: (Int) -> Unit) {
 
             FilledTonalIconButton(
                 onClick = { onChange(count + 1) },
+                enabled = max == null || count < max,
             ) { Icon(Icons.Filled.Add, contentDescription = "Więcej") }
 
             Spacer(Modifier.width(12.dp))

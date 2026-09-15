@@ -115,7 +115,7 @@ class ItemEditsTest {
             draft = DraftItem(name = "talerze", quantity = 12),
         )
         repository.recordSell(itemId, price = Money(1500), quantity = 1)
-        repository.recordSell(itemId, price = Money(3000), quantity = 2)
+        repository.recordSell(itemId, price = Money(3200), quantity = 2)
 
         repository.markSoldOut(itemId)
 

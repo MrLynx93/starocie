@@ -29,4 +29,18 @@ class UndoSellTextTest {
             undoSellText(price, pieces = 3, splittable = true, backInStock = true),
         )
     }
+
+    /** Only some of the sale comes back, so the sale stays and only its share goes. */
+    @Test
+    fun part_of_a_sale_says_what_share_of_the_money_goes() {
+        val share = Money(4500)
+        assertEquals(
+            "3 sztuki wrócą do magazynu, a z naszych rachunków zniknie ${share.format()}.",
+            undoSellText(share, pieces = 3, splittable = true, backInStock = true, wholeSale = false),
+        )
+        assertEquals(
+            "Z naszych rachunków zniknie ${share.format()}.",
+            undoSellText(share, pieces = 3, splittable = true, backInStock = false, wholeSale = false),
+        )
+    }
 }

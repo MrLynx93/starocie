@@ -1,5 +1,6 @@
 package pl.starocie.data
 
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.WriteBatch
 import kotlin.time.Clock
@@ -33,6 +34,9 @@ import pl.starocie.domain.Ledger
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.Sell
+import pl.starocie.domain.priceOf
+import pl.starocie.domain.sellToJoin
+import pl.starocie.domain.sellToJoinWith
 
 /**
  * Firestore's offline cache is the local database: reads come from snapshot
@@ -249,10 +253,13 @@ class FirestoreLedgerRepository(
             ?.let { ledger.value.itemStats(it).soldQuantity + pieces }
             ?.takeIf { it > item.quantity }
 
+        val eventId = events.eventIdFor(at)
+        val joined = ledger.value.sellToJoin(itemId, eventId, price, pieces)
+
         val sell = Sell(
             id = newId(),
             itemId = itemId,
-            eventId = events.eventIdFor(at),
+            eventId = eventId,
             date = events.dateOf(at),
             price = price,
             quantity = pieces,
@@ -272,7 +279,19 @@ class FirestoreLedgerRepository(
 
         firestore.batch().apply {
             setEvent(this, at)
-            set(sellsRef.document(sell.id), sell.toDoc())
+            if (joined == null) {
+                set(sellsRef.document(sell.id), sell.toDoc())
+            } else {
+                // Grown rather than rewritten, so another phone joining the same sale
+                // offline adds its pieces instead of replacing ours.
+                val sellChanges = buildList<Pair<String, Any>> {
+                    add("quantity" to FieldValue.increment(pieces))
+                    add("price" to FieldValue.increment(price.minor.toInt()))
+                    if (resolves) add("soldCompletely" to true)
+                    add("updatedAt" to at.toEpochMilliseconds())
+                }
+                update(sellsRef.document(joined.id), *sellChanges.toTypedArray())
+            }
             if (itemChanges.isNotEmpty()) {
                 update(itemsRef.document(itemId), *itemChanges.toTypedArray())
             }
@@ -293,6 +312,38 @@ class FirestoreLedgerRepository(
     ): String {
         val at = now()
         val eventId = events.eventIdFor(at)
+
+        // The same thing sold again today is more pieces of it, not a new thing.
+        // Everything grows by increments, so two phones both doing this offline both
+        // count on reconnect.
+        val joined = if (soldCompletely) ledger.value.sellToJoinWith(eventId, draft, paid, price) else null
+        val joinedItem = joined?.let { ledger.value.itemById(it.itemId) }
+        if (joined != null && joinedItem != null) {
+            val pieces = draft.quantity.coerceAtLeast(1)
+            firestore.batch().apply {
+                setEvent(this, at)
+                update(
+                    itemsRef.document(joinedItem.id),
+                    "quantity" to FieldValue.increment(pieces),
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+                if (paid != null && joinedItem.buyId != null) {
+                    update(
+                        buysRef.document(joinedItem.buyId),
+                        "price" to FieldValue.increment(paid.minor.toInt()),
+                        "updatedAt" to at.toEpochMilliseconds(),
+                    )
+                }
+                update(
+                    sellsRef.document(joined.id),
+                    "quantity" to FieldValue.increment(pieces),
+                    "price" to FieldValue.increment(price.minor.toInt()),
+                    "updatedAt" to at.toEpochMilliseconds(),
+                )
+            }.commitDetached()
+            return joinedItem.id
+        }
+
         val buyId = paid?.let { newId() }
 
         val item = draft.toItem(buyId = buyId, at = at).copy(
@@ -503,19 +554,32 @@ class FirestoreLedgerRepository(
         }
     }
 
-    override suspend fun undoSell(sellId: String) {
+    override suspend fun undoSell(sellId: String, pieces: Int?) {
         val at = now()
         val sell = ledger.value.sells.firstOrNull { it.id == sellId } ?: return
+        val taken = pieces?.coerceIn(1, sell.quantity) ?: sell.quantity
+        val after = ledger.value.statusAfterUndoing(sell, taken)
         // Only written when it changes: a lot another sale still closes stays closed,
         // and a sale whose item is gone has nothing to hand its pieces back to.
-        val status = ledger.value.statusAfterUndoing(sell)
-            ?.takeIf { it != ledger.value.itemById(sell.itemId)?.status }
+        val status = after?.takeIf { it != ledger.value.itemById(sell.itemId)?.status }
 
         // One batch: the sale going and its pieces coming back are one correction,
         // and a half-written one would leave a thing sold on no sale at all.
         // No event stub either — nothing here happened today.
         firestore.batch().apply {
-            delete(sellsRef.document(sellId))
+            if (taken >= sell.quantity) {
+                delete(sellsRef.document(sellId))
+            } else {
+                // Shrunk by increments, like the joining that grew it.
+                val sellChanges = buildList<Pair<String, Any>> {
+                    add("quantity" to FieldValue.increment(-taken))
+                    add("price" to FieldValue.increment(-sell.priceOf(taken).minor.toInt()))
+                    // Pieces handed back are the rest coming back after all.
+                    if (sell.soldCompletely && after == ItemStatus.IN_STOCK) add("soldCompletely" to false)
+                    add("updatedAt" to at.toEpochMilliseconds())
+                }
+                update(sellsRef.document(sellId), *sellChanges.toTypedArray())
+            }
             if (status != null) {
                 update(
                     itemsRef.document(sell.itemId),

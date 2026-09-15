@@ -338,16 +338,21 @@ data class Ledger(
      * still cover the whole lot. Otherwise it is in stock again — which is where a
      * thing whose only sale was a mistake belongs, it never having left our hands.
      *
+     * [pieces] takes back only part of the sale — three of ten rings sold as one. What
+     * stays of it counts toward covering the lot, but its own "the rest is not coming
+     * back" does not: pieces being handed back is the rest coming back.
+     *
      * It lives here rather than in each repository so the two cannot disagree.
      */
-    fun statusAfterUndoing(sell: Sell): ItemStatus? {
+    fun statusAfterUndoing(sell: Sell, pieces: Int = sell.quantity): ItemStatus? {
         val item = itemsById[sell.itemId] ?: return null
         // Written before removing became a delete, and not a statement about sales.
         if (item.status == ItemStatus.REMOVED) return item.status
 
         val remaining = sellsByItem[item.id].orEmpty().filterNot { it.id == sell.id }
+        val kept = (sell.quantity - pieces).coerceAtLeast(0)
         val closed = remaining.any { it.soldCompletely } ||
-            remaining.sumOf { it.quantity } >= item.quantity
+            remaining.sumOf { it.quantity } + kept >= item.quantity
         return if (closed) ItemStatus.SOLD else ItemStatus.IN_STOCK
     }
 

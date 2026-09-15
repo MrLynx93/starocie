@@ -62,7 +62,7 @@ class UndoingASaleTest {
         val repository = InMemoryLedgerRepository()
         val itemId = repository.addItem(buyId = null, draft = DraftItem(name = "talerze", quantity = 12))
         repository.recordSell(itemId, price = Money(4500), quantity = 3)
-        repository.recordSell(itemId, price = Money(3000), quantity = 2)
+        repository.recordSell(itemId, price = Money(3200), quantity = 2)
         val wrong = repository.ledger.value.sellsOfItem(itemId).first()
 
         repository.undoSell(wrong.id)
@@ -71,7 +71,7 @@ class UndoingASaleTest {
         val item = ledger.itemById(itemId)!!
         assertEquals(ItemStatus.IN_STOCK, item.status)
         assertEquals(10, ledger.piecesLeft(item))
-        assertEquals(Money(3000), ledger.itemStats(item).proceeds, "the other sale still stands")
+        assertEquals(Money(3200), ledger.itemStats(item).proceeds, "the other sale still stands")
     }
 
     @Test
@@ -79,7 +79,7 @@ class UndoingASaleTest {
         val repository = InMemoryLedgerRepository()
         val itemId = repository.addItem(buyId = null, draft = DraftItem(name = "kubki", quantity = 3))
         repository.recordSell(itemId, price = Money(1000), quantity = 1)
-        repository.recordSell(itemId, price = Money(2000), quantity = 2)
+        repository.recordSell(itemId, price = Money(2400), quantity = 2)
         assertEquals(ItemStatus.SOLD, repository.ledger.value.itemById(itemId)!!.status)
 
         repository.undoSell(repository.ledger.value.sellsOfItem(itemId).last().id)
@@ -96,7 +96,7 @@ class UndoingASaleTest {
         val repository = InMemoryLedgerRepository()
         val itemId = repository.addItem(buyId = null, draft = DraftItem(name = "talerze", quantity = 12))
         repository.recordSell(itemId, price = Money(3000), quantity = 2)
-        repository.recordSell(itemId, price = Money(4500), quantity = 3)
+        repository.recordSell(itemId, price = Money(4800), quantity = 3)
         repository.markSoldOut(itemId)
 
         repository.undoSell(repository.ledger.value.sellsOfItem(itemId).first().id)

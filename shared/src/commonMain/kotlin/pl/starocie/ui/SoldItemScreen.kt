@@ -210,14 +210,17 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
 
             Spacer(Modifier.height(24.dp))
 
-            // The heading carries the total, which is why there is no separate line
-            // adding the sales up underneath them.
+            // With several sales the heading carries the total, pieces and money, which
+            // is why there is no separate line adding the sales up underneath them. With
+            // one it is a bare "Sprzedaliśmy", like "Kupiliśmy" above: the sale's own
+            // field reads its total back, and the same sentence twice is noise.
             if (item.splittable) {
                 SectionLabel(
                     if (sells.size > 1) {
-                        "Sprzedaliśmy za ${stats.proceeds.format()} w ${sells.size} kawałkach"
+                        "Sprzedaliśmy ${sztuki(stats.soldQuantity)} za ${stats.proceeds.format()} " +
+                            "w ${sells.size} kawałkach"
                     } else {
-                        "Sprzedaliśmy za ${stats.proceeds.format()}"
+                        "Sprzedaliśmy"
                     },
                 )
             }
@@ -244,7 +247,7 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
                         else -> "${index + 1}. sprzedaż"
                     },
                     onDateChange = { viewModel.setSellDate(sell.id, it) },
-                    onPriceSave = { viewModel.setSellPrice(sell.id, it) },
+                    onPriceSave = { text, pieces -> viewModel.setSellPrice(sell.id, text, pieces) },
                     // Only where there are several to choose between: a single sale is
                     // taken back from the pinned button below instead.
                     onUndo = if (sells.size > 1) {
@@ -286,10 +289,10 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
         UndoSellDialog(
             sell = sell,
             splittable = item.splittable,
-            backInStock = ledger.statusAfterUndoing(sell) == ItemStatus.IN_STOCK,
+            backInStock = { ledger.statusAfterUndoing(sell, it) == ItemStatus.IN_STOCK },
             onConfirm = {
                 undoing = null
-                viewModel.undoSell(sell.id)
+                viewModel.undoSell(sell.id, it)
             },
             onDismiss = { undoing = null },
         )
@@ -302,17 +305,29 @@ fun SoldItemScreen(itemId: String, onDone: () -> Unit) {
  *
  * The text is held here, keyed by the sale, so a lot's several sales cannot share a
  * field between them — and so an edit survives the ledger echoing the write back.
+ *
+ * A sale of several pieces is typed **per piece**, in the words the paid field above
+ * uses — "Sprzedaliśmy po cenie za szt." over "Sprzedaliśmy 10 sztuk za 150,00 zł" —
+ * because ten rings went at one ring's price, and that is the number anybody
+ * remembers. `Sell.price` is still the total: the field multiplies on the way in and
+ * divides on the way out, so a total that will not divide loses the odd grosz to the
+ * display only, a price shown and left alone writing nothing.
  */
 @Composable
 private fun SaleFields(
     sell: Sell,
     caption: String?,
     onDateChange: (LocalDate) -> Unit,
-    onPriceSave: (String) -> Unit,
+    /** The typed text, and how many pieces it is the price of. */
+    onPriceSave: (text: String, pieces: Int) -> Unit,
     /** Null when this is the only sale, which the screen's pinned button takes back. */
     onUndo: (() -> Unit)?,
 ) {
-    var priceText by remember(sell.id) { mutableStateOf(sell.price.toInputText()) }
+    val perPiece = sell.quantity > 1
+    val shown = if (perPiece) sell.price / sell.quantity else sell.price
+    // Keyed by the count as well: a sale joined or partly taken back has a different
+    // price per piece from the one the field was seeded with.
+    var priceText by remember(sell.id, sell.quantity) { mutableStateOf(shown.toInputText()) }
 
     Column {
         caption?.let {
@@ -332,13 +347,19 @@ private fun SaleFields(
 
         Spacer(Modifier.height(10.dp))
 
+        val typed = parseMoney(priceText)
         MoneyField(
-            label = "Sprzedaliśmy za",
+            label = if (perPiece) "Sprzedaliśmy po cenie za szt." else "Sprzedaliśmy za",
             text = priceText,
             onTextChange = { priceText = it },
-            saved = sell.price,
+            saved = shown,
             placeholder = "Za ile poszło",
-            onSave = onPriceSave,
+            hint = if (perPiece && typed != null) {
+                "Sprzedaliśmy ${sztuki(sell.quantity)} za ${(typed * sell.quantity).format()}"
+            } else {
+                null
+            },
+            onSave = { onPriceSave(it, if (perPiece) sell.quantity else 1) },
         )
 
         // Under the sale it takes back, so each of a lot's sales carries its own and

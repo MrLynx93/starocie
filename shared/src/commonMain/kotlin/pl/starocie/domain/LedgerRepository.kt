@@ -93,6 +93,12 @@ interface LedgerRepository {
      * decides that, and for anything that was only ever one thing the count says
      * yes. A default of true would close a lot on every partial sale by a caller
      * that simply had no opinion.
+     *
+     * **Another sale of the same item today at the same price per piece is joined
+     * rather than repeated** ([Ledger.sellToJoin]): its pieces and its price grow by
+     * this sale's, so a lot sold a piece at a time over one afternoon is one sale.
+     * Both grow by increments rather than being written as totals, so two phones
+     * joining the same sale offline both land in it on reconnect.
      */
     suspend fun recordSell(
         itemId: String,
@@ -110,7 +116,12 @@ interface LedgerRepository {
      * its cost stays honestly unknown. A stated price opens a buy holding only this
      * item, which makes its cost exact rather than an allocated share.
      *
-     * Returns the new item's id.
+     * **Sold whole, the same thing sold again today is joined rather than repeated**
+     * ([Ledger.sellToJoinWith]) — the tenth ring rung up at 15,00 zł is not a tenth
+     * item. That item's count, its buy's price and its sale's pieces and price each
+     * grow by this one's, by increments, and no new document is written.
+     *
+     * Returns the new item's id, or the joined one's.
      */
     suspend fun recordBuyAndSell(
         paid: Money?,
@@ -244,8 +255,13 @@ interface LedgerRepository {
      * it: what it said before is recorded nowhere, and a guess would be a count nobody
      * typed. With no sale left against it [setQuantity] takes corrections again, so
      * the item screen can put it right.
+     *
+     * [pieces] takes back only some of a sale of several — the buyer who returned
+     * three of the ten rings. The sale stays with its pieces and its price reduced by
+     * that share ([Sell.priceOf]), by increments, and the pieces come back to stock;
+     * null, or all of them, deletes it as above.
      */
-    suspend fun undoSell(sellId: String)
+    suspend fun undoSell(sellId: String, pieces: Int? = null)
 
     /**
      * The rest of a lot is not coming back — kept, lost, given away or simply not

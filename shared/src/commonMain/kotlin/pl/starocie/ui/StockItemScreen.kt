@@ -444,10 +444,10 @@ fun StockItemScreen(itemId: String, onDone: () -> Unit, selling: Boolean = true)
         UndoSellDialog(
             sell = sell,
             splittable = item.splittable,
-            backInStock = ledger.statusAfterUndoing(sell) == ItemStatus.IN_STOCK,
+            backInStock = { ledger.statusAfterUndoing(sell, it) == ItemStatus.IN_STOCK },
             onConfirm = {
                 undoing = null
-                viewModel.undoSell(sell.id)
+                viewModel.undoSell(sell.id, it)
             },
             onDismiss = { undoing = null },
         )

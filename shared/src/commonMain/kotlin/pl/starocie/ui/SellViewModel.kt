@@ -428,8 +428,9 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
      * An unreadable amount writes nothing: a sale happened for *some* price, and
      * blanking the field is a half-typed number rather than an answer.
      */
-    fun setSellPrice(sellId: String, text: String) {
-        val price = parseMoney(text) ?: return
+    fun setSellPrice(sellId: String, text: String, pieces: Int = 1) {
+        // [pieces] as in [setPaidPrice]: a sale of several is typed per piece.
+        val price = parseMoney(text)?.times(pieces) ?: return
         viewModelScope.launch {
             runCatching { repository.setSellPrice(sellId, price) }
                 .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się zapisać") } }
@@ -447,9 +448,9 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
      * A sale taken back. The screen asks first, since it erases what the sale said;
      * after that it is written straight through like every other correction.
      */
-    fun undoSell(sellId: String) {
+    fun undoSell(sellId: String, pieces: Int) {
         viewModelScope.launch {
-            runCatching { repository.undoSell(sellId) }
+            runCatching { repository.undoSell(sellId, pieces) }
                 .onFailure { e -> local.update { it.copy(error = e.message ?: "Nie udało się cofnąć") } }
         }
     }

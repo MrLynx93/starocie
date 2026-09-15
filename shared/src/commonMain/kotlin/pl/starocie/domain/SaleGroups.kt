@@ -44,7 +44,7 @@ fun Ledger.saleGroups(sells: List<Sell>): List<SaleGroup> {
         val key: Any = if (item == null) sell.id else {
             val stats = itemStats(item)
             GroupKey(
-                name = item.name.trim().lowercase(),
+                name = item.name.nameKey(),
                 photo = if (item.photo == null) null else item.id,
                 cost = stats.cost?.let { perPiece(it, item.quantity) },
                 costIsEstimated = stats.costIsEstimated,

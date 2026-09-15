@@ -21,6 +21,9 @@ import pl.starocie.domain.Ledger
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.Sell
+import pl.starocie.domain.priceOf
+import pl.starocie.domain.sellToJoin
+import pl.starocie.domain.sellToJoinWith
 
 /**
  * Holds everything in memory, which is the same shape Firestore's offline cache
@@ -131,9 +134,27 @@ class InMemoryLedgerRepository(
             updatedAt = at,
         )
 
+        // Another sale of this thing today at the same price per piece grows instead.
+        val joined = state.value.sellToJoin(itemId, eventId, price, pieces)
+
         state.update { current ->
             current.copy(
-                sells = current.sells + sell,
+                sells = if (joined == null) {
+                    current.sells + sell
+                } else {
+                    current.sells.map {
+                        if (it.id != joined.id) {
+                            it
+                        } else {
+                            it.copy(
+                                quantity = it.quantity + pieces,
+                                price = it.price + price,
+                                soldCompletely = it.soldCompletely || resolves,
+                                updatedAt = at,
+                            )
+                        }
+                    }
+                },
                 items = current.items.map {
                     if (it.id != itemId || (!resolves && corrected == null)) {
                         it
@@ -157,6 +178,36 @@ class InMemoryLedgerRepository(
     ): String {
         val at = now()
         val eventId = ensureEvent(at)
+
+        // The same thing sold again today is more pieces of it, not a new thing.
+        val joined = if (soldCompletely) state.value.sellToJoinWith(eventId, draft, paid, price) else null
+        val joinedItem = joined?.let { state.value.itemById(it.itemId) }
+        if (joined != null && joinedItem != null) {
+            val pieces = draft.quantity.coerceAtLeast(1)
+            state.update { current ->
+                current.copy(
+                    items = current.items.map {
+                        if (it.id == joinedItem.id) it.copy(quantity = it.quantity + pieces, updatedAt = at) else it
+                    },
+                    buys = current.buys.map {
+                        if (paid != null && it.id == joinedItem.buyId && it.price != null) {
+                            it.copy(price = it.price + paid, updatedAt = at)
+                        } else {
+                            it
+                        }
+                    },
+                    sells = current.sells.map {
+                        if (it.id == joined.id) {
+                            it.copy(quantity = it.quantity + pieces, price = it.price + price, updatedAt = at)
+                        } else {
+                            it
+                        }
+                    },
+                )
+            }
+            return joinedItem.id
+        }
+
         if (paid != null) ensureLongAgoEvent(at)
 
         // A stated price gets a buy of its own, holding only this item, so its cost
@@ -355,16 +406,33 @@ class InMemoryLedgerRepository(
         }
     }
 
-    override suspend fun undoSell(sellId: String) {
+    override suspend fun undoSell(sellId: String, pieces: Int?) {
         val at = now()
         state.update { current ->
             val sell = current.sells.firstOrNull { it.id == sellId } ?: return@update current
+            val taken = pieces?.coerceIn(1, sell.quantity) ?: sell.quantity
             // Decided over the sales that remain, so a lot another sale still closes
             // stays closed, and anything else comes back.
-            val status = current.statusAfterUndoing(sell)
+            val status = current.statusAfterUndoing(sell, taken)
 
             current.copy(
-                sells = current.sells.filterNot { it.id == sellId },
+                sells = if (taken >= sell.quantity) {
+                    current.sells.filterNot { it.id == sellId }
+                } else {
+                    current.sells.map {
+                        if (it.id != sellId) {
+                            it
+                        } else {
+                            it.copy(
+                                quantity = it.quantity - taken,
+                                price = it.price - it.priceOf(taken),
+                                // Pieces handed back are the rest coming back after all.
+                                soldCompletely = it.soldCompletely && status != ItemStatus.IN_STOCK,
+                                updatedAt = at,
+                            )
+                        }
+                    }
+                },
                 items = current.items.map {
                     if (it.id == sell.itemId && status != null && status != it.status) {
                         it.copy(status = status, updatedAt = at)

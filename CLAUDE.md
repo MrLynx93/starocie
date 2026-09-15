@@ -137,6 +137,19 @@ putting the field back would find them where they were left.
    the count said before is recorded nowhere, and lowering it to a guess would be a
    number nobody typed; with no sale left against it, `setQuantity` takes the
    correction again.
+   **The same thing sold again the same day is written as one sale, not ten.**
+   Another sale of the same item on the same event at the same price per piece
+   (`Ledger.sellToJoin`) grows that sale's `quantity` and `price` instead of writing a
+   new `Sell`. So does a shortcut sale sold whole that matches something already sold
+   that day (`Ledger.sellToJoinWith`): the same name, trimmed and in any case, the same
+   price and cost per piece compared exactly, and a photo on neither. Then the item's
+   `quantity`, its buy's `price` and the sale all grow, and no document is written.
+   A stated cost only joins a buy the shortcut sale filed under "Dawno temu" holding
+   that thing alone — pieces added to a real giełda's buy would land in that day's
+   spend. The thing joined has to be `SOLD` already, so adding pieces sold in the same
+   breath leaves what was left of it untouched. Taking back **some** of a sale
+   shrinks it by that share (`Sell.priceOf`) and returns those pieces to stock; its
+   own `soldCompletely` goes with them, the rest coming back after all.
    `Sell.soldCompletely` stays as the override
    for "and the rest is not coming back" — kept, lost or given away — and it
    **defaults to false** on `recordSell`: a default of true would close a lot on
@@ -286,6 +299,10 @@ Security rules are a single predicate: the caller's uid is in the workspace's
 - **Multi-document writes use `WriteBatch`, never a transaction.** Transactions
   need a server round-trip and fail offline, breaking the stall case exactly when
   it matters.
+- **A count or a sum that grows or shrinks is written as `FieldValue.increment`**,
+  never as a total — joining a sale and taking back part of one. Two phones joining
+  the same sale offline each add their pieces; a total computed from each phone's own
+  view would keep only one of them and lose a ring and its money on reconnect.
 - **Writes never block on the network.** Firestore's local cache echoes the write
   immediately and the UI reflects that optimistic state. Never show a spinner while
   saving.
@@ -962,11 +979,17 @@ write nothing until their main button is pressed.
   out to be dated.
   **A single thing carries no headings** — four fields, each labelled, and a
   "Kupiliśmy"/"Sprzedaliśmy" divider above them would only name what the labels
-  already say. A lot earns them back, having several sales to tell apart, and its
-  selling heading carries the total — "Sprzedaliśmy za 806,00 zł w 3 kawałkach" —
-  which is why nothing adds the sales up again underneath them.
+  already say. A lot earns them back, and with several sales its selling heading
+  carries the total — "Sprzedaliśmy 12 sztuk za 806,00 zł w 3 kawałkach" — which is
+  why nothing adds the sales up again underneath them. With one sale it is a bare
+  "Sprzedaliśmy", like "Kupiliśmy" above it, the sale's own field reading its total
+  back.
   A lot that went in several sales gets a date and a price **per sale**, each
-  happening on its own day for its own money.
+  happening on its own day for its own money. **A sale of several pieces is priced per
+  piece**, in the paid field's own words — "Sprzedaliśmy po cenie za szt." over
+  "Sprzedaliśmy 10 sztuk za 150,00 zł" — because ten rings went at one ring's price.
+  `Sell.price` stays the total: the field multiplies on the way in and divides on the
+  way out, exactly as the paid field does.
   There is **no "Usuń"** here — deleting belongs where a thing still exists to be got
   rid of, and erasing a sold item would only lose the proceeds it is the record of.
   **"Cofnij sprzedaż" is there** instead, for the one mistake no field can
@@ -981,7 +1004,12 @@ write nothing until their main button is pressed.
   It is red and it
   asks first, since it erases a record and that day's takings drop by it, and the
   dialog says both halves: "Przedmiot wróci do magazynu, a sprzedaż za 45,00 zł
-  zniknie z naszych rachunków." The sale is **deleted rather than flagged** — every
+  zniknie z naszych rachunków." **A sale of several pieces asks how many come back**,
+  with the sell dialog's own stepper starting at all of them and stopping there — the
+  wrong row tapped is the commoner mistake, the buyer returning three rings of ten the
+  other. The text follows the count: "3 sztuki wrócą do magazynu, a z naszych
+  rachunków zniknie 45,00 zł." Taking all of them deletes the sale; fewer shrinks it.
+  The same dialog serves the magazyn's sale lines. The sale is **deleted rather than flagged** — every
   figure it fed is computed, so nothing else needs telling — and nothing is written
   into today. The item goes back into stock unless the sales that remain still close
   it, which `Ledger.statusAfterUndoing` decides so the two repositories cannot differ.
@@ -1045,9 +1073,12 @@ write nothing until their main button is pressed.
   fractions**, so two for 30,00 zł joins one for 15,00 zł — and a photo that could
   tell them apart: none on either thing, or the very same item, a lot sold a piece at
   a time. The cost per piece is read off the item rather than each sale's share,
-  since a lot's shares differ by a grosz on purpose and are still one purchase. It is
-  **only a reading**: every `Sell` stays its own document, the line opens its newest
-  sale's thing, and "Cofnij sprzedaż" there takes back one of the ten. A line of
+  since a lot's shares differ by a grosz on purpose and are still one purchase.
+  **New sales like that are joined when they are written** (see invariant 5), so the
+  line is usually one `Sell` already, and it opens one thing that corrects all ten.
+  The collapsing on screen stays for what was written apart: records from before the
+  join existed, two phones selling the same ring offline, and separately recorded
+  things from the magazyn. There the line opens its newest sale's thing. A line of
   several pieces says its prices per piece where they divide into whole grosze, and
   as the total where they do not, rather than rounding into a price nobody paid.
   That screen carries **the same search box as the three lists, under the day's
