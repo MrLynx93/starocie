@@ -40,9 +40,15 @@ import pl.starocie.domain.sum
  * A row opens the item, always. Selling, correcting a price and deleting all live
  * there, one screen away from the list, where there is room to read before acting.
  *
- * [selling] is the single difference: coming in from "Sprzedaj" adds the button for
- * a thing that was never recorded at all. From the magazyn it is absent, because
- * you did not come here to buy anything.
+ * [selling] is the difference, and it changes two things. Coming in from "Sprzedaj"
+ * adds the button for a thing that was never recorded at all — from the magazyn it is
+ * absent, because you did not come here to buy anything — and the heading becomes the
+ * question being answered, "Co chcesz sprzedać?" rather than "Nasz magazyn". The list
+ * itself, its figures and its rows stay exactly the same either way.
+ *
+ * The heading matters most coming from a giełda, which is the one door where the
+ * screen behind is a place rather than a list: without it, a day's "Sprzedaj" landed
+ * on a page that gave no sign the sale was still going to be recorded into that day.
  */
 @Composable
 fun StockScreen(
@@ -61,7 +67,15 @@ fun StockScreen(
     }
 
     ScreenColumn {
-        Text("Nasz magazyn", style = MaterialTheme.typography.headlineSmall)
+        // Opened to sell from, the heading is the question being answered — the same
+        // second person the search box under it uses, and for the same reason: it is
+        // the app asking the person holding the phone, not the notebook saying what we
+        // did. It is also what says this is a step in selling rather than the magazyn
+        // arrived at, which a giełda's own "Sprzedaj" had no other way to show.
+        Text(
+            if (selling) "Co chcesz sprzedać?" else "Nasz magazyn",
+            style = MaterialTheme.typography.headlineSmall,
+        )
         // The asking total is what the list is worth, and with the unpriced ones on
         // their own there is no such number — every one of them is the gap. "Chcemy
         // sprzedać za łącznie 0,00 zł" would be the app answering a question it has

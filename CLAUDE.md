@@ -592,7 +592,12 @@ second person the way a button is imperative. It is **one string in four places*
 has to stay that way; two lists asking the same question in two different voices is
 exactly the small wrongness that makes an app feel unfinished.
 
-Everything else is "we", and a third exception is drift rather than a pattern.
+The sell list's heading, **"Co chcesz sprzedać?"**, is that same exception one line
+higher up the screen: the list is being offered to pick from, so the app asks, and it
+is second person for exactly as long as the screen is a step in selling. Browsed from
+the magazyn card the same screen says "Nasz magazyn", which is us again.
+
+Everything else is "we", and a fourth exception is drift rather than a pattern.
 
 ## Screens
 
@@ -781,10 +786,17 @@ write nothing until their main button is pressed.
   "Mamy 3 przedmioty · Jeszcze ich nie wyceniliśmy" — because the asking total of
   things that are asked at nothing is 0,00 zł, which would be the app answering the
   very question it has just been told nobody can answer yet.
-  **The route is the only difference.** Arriving from "Sprzedaj" adds the
-  "Dodaj … i sprzedaj" button, pinned at the bottom above "Wstecz" rather than
-  sitting under the search box where it used to shove the list down a line every
-  time the typing stopped matching. From the magazyn card it is simply absent.
+  **The route changes the heading and one button, and nothing else.** Arriving from
+  "Sprzedaj" adds the "Dodaj … i sprzedaj" button, pinned at the bottom above "Wstecz"
+  rather than sitting under the search box where it used to shove the list down a line
+  every time the typing stopped matching; from the magazyn card it is simply absent.
+  It also heads the screen **"Co chcesz sprzedać?" rather than "Nasz magazyn"** — the
+  same second person the search box under it uses, and the same reason: the app is
+  asking the person holding the phone, not saying what we did. That is what tells you
+  the list is a step in selling rather than the magazyn arrived at, which matters most
+  coming from a giełda — the one door where what you left is a day rather than a list,
+  and where the sale you are about to make is recorded into that day. The list, its
+  two figures and its rows are identical either way.
   **The item screen puts the facts above and the three buttons below** — Sprzedaj,
   Usuń, Wstecz — pinned, so what you can do about a thing is always in the same
   place under the thumb while what it is scrolls past.
