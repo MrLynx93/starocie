@@ -606,7 +606,8 @@ outlined, arrow and word, always doing exactly one thing. That is where the thum
 already is, and having one guaranteed exit is what lets the primary button be
 strict about its required fields instead of quietly doubling as the way out. It
 replaced a "Gotowe" here, a "Wróć" there and an "Anuluj" on the two forms that
-write nothing until their main button is pressed.
+write nothing until their main button is pressed. The magazyn list alone puts it
+away while its search is being typed into, the keyboard then covering where it sits.
 
 - **Home** — "Nasze starocie" at the top with **the light/dark switch on its line**,
   right-hand end: it is the only app-wide setting there is, and a top bar to hold
@@ -773,8 +774,17 @@ write nothing until their main button is pressed.
   invariant 1, so a lot's whole cost sitting under a single piece's ask is a gap that
   is not there — a crate of twelve read as a disaster, on the one list whose job is
   saying what is worth selling.
-  The count and the total are computed over **what is on screen**, so a search
-  answers for what it found rather than for the whole magazyn.
+  The count and the total are **the magazyn's, not the search's**: typing a name to
+  find one thing does not change how much we have, so the heading stays put while the
+  list under it narrows. The unpriced filter below is the one thing that moves them,
+  being a question about the magazyn rather than a search through it.
+  **While the keyboard is up, the screen is for the rows.** The figures under the
+  heading, "Wstecz" and most of the bottom margin go until it is put away, so what the
+  typing found fills the space the keyboard left — on a phone half-covered by it those
+  lines were two or three rows nobody could see. The heading and "Dodaj … i sprzedaj"
+  stay: one says which door this is, the other is where a failed search goes next.
+  Leaving is not lost with the button, the system back closing the keyboard first and
+  bringing it back. This is the one place "Wstecz" is ever not on screen.
   **One filter sits under that box, "Niewycenione przedmioty"**, and it is the one
   question the typing cannot ask: a thing we have not decided a price for has no
   name to type. It is what the magazyn is read for between giełdy — what still has
@@ -963,8 +973,9 @@ write nothing until their main button is pressed.
   shares that list's predicate — the name, case-insensitive, in memory — so the
   two can never answer differently about the same typing. Over the box sit the two
   figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
-  "Zarobiliśmy ok. 240,00 zł", **both computed over what is on screen**, so a search
-  answers for what it found. Everything sold is in that profit, including what we
+  "Zarobiliśmy ok. 240,00 zł", **both over everything sold rather than over what the
+  search found** — the heading says what we have sold, and looking for one thing does
+  not change it. Everything sold is in that profit, including what we
   never recorded buying: with no cost against it, what it went for is what it made,
   and its row says as much on the left — "Nie wiemy, za ile kupiliśmy" over what we
   took.
@@ -1102,9 +1113,8 @@ write nothing until their main button is pressed.
   is honestly in each, so one box has to find it in both. It is under the figures
   rather than over them because those figures are **the day's and stay the day's**:
   they are what the row in the list behind says as well, and the two must not
-  disagree because somebody is looking for a lamp. That is the opposite of the
-  magazyn and the sold list, whose totals *are* computed over what was found — there
-  the heading answers for the list, here it answers for the giełda. A sale is matched
+  disagree because somebody is looking for a lamp. The magazyn and the sold list keep
+  their headings still for the same reason. A sale is matched
   on its item's name, so a deleted thing's sale has nothing left to match and drops
   out of a search; it is back the moment the box is cleared. The box only appears
   once the day holds something, there being nothing to search in an empty one.

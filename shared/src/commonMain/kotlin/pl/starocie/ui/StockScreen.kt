@@ -1,8 +1,10 @@
 package pl.starocie.ui
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,15 +19,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import pl.starocie.domain.format
-import pl.starocie.domain.sum
 
 /**
  * Everything we are holding: one list, searched, whichever way you came in.
@@ -62,13 +65,16 @@ fun StockScreen(
     val viewModel: SellViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Over what is on screen rather than over the whole magazyn: with a search
-    // running, the total that matters is the total of what was found.
-    val shownValue = remember(state.inStock) {
-        state.inStock.mapNotNull { it.item.price }.sum()
-    }
+    // The keyboard is up only while the search box is being typed into, and then the
+    // screen is for the rows: the heading's figures, "Wstecz" and most of the bottom
+    // margin go until it is put away, so what the typing found is what fills the
+    // space left. Leaving is still one system back away — the first closes the
+    // keyboard and brings the button back.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val typing by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
 
-    ScreenColumn {
+    ScreenColumn(bottom = if (typing) 8.dp else 20.dp) {
         // Opened to sell from, the heading is the question being answered — the same
         // second person the search box under it uses, and for the same reason: it is
         // the app asking the person holding the phone, not the notebook saying what we
@@ -78,21 +84,29 @@ fun StockScreen(
             if (selling) "Co chcesz sprzedać?" else "Nasz magazyn",
             style = MaterialTheme.typography.headlineSmall,
         )
-        // The asking total is what the list is worth, and with the unpriced ones on
-        // their own there is no such number — every one of them is the gap. "Chcemy
-        // sprzedać za łącznie 0,00 zł" would be the app answering a question it has
-        // just been told nobody can answer yet.
-        val summary = if (state.onlyUnpriced) {
-            "Jeszcze ${if (state.inStock.size == 1) "go" else "ich"} nie wyceniliśmy"
-        } else {
-            "Chcemy sprzedać za łącznie ${shownValue.format()}"
-        }
 
-        Text(
-            "Mamy ${przedmioty(state.inStock.size)} · $summary",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!typing) {
+            // Over the magazyn, not over what the search found: the heading says what
+            // we have, and looking for one thing does not change that. The unpriced
+            // filter does move it, being a question about the magazyn rather than a
+            // search through it.
+            //
+            // The asking total is what the list is worth, and with the unpriced ones
+            // on their own there is no such number — every one of them is the gap.
+            // "Chcemy sprzedać za łącznie 0,00 zł" would be the app answering a
+            // question it has just been told nobody can answer yet.
+            val summary = if (state.onlyUnpriced) {
+                "Jeszcze ${if (state.shelfCount == 1) "go" else "ich"} nie wyceniliśmy"
+            } else {
+                "Chcemy sprzedać za łącznie ${state.shelfValue.format()}"
+            }
+
+            Text(
+                "Mamy ${przedmioty(state.shelfCount)} · $summary",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -188,10 +202,10 @@ fun StockScreen(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            if (!typing) Spacer(Modifier.height(10.dp))
         }
 
-        BackButton(onDone)
+        if (!typing) BackButton(onDone)
     }
 }
 

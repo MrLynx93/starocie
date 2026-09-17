@@ -59,21 +59,24 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     // Newest sale first: the thing you are least sure about is the thing that went
     // last. Items with no completed sale left by some other route, so they fall
     // back to when the record was last touched.
-    val sold = remember(ledger, query) {
+    val everything = remember(ledger) {
         ledger.items
             .filter { it.status == ItemStatus.SOLD }
-            .filter { query.isBlank() || it.matchesQuery(query) }
             .map { it to ledger.itemStats(it) }
             .sortedByDescending { (item, stats) -> stats.soldAt ?: item.updatedAt }
     }
-    // Over what is on screen, so a search answers for what it found.
-    val proceeds = remember(sold) { sold.map { (_, stats) -> stats.proceeds }.sum() }
-    val profit = remember(sold) { soldProfit(sold.map { (_, stats) -> stats }) }
+    val sold = remember(everything, query) {
+        everything.filter { (item, _) -> query.isBlank() || item.matchesQuery(query) }
+    }
+    // Over everything sold, not over what the search found: the heading says what we
+    // have sold, and looking for one thing does not change that.
+    val proceeds = remember(everything) { everything.map { (_, stats) -> stats.proceeds }.sum() }
+    val profit = remember(everything) { soldProfit(everything.map { (_, stats) -> stats }) }
 
     ScreenColumn {
         Text("Co sprzedaliśmy", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Sprzedaliśmy ${przedmioty(sold.size)} za ${proceeds.format()}",
+            "Sprzedaliśmy ${przedmioty(everything.size)} za ${proceeds.format()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

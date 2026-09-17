@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -22,12 +23,16 @@ import androidx.compose.ui.unit.dp
  *
  * The content is a [Column], so a screen keeps its usual shape: something with
  * `weight(1f)` scrolls, and everything after it stays put beneath.
+ *
+ * [bottom] is the one edge a screen may pull in: a list searched with the keyboard up
+ * has the keyboard for a floor, and the usual margin there is rows it cannot show.
  */
 @Composable
-internal fun ScreenColumn(content: @Composable ColumnScope.() -> Unit) {
+internal fun ScreenColumn(bottom: Dp = 20.dp, content: @Composable ColumnScope.() -> Unit) {
     Scaffold { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).imePadding().padding(20.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).imePadding()
+                .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = bottom),
             content = content,
         )
     }

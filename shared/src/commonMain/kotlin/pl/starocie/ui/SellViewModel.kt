@@ -16,6 +16,7 @@ import pl.starocie.domain.ItemStats
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.parseMoney
+import pl.starocie.domain.sum
 import pl.starocie.domain.toInputText
 
 /**
@@ -101,6 +102,14 @@ data class SellUiState(
      */
     val onlyUnpriced: Boolean = false,
     val inStock: List<StockEntry> = emptyList(),
+    /**
+     * What the heading counts: the magazyn, or the unpriced part of it while that
+     * filter is on — but never what the search found. The heading says what we have,
+     * and typing a name to find one thing does not change how much that is.
+     */
+    val shelfCount: Int = 0,
+    /** The asking total of those same things, for the heading beside [shelfCount]. */
+    val shelfValue: Money = Money(0),
     val selected: Item? = null,
     val priceText: String = "",
     /** How many of a lot's pieces this sale takes. One thing is always one. */
@@ -198,7 +207,13 @@ class SellViewModel(private val repository: LedgerRepository) : ViewModel() {
         val stock = everything
             .narrowedForStock(ui.query, ui.onlyUnpriced)
             .map { StockEntry(it, ledger.itemStats(it), ledger.piecesLeft(it)) }
-        ui.copy(inStock = stock, hasUnpriced = everything.any { it.price == null })
+        val shelf = everything.narrowedForStock(query = "", ui.onlyUnpriced)
+        ui.copy(
+            inStock = stock,
+            shelfCount = shelf.size,
+            shelfValue = shelf.mapNotNull { it.price }.sum(),
+            hasUnpriced = everything.any { it.price == null },
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SellUiState())
 
     fun onQueryChange(value: String) = local.update { it.copy(query = value) }
