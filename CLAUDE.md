@@ -786,7 +786,11 @@ write nothing until their main button is pressed.
   "Mamy 3 przedmioty · Jeszcze ich nie wyceniliśmy" — because the asking total of
   things that are asked at nothing is 0,00 zł, which would be the app answering the
   very question it has just been told nobody can answer yet.
-  **The route changes the heading and one button, and nothing else.** Arriving from
+  **It is only offered from the magazyn card.** Opened to sell from, the thing being
+  looked for is already in somebody's hand, and whether it has an asking price is
+  something the sell dialog settles anyway — the filter is a chore for between
+  giełdy, not a step in a sale.
+  **The route changes the heading, one button and that filter, and nothing else.** Arriving from
   "Sprzedaj" adds the "Dodaj … i sprzedaj" button, pinned at the bottom above "Wstecz"
   rather than sitting under the search box where it used to shove the list down a line
   every time the typing stopped matching; from the magazyn card it is simply absent.

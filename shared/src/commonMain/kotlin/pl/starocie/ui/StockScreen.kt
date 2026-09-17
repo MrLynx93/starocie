@@ -40,11 +40,13 @@ import pl.starocie.domain.sum
  * A row opens the item, always. Selling, correcting a price and deleting all live
  * there, one screen away from the list, where there is room to read before acting.
  *
- * [selling] is the difference, and it changes two things. Coming in from "Sprzedaj"
+ * [selling] is the difference, and it changes three things. Coming in from "Sprzedaj"
  * adds the button for a thing that was never recorded at all — from the magazyn it is
- * absent, because you did not come here to buy anything — and the heading becomes the
- * question being answered, "Co chcesz sprzedać?" rather than "Nasz magazyn". The list
- * itself, its figures and its rows stay exactly the same either way.
+ * absent, because you did not come here to buy anything — the heading becomes the
+ * question being answered, "Co chcesz sprzedać?" rather than "Nasz magazyn", and the
+ * "Niewycenione przedmioty" filter goes, being a question for the magazyn between
+ * giełdy rather than for somebody holding a thing out. The list's rows stay exactly
+ * the same either way.
  *
  * The heading matters most coming from a giełda, which is the one door where the
  * screen behind is a place rather than a list: without it, a day's "Sprzedaj" landed
@@ -107,7 +109,12 @@ fun StockScreen(
         // nothing to type. It sits under the box because it narrows the same list in
         // the same way, and it is only drawn while there is something to find — a
         // switch that can only ever empty the list is a line about nothing.
-        if (state.offersUnpricedFilter) {
+        //
+        // Only from the magazyn card, though. It is what the list is read for between
+        // giełdy — what still needs a price before the next one — and at the stall the
+        // thing being looked for is in somebody's hand, priced or not. Each route owns
+        // its own view model, so the selling list can never inherit the filter on.
+        if (!selling && state.offersUnpricedFilter) {
             Spacer(Modifier.height(10.dp))
 
             // A tick while it is on, and the slot empty while it is off: the chip's
