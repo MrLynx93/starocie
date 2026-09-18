@@ -1235,6 +1235,17 @@ Studio's own device picker, debugger and logcat. They are the one thing under
 `.idea/` that is not gitignored: a button that exists only on the machine it was
 made on is a setting each of us has to rediscover.
 
+**Two more buttons build the file rather than the phone** — "APK (prod)" and
+"APK (test)", Gradle configurations running `:androidApp:assembleDebug` and
+`:androidAppTest:assembleDebug`. The pair above them deploys over a cable to
+whatever Studio's device picker is pointed at, which is the wrong shape when what
+is wanted is the `.apk` itself: the other phone is not plugged in, and sending
+somebody a build is sending them a file. They name a module the same way, so the
+same rule holds — the button says which books it is for, and nothing in a panel
+can change that. Each leaves its APK where the workflow picks its own up,
+`<module>/build/outputs/apk/debug/<module>-debug.apk`, and it is a debug build
+for the same reason CI's is: an unsigned release APK will not install at all.
+
 A module is also something the IDE has to be told about: until Gradle is synced,
 `:androidAppTest` is not in Studio's model and its button falls back to the app
 Studio does know, which is the real one. A sync is the first thing to try when a
@@ -1378,6 +1389,9 @@ test.
 **Debug, not release**, because the debug keystore is generated and an unsigned
 release APK will not install at all. Every push to `main` or a `claude/**`
 branch rebuilds it and moves that download on.
+
+The same two APKs are a button away in Studio — "APK (prod)" and "APK (test)",
+above — for the build that is wanted before it has been pushed anywhere.
 
 To rebuild by hand, use **Actions → Android APK → Run workflow**. It leaves the
 release alone by default and attaches the APK to the run instead, because a
