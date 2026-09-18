@@ -785,6 +785,8 @@ away while its search is being typed into, the keyboard then covering where it s
   stay: one says which door this is, the other is where a failed search goes next.
   Leaving is not lost with the button, the system back closing the keyboard first and
   bringing it back. This is the one place "Wstecz" is ever not on screen.
+  What the margin gives back is real only because `ScreenColumn` stopped paying for
+  the gesture bar and the keyboard separately — see there.
   **One filter sits under that box, "Niewycenione przedmioty"**, and it is the one
   question the typing cannot ask: a thing we have not decided a price for has no
   name to type. It is what the magazyn is read for between giełdy — what still has
