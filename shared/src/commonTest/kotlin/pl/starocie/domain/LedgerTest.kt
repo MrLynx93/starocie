@@ -447,6 +447,49 @@ class LedgerTest {
     }
 
     /**
+     * The home screen's "Sprzedaliśmy N przedmiotów" is the giełdy's own figure summed,
+     * so the two must agree to the piece and to the grosz.
+     *
+     * It used to count the things that were wholly gone, which is neither: a lot of
+     * twelve plates sold at one giełda is one such thing and twelve pieces sold there,
+     * and a lot sold in part is no such thing at all while having taken real money. The
+     * home total read smaller than the days it is made of both ways at once.
+     */
+    @Test
+    fun what_we_have_sold_altogether_is_what_the_giełdy_sold_summed() {
+        val ledger = Ledger(
+            events = listOf(event("2026-08-02", D1), event("2026-08-03", D1)),
+            buys = listOf(buy("b1", price = 6000), buy("b2", price = 2000)),
+            items = listOf(
+                // A lot of twelve that went whole, in two sales on two days.
+                item("plates", price = 700, buyId = "b1", quantity = 12, status = ItemStatus.SOLD),
+                // A lot of ten still in the magazyn with three of it gone.
+                item("rings", price = 300, buyId = "b2", quantity = 10),
+            ),
+            sells = listOf(
+                sell(
+                    "s1", "plates", 5000,
+                    eventId = "2026-08-02", quantity = 8, soldCompletely = false,
+                ),
+                sell("s2", "plates", 2500, eventId = "2026-08-03", quantity = 4),
+                sell(
+                    "s3", "rings", 900,
+                    eventId = "2026-08-03", quantity = 3, soldCompletely = false,
+                ),
+            ),
+        )
+
+        val days = ledger.events.map { ledger.eventStats(it) }
+        val overall = ledger.overallStats()
+
+        assertEquals(15, days.sumOf { it.itemsSold }, "8 plates, then 4 more and 3 rings")
+        assertEquals(15, overall.itemsSold, "the home screen counts pieces, not records")
+        assertEquals(Money(8400), overall.earned)
+        assertEquals(days.map { it.earned }.sum(), overall.earned)
+        assertEquals(Money(days.sumOf { it.profit.minor }), overall.profit)
+    }
+
+    /**
      * A 100.00 box of four: cup, candle and book priced 50 / 30 / 25, plus an
      * unpriced plate that later breaks. Allocation is 35.71 / 21.43 / 17.86 / 25.00.
      */

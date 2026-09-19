@@ -250,11 +250,14 @@ behind the item, or no item left at all — is set against **nothing**, so its w
 price counts, and **every sale is in the figure**. Nothing is left out, so no screen
 has a gap to admit: the profit is always a number.
 
-`overallStats` answers the home screen's third card, and it **sums the days rather
-than the sales**: an event is the sole grouping, so every sale belongs to exactly one
-day and no sale can fall outside the total or land in it twice. It returns
-`EventStats` — the fields all still mean what they mean for one day — so the card and
-the giełdy list cannot disagree.
+`overallStats` answers the home screen's second and third cards and the sold list's
+own two figures, and it **sums the days rather than the sales**: an event is the sole
+grouping, so every sale belongs to exactly one day and no sale can fall outside the
+total or land in it twice. It returns `EventStats` — the fields all still mean what
+they mean for one day — so the cards and the giełdy list cannot disagree. **What we
+have sold is `itemsSold`, which is pieces**, never a count of `SOLD` items: that is
+one number for a lot of twelve and none at all for a lot sold in part, and both make
+the home screen smaller than the days beneath it.
 
 `sellingSessions()` and `buyingSessions()` split the days between them: the ones with
 at least one `Sell`, and the ones with buys and no sale. **They are complementary**,
@@ -624,6 +627,13 @@ away while its search is being typed into, the keyboard then covering where it s
   **"Mamy 12 przedmiotów" / "Chcemy sprzedać za łącznie …"**,
   **"Sprzedaliśmy 12 przedmiotów" / "Sprzedaliśmy za łącznie …"**, and
   **"Mamy za sobą 12 giełd" / "Zarobiliśmy na nich ok. …"**.
+  **The second card counts pieces and comes out of `overallStats()`**, exactly as the
+  third does, so it is the giełdy's own `itemsSold` and `earned` summed and the home
+  screen cannot answer smaller than the days it is the total of. It counted the things
+  that were wholly gone, and that is two wrongnesses at once: a lot of twelve plates
+  sold at a giełda is twelve things sold there and one record, and a lot sold in part
+  is still `IN_STOCK`, so what went out of it counted nowhere on this screen at all —
+  its money included, the subtitle having been those same records' proceeds.
   **The third card counts only the days we sold something on** — `Ledger.sellingSessions()`,
   the events with at least one `Sell`. An `Event` is created by buying as readily as
   by selling, so a trip to somebody's garage makes one exactly like a market does;
@@ -977,7 +987,13 @@ away while its search is being typed into, the keyboard then covering where it s
   figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
   "Zarobiliśmy ok. 240,00 zł", **both over everything sold rather than over what the
   search found** — the heading says what we have sold, and looking for one thing does
-  not change it. Everything sold is in that profit, including what we
+  not change it. They are **over the sales rather than over the rows**, out of
+  `overallStats()` like the home card that opens this screen: a row is a thing wholly
+  gone, and a lot of twelve plates is one of those while being twelve things sold, so
+  counting rows made this line disagree with the giełdy and left a lot sold in part
+  out altogether — pieces and money both, it being still in the magazyn. A lot's row
+  says how many of it went ("Sprzedaliśmy 12 sztuk za 806,00 zł"), so the list can be
+  read against the count above it. Everything sold is in that profit, including what we
   never recorded buying: with no cost against it, what it went for is what it made,
   and its row says as much on the left — "Nie wiemy, za ile kupiliśmy" over what we
   took.

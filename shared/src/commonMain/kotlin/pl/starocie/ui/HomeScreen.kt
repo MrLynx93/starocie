@@ -52,7 +52,6 @@ import kotlin.time.ExperimentalTime
 import org.koin.compose.koinInject
 import pl.starocie.domain.CurrentEventResolver
 import pl.starocie.domain.EventStats
-import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.format
@@ -84,11 +83,10 @@ fun HomeScreen(
 
     val stock = ledger.itemsInStock()
     val stockValue = stock.mapNotNull { it.price }.sum()
-    val sold = ledger.items.filter { it.status == ItemStatus.SOLD }
-    val soldProceeds = sold.map { ledger.itemStats(it).proceeds }.sum()
     val recentSells = ledger.sells.sortedByDescending { it.createdAt }.take(30)
     // What every giełda made, not what it took: each sale against what its own
-    // pieces cost. Takings minus spending would be two unrelated days' money.
+    // pieces cost. Takings minus spending would be two unrelated days' money. It is
+    // also what the second card counts and totals by — see there.
     val sessions = remember(ledger) { ledger.overallStats() }
     // A day we only bought on is not a giełda, so it is not counted as one — and the
     // list behind this card leaves out exactly the same days.
@@ -216,8 +214,16 @@ fun HomeScreen(
                 // Money taken, rather than the tag on "Sprzedaj": the button is the
                 // act and this is what the act came to.
                 icon = Icons.Filled.Payments,
-                title = if (skeleton) null else "Sprzedaliśmy ${przedmioty(sold.size)}",
-                subtitle = if (skeleton) null else "Sprzedaliśmy za łącznie ${soldProceeds.format()}",
+                // Pieces, out of the days themselves, and not the things that are
+                // wholly gone: a lot of twelve plates that went at one giełda is
+                // twelve things sold there, and counting the record instead made it
+                // one — so the home screen answered smaller than the giełdy it is
+                // the total of. A lot sold in part is the other half of the same
+                // wrongness: it is still IN_STOCK, so what went out of it counted
+                // nowhere here at all, money included. Both are the same figure the
+                // day's own row reads, summed over every day.
+                title = if (skeleton) null else "Sprzedaliśmy ${przedmioty(sessions.itemsSold)}",
+                subtitle = if (skeleton) null else "Sprzedaliśmy za łącznie ${sessions.earned.format()}",
                 openLabel = "Pokaż, co sprzedaliśmy",
                 onClick = onSold,
                 titleWidth = 0.62f,
