@@ -25,7 +25,7 @@ left, and rows 77 dp tall:
 | magazyn (filter on)  | 178 dp | 4.1 |
 | sold                 | 232 dp | 3.4 |
 | giełdy               | 152 dp | 4.5 |
-| one giełda           | 308 dp | 2.5 |
+| one giełda           | 308 dp | 2.0 |
 
 The magazyn is the only one that collapses anything at all while the keyboard is up —
 its two figures, "Wstecz" and most of the bottom margin go. The other three do not, and
@@ -134,7 +134,12 @@ Same phone, same keyboard, rows now 68 dp:
 | magazyn (filter on)  | 178 dp | 128 dp | 4.1 | **5.4** |
 | sold                 | 232 dp | 86 dp | 3.4 | **6.0** |
 | giełdy               | 152 dp | 86 dp | 4.5 | **6.0** |
-| one giełda           | 308 dp | 86 dp | 2.5 | **6.0** |
+| one giełda           | 308 dp | 86 dp | 2.0 | **5.5** |
+
+A giełda's two counts are the odd ones out because its list carries a section heading
+inside it — `SectionLabel` is a `titleSmall` and a rule, 39 dp — and that is drawn either
+way. It is the one place where what you can see is not simply the list area divided by
+the row height.
 
 Idle, the four screens are 40 dp shorter in the head and every row is 8 dp shorter, which
 is the "more concise" half: about one extra row on each list before anybody types
