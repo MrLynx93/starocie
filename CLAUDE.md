@@ -1069,6 +1069,14 @@ away while its search is being typed into, the keyboard then covering where it s
   **Each line appears only if that half of the day happened**: a day of only shopping
   says what we bought and nothing else, a nought beside a nought being a sentence
   with nothing in it — and on the list of those days, every row would carry one.
+  **A day with no sale puts what it cost where the profit would go**, and the line on
+  the left then drops the sum and keeps the count — "Kupiliśmy 17 rzeczy" over there,
+  "492,00 zł" and "Wydaliśmy" over here. Such a day has no profit to name and must not
+  claim a nought, and what it does have is the money that left our hands, which is the
+  whole of what the day was: on "Nasze zakupy" the figure every row is read for sat at
+  the tail of a sentence while the place the eye goes for it stood empty. One rule
+  decides it for both halves, so the sum appears once — the figure and the line cannot
+  each think the other is carrying it.
   One composable draws these figures for the list row and for the day's own screen,
   so the two cannot fall out of step.
   **Each of the pair is one line and stays one line**, ellipsised rather than wrapped:
@@ -1087,7 +1095,14 @@ away while its search is being typed into, the keyboard then covering where it s
   add up to a day. Nothing above the box is computed over what the search found,
   because there is nothing above it to compute.
   **A row opens the day**, onto its own screen — the magazyn's list and the sold list
-  narrowed to it, in two sections, with the same rows and the same wording. A row
+  narrowed to it, in two sections, with the same rows and the same wording, **except
+  that "Co kupiliśmy" answers in cost rather than in ask**: the figure on the right of
+  those rows is what the whole thing cost us — a lot of three at 30,00 zł reading
+  90,00 zł, a share of a box still marked "ok." — under a "Kupiliśmy" saying which
+  figure it is, and the line under the name goes, one number in two places on one row
+  being a row read twice. A day is read for the money that left our hands, and the
+  per-piece ask the magazyn shows there is a different question asked of the same
+  thing; it is a tap away, on the thing itself. A row
   there opens the thing, in the magazyn's item screen or the sold one depending on
   where it is now — **minus the way to sell it**, since the day it would be sold
   into is not the day on screen. A day is a way *into* the records rather than a
@@ -1124,6 +1139,14 @@ away while its search is being typed into, the keyboard then covering where it s
   the reason its rows keep "Sprzedaj": the day on screen is the one every write
   resolves to, so what it records lands in the takings being read. A day that has
   been and gone shows none — those sales would be dated today.
+  **Nor does a day that has sold nothing yet.** Until the first sale it is a day of
+  shopping — the screen "Nasze zakupy" opens, answering for what an afternoon cost —
+  and a primary button offering to sell is the wrong instrument on a screen being read
+  for that. The first sale of the day is made from the home screen's "Sprzedaj", which
+  is where a sale is started from when there is no day on screen at all; from the next
+  one on, the day is a giełda and the button is here, at the stall. The rows are
+  unaffected: what they carry is which day a sale would land in, and that is still
+  today's.
   It is **the home screen's "Sprzedaj"**, in the same word, opening the same
   searchable magazyn: these two sections are one day's own work, and what a buyer is
   holding was most likely bought at some other giełda entirely, so without it the way

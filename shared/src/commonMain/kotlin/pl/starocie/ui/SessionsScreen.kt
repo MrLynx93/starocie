@@ -168,7 +168,7 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
 
         Spacer(Modifier.width(12.dp))
 
-        SessionProfit(stats)
+        SessionOutcome(stats)
     }
 }
 
@@ -182,13 +182,17 @@ private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
  *
  * They are never subtracted from one another here or anywhere else: the things we
  * bought are almost never the things we sold, so the gap between these two numbers is
- * not what we made. That answer is [SessionProfit]'s, and it comes from somewhere else
+ * not what we made. That answer is [SessionOutcome]'s, and it comes from somewhere else
  * entirely.
+ *
+ * A day we only shopped on has no such answer, and its spending takes the figure's
+ * place instead ([spentShownApart]) — so the buying line here drops the sum and keeps
+ * the count, one number on a row being enough for it to be read once.
  *
  * Each is one line and stays one line. A count and a sum read as a single fact, and
  * wrapped in half they read as two — worse here than anywhere, because the line
  * underneath is the other half of the pair and a four-line block has no obvious order
- * left. The width is not ours to spend either: [SessionProfit] takes what it needs
+ * left. The width is not ours to spend either: [SessionOutcome] takes what it needs
  * first and this column lives on the remainder. That is why the things are [rzeczy]
  * here and przedmioty everywhere else — the short word is what makes the line fit at
  * all, rather than merely trimming one that already did.
@@ -209,7 +213,11 @@ internal fun SessionFigures(stats: EventStats) {
     }
     if (stats.buyCount > 0) {
         Text(
-            "Kupiliśmy ${rzeczy(stats.itemsBought)} za ${stats.spent.format()}",
+            if (stats.spentShownApart) {
+                "Kupiliśmy ${rzeczy(stats.itemsBought)}"
+            } else {
+                "Kupiliśmy ${rzeczy(stats.itemsBought)} za ${stats.spent.format()}"
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -219,14 +227,36 @@ internal fun SessionFigures(stats: EventStats) {
 }
 
 /**
- * What the day made — each sale against what that thing cost us, not the day's takings
- * against the day's spending.
+ * The day's one big figure: what it made, or — on a day we only shopped on — what it
+ * cost.
  *
- * A day we only bought on has nothing to say here, and says nothing rather than
- * claiming a nought: no sale means no profit and no loss, only stock.
+ * What it made is each sale against what that thing cost us, never the day's takings
+ * against the day's spending. A day with no sale has no such answer and must not claim
+ * a nought: nothing was sold, so there is no profit and no loss, only stock. What it
+ * has instead is the money that left our hands, which is the whole of what such a day
+ * was — and it belongs here, in the place the eye already goes for a day's figure,
+ * rather than at the end of the line saying how many things we carried home.
+ *
+ * A day with neither sale nor buy says nothing at all, there being no figure it is
+ * short of.
  */
 @Composable
-internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
+internal fun SessionOutcome(stats: EventStats, style: TextStyle? = null) {
+    if (stats.spentShownApart) {
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                stats.spent.format(),
+                style = style ?: MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                "Wydaliśmy",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
     if (stats.sellCount == 0) return
 
     val lost = stats.profit.minor < 0
@@ -250,3 +280,14 @@ internal fun SessionProfit(stats: EventStats, style: TextStyle? = null) {
         )
     }
 }
+
+/**
+ * Whether the day's spending is the figure on the right rather than the tail of the
+ * line on the left.
+ *
+ * It is one rule in one place because two composables have to agree about it: the
+ * figure appears once, and the line that would otherwise carry the same sum drops it.
+ * A day with a sale has a profit to put there and keeps the sum where it was.
+ */
+internal val EventStats.spentShownApart: Boolean
+    get() = sellCount == 0 && buyCount > 0

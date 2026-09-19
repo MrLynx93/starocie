@@ -38,11 +38,25 @@ import pl.starocie.domain.format
  * does not say whether there is one. A guess says "ok." so it never passes for a
  * measured price, and an unknown says so rather than showing nothing.
  *
+ * [bought] turns the row round for a day's "Co kupiliśmy", where the question is not
+ * what we are asking but what the thing cost us: the total paid moves to the figure's
+ * place on the right, under a word saying which figure it is, and the line under the
+ * name goes with it rather than saying the same number twice. It is the *whole* cost —
+ * a lot of three at 30,00 zł reads 90,00 zł — because a list of what a day cost is
+ * read for the money that left our hands, and a per-piece price there would be a
+ * fraction of it presented as the whole. The ask is a tap away on the thing itself.
+ *
  * The whole row is one target, photo included — it opens the thing, and everything
  * you can do about it is there.
  */
 @Composable
-internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: () -> Unit) {
+internal fun StockRow(
+    item: Item,
+    stats: ItemStats,
+    piecesLeft: Int,
+    bought: Boolean = false,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -66,24 +80,50 @@ internal fun StockRow(item: Item, stats: ItemStats, piecesLeft: Int, onClick: ()
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            Text(
-                // By the piece for a lot, which is the number beside it on the right:
-                // the ask on a lot is what one of them goes for, so a total cost
-                // against a per-piece ask would be a gap that is not there.
-                boughtForLabel(stats, pieces = item.quantity),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // On a day's list of what it cost us the figure has moved right, and one
+            // number in two places on one row is a row read twice. An item whose cost
+            // we do not know has nothing to put there, so the line stays and says so —
+            // the unknown is never allowed to read as nothing at all.
+            if (!bought || stats.cost == null) {
+                Text(
+                    // By the piece for a lot, which is the number beside it on the
+                    // right: the ask on a lot is what one of them goes for, so a total
+                    // cost against a per-piece ask would be a gap that is not there.
+                    boughtForLabel(stats, pieces = item.quantity),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Spacer(Modifier.width(12.dp))
 
-        item.price?.let {
-            Text(
-                it.format(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (bought) {
+            // Drawn as the day's sales are drawn directly above it — the figure and a
+            // word under it saying which figure it is — so the two sections of a day
+            // read as one column of money rather than two habits.
+            stats.cost?.let {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "${if (stats.costIsEstimated) "ok. " else ""}${it.format()}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "Kupiliśmy",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            item.price?.let {
+                Text(
+                    it.format(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

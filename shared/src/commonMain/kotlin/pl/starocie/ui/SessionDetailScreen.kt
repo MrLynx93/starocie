@@ -64,9 +64,11 @@ import pl.starocie.domain.saleGroups
  *
  * The day being *today* changes one thing: a sale started from here would be dated
  * today and counted in today's takings, which is the whole reason a day that has been
- * and gone offers no "Sprzedaj". When the day on screen is the one every write
- * resolves to, that objection is gone and the button belongs — this is the giełda we
- * are standing at. What is sold at a giełda is mostly what we bought at some other
+ * and gone offers no "Sprzedaj" — and neither does a day that has sold nothing yet,
+ * that one being a day of shopping rather than a stall we are standing at. When the
+ * day on screen is the one every write resolves to and something has already gone at
+ * it, that objection is gone and the button belongs — this is the giełda we are
+ * standing at. What is sold at a giełda is mostly what we bought at some other
  * one, so the thing a buyer is holding is usually nowhere in these two lists; without
  * that button, selling from the stall we are standing at meant going back out to the
  * home screen, the one place the whole magazyn can be searched.
@@ -168,7 +170,7 @@ fun SessionDetailScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { SessionFigures(it) }
                 Spacer(Modifier.width(12.dp))
-                SessionProfit(it, style = MaterialTheme.typography.titleLarge)
+                SessionOutcome(it, style = MaterialTheme.typography.titleLarge)
             }
         }
 
@@ -233,6 +235,10 @@ fun SessionDetailScreen(
                             item = item,
                             stats = ledger.itemStats(item),
                             piecesLeft = ledger.piecesLeft(item),
+                            // A day is read for what it cost, so the row's figure is
+                            // what we paid for the whole thing rather than what we are
+                            // asking for one piece of it.
+                            bought = true,
                             onClick = openItemOrNull(
                                 item,
                                 sellingToday,
@@ -251,7 +257,15 @@ fun SessionDetailScreen(
         // Only on the day itself, and for the same reason the rows keep "Sprzedaj":
         // what it writes is a sale dated today, which on any other giełda would put
         // the money in a day nobody was reading.
-        if (sellingToday && event != null) {
+        //
+        // And only once that day has sold something. Until then it is a day of
+        // shopping — the screen reached from "Nasze zakupy", answering for what an
+        // afternoon cost — and a primary button offering to sell is the wrong
+        // instrument on a screen being read for that. The first sale of a day is made
+        // from the home screen's own "Sprzedaj", which is a tap away and is where a
+        // sale is started from when there is no day on screen at all; from the sale
+        // after that this day is a giełda and the button is here, at the stall.
+        if (sellingToday && event != null && (stats?.sellCount ?: 0) > 0) {
             // The magazyn, opened to sell from: these two sections are a day's own
             // work, and the thing being handed over was most likely bought at some
             // other giełda entirely. It is the same button the home screen leads with,
