@@ -2,24 +2,26 @@ package pl.starocie.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.time.Clock
@@ -120,12 +123,18 @@ fun SessionDetailScreen(
         ledger.sellsOfEvent(eventId).sortedByDescending { it.createdAt }
     }
 
-    // The same search the other three lists carry, in the same words: a good giełda
-    // is a hundred rows across the two sections, and typing a name is how anything
-    // is found in this app. It filters both sections at once, because a thing bought
-    // and sold on the same day honestly appears in each and one box must find it in
-    // both.
+    // The same search the other three lists carry, behind the same magnifier and in the
+    // same words: a good giełda is a hundred rows across the two sections, and typing a
+    // name is how anything is found in this app. It filters both sections at once,
+    // because a thing bought and sold on the same day honestly appears in each and one
+    // box must find it in both. See `Search.kt`.
+    val search = rememberSearchState()
     var query by remember(eventId) { mutableStateOf("") }
+
+    // Under the keyboard the bottom margin is rows nobody can see.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val typing by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
     val bought = remember(boughtThatDay, query) {
         boughtThatDay.filter { query.isBlank() || it.matchesQuery(query) }
     }
@@ -143,54 +152,67 @@ fun SessionDetailScreen(
         )
     }
 
-    ScreenColumn {
-        if (event == null) {
-            Text("Nie znamy tej giełdy", style = MaterialTheme.typography.headlineSmall)
+    ScreenColumn(bottom = if (typing) 6.dp else 20.dp) {
+        // Nothing to search in an empty day, so the magnifier is not offered either.
+        val searchable = boughtThatDay.isNotEmpty() || soldThatDay.isNotEmpty()
+        val closeSearch = {
+            query = ""
+            search.close()
+        }
+
+        SystemBack(enabled = search.isOpen, onBack = closeSearch)
+
+        if (search.isOpen) {
+            // The name field, the date and the day's figures all go while the search is
+            // open, which on this screen is 180 dp of it: a day is read for its figures
+            // and searched for one row, and those are not the same errand. They are all
+            // back the moment the search closes, and the figures are the day's own
+            // either way — never recomputed over what the typing found, because the row
+            // in the list behind this screen says the same numbers and the two must not
+            // disagree because somebody is looking for a lamp.
+            SearchLine(query, { query = it }, closeSearch)
+            Spacer(Modifier.height(8.dp))
         } else {
-            // Named after the fact, usually: the day exists the moment anything is
-            // recorded, and what to call it is remembered on the way home.
-            NameField(
-                label = "Nazwa giełdy",
-                text = name,
-                onTextChange = { name = it },
-                saved = event.name.orEmpty(),
-                placeholder = event.date.asText(),
-                onSave = { scope.launch { repository.nameEvent(eventId, it) } },
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                event.date.asText(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        stats?.let {
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { SessionFigures(it) }
-                Spacer(Modifier.width(12.dp))
-                SessionOutcome(it, style = MaterialTheme.typography.titleLarge)
+            if (event == null) {
+                Text("Nie znamy tej giełdy", style = MaterialTheme.typography.headlineSmall)
+            } else {
+                // Named after the fact, usually: the day exists the moment anything is
+                // recorded, and what to call it is remembered on the way home. The
+                // magnifier sits on its line, as it sits on the other lists' headings.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        NameField(
+                            label = "Nazwa giełdy",
+                            text = name,
+                            onTextChange = { name = it },
+                            saved = event.name.orEmpty(),
+                            placeholder = event.date.asText(),
+                            onSave = { scope.launch { repository.nameEvent(eventId, it) } },
+                        )
+                    }
+                    if (searchable) {
+                        Spacer(Modifier.width(12.dp))
+                        SearchAction { search.open() }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    event.date.asText(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            stats?.let {
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) { SessionFigures(it) }
+                    Spacer(Modifier.width(12.dp))
+                    SessionOutcome(it, style = MaterialTheme.typography.titleLarge)
+                }
+            }
 
-        // Below the day's figures rather than above them, and that is the whole
-        // reason they are not computed over what the search found: they answer for
-        // the giełda, which is what the row in the list behind this screen says too,
-        // and the two must not disagree because somebody is looking for a lamp.
-        if (boughtThatDay.isNotEmpty() || soldThatDay.isNotEmpty()) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                singleLine = true,
-                placeholder = { Text("Czego szukasz?") },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         if (bought.isEmpty() && sold.isEmpty()) {
@@ -219,7 +241,6 @@ fun SessionDetailScreen(
                                 onOpenSoldItem,
                             ),
                         )
-                        HorizontalDivider()
                     }
                 }
 
@@ -246,46 +267,50 @@ fun SessionDetailScreen(
                                 onOpenSoldItem,
                             ) ?: {},
                         )
-                        HorizontalDivider()
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        // While the search is open there is nothing under the rows at all — not
+        // "Sprzedaj" and not "Wstecz" — so what the typing found runs to the keyboard.
+        // Neither is lost: back closes the search and both come straight back.
+        if (!search.isOpen) {
+            Spacer(Modifier.height(12.dp))
 
-        // Only on the day itself, and for the same reason the rows keep "Sprzedaj":
-        // what it writes is a sale dated today, which on any other giełda would put
-        // the money in a day nobody was reading.
-        //
-        // And only once that day has sold something. Until then it is a day of
-        // shopping — the screen reached from "Nasze zakupy", answering for what an
-        // afternoon cost — and a primary button offering to sell is the wrong
-        // instrument on a screen being read for that. The first sale of a day is made
-        // from the home screen's own "Sprzedaj", which is a tap away and is where a
-        // sale is started from when there is no day on screen at all; from the sale
-        // after that this day is a giełda and the button is here, at the stall.
-        if (sellingToday && event != null && (stats?.sellCount ?: 0) > 0) {
-            // The magazyn, opened to sell from: these two sections are a day's own
-            // work, and the thing being handed over was most likely bought at some
-            // other giełda entirely. It is the same button the home screen leads with,
-            // in the same word, landing on the same searchable list.
+            // Only on the day itself, and for the same reason the rows keep "Sprzedaj":
+            // what it writes is a sale dated today, which on any other giełda would put
+            // the money in a day nobody was reading.
             //
-            // It is the only button here, and the list it opens is where the thing
-            // that was never recorded is added — the sell list's own "Dodaj … i
-            // sprzedaj" is one tap further on, from the screen whose search box has
-            // just failed to find it. Offering that door twice put a second primary
-            // decision on a day's screen for the rarer of the two moments.
-            Button(
-                onClick = onSell,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
+            // And only once that day has sold something. Until then it is a day of
+            // shopping — the screen reached from "Nasze zakupy", answering for what an
+            // afternoon cost — and a primary button offering to sell is the wrong
+            // instrument on a screen being read for that. The first sale of a day is made
+            // from the home screen's own "Sprzedaj", which is a tap away and is where a
+            // sale is started from when there is no day on screen at all; from the sale
+            // after that this day is a giełda and the button is here, at the stall.
+            if (sellingToday && event != null && (stats?.sellCount ?: 0) > 0) {
+                // The magazyn, opened to sell from: these two sections are a day's own
+                // work, and the thing being handed over was most likely bought at some
+                // other giełda entirely. It is the same button the home screen leads with,
+                // in the same word, landing on the same searchable list.
+                //
+                // It is the only button here, and the list it opens is where the thing
+                // that was never recorded is added — the sell list's own "Dodaj … i
+                // sprzedaj" is one tap further on, from the screen whose search box has
+                // just failed to find it. Offering that door twice put a second primary
+                // decision on a day's screen for the rarer of the two moments.
+                Button(
+                    onClick = onSell,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) { Text("Sprzedaj", fontWeight = FontWeight.Medium) }
 
-            Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(10.dp))
+            }
+
+            BackButton(onDone)
         }
-
-        BackButton(onDone)
     }
 }
 

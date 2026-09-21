@@ -5,25 +5,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,10 +64,16 @@ fun SessionsScreen(
     val repository: LedgerRepository = koinInject()
     val ledger by repository.ledger.collectAsState()
 
-    // The same search box the other two lists carry, in the same place and with the
-    // same words: typing is how anything is found in this app, and a list of days
-    // gets long the same way a list of things does.
+    // The same search the other two lists carry, behind the same magnifier and with the
+    // same words: typing is how anything is found in this app, and a list of days gets
+    // long the same way a list of things does. See `Search.kt`.
+    val search = rememberSearchState()
     var query by remember { mutableStateOf("") }
+
+    // Under the keyboard the bottom margin is rows nobody can see.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val typing by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
 
     // Newest first, the way both other lists run: the day just had is the one being
     // asked about. Two events on one day fall back to when they were made.
@@ -85,24 +92,17 @@ fun SessionsScreen(
             .map { it to ledger.eventStats(it) }
     }
 
-    ScreenColumn {
-        Text(
-            if (buying) "Nasze zakupy" else "Nasze giełdy",
-            style = MaterialTheme.typography.headlineSmall,
+    ScreenColumn(bottom = if (typing) 6.dp else 20.dp) {
+        // No figures under this heading: a giełda is a day, and days do not add up to
+        // a day. There is nothing above the box to be computed over what it found.
+        SearchableHeader(
+            heading = if (buying) "Nasze zakupy" else "Nasze giełdy",
+            search = search,
+            query = query,
+            onQueryChange = { query = it },
         )
 
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text("Czego szukasz?") },
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (search.isOpen) 8.dp else 12.dp))
 
         if (sessions.isEmpty()) {
             Text(
@@ -120,13 +120,16 @@ fun SessionsScreen(
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(sessions, key = { (event, _) -> event.id }) { (event, stats) ->
                     SessionRow(event, stats) { onOpenSession(event.id) }
-                    HorizontalDivider()
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        BackButton(onDone)
+        // Nothing under the rows while the search is open: this list has no button of
+        // its own, so what the typing found runs all the way to the keyboard.
+        if (!search.isOpen) {
+            Spacer(Modifier.height(12.dp))
+            BackButton(onDone)
+        }
     }
 }
 
@@ -150,7 +153,7 @@ internal fun Event.matchesQuery(query: String): Boolean =
 @Composable
 private fun SessionRow(event: Event, stats: EventStats, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

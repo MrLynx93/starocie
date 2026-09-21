@@ -588,9 +588,11 @@ The other is **the search placeholder, "Czego szukasz?"**, over every list there
 is — the magazyn, the sold list, the giełdy and one giełda's own two sections. It is
 the same exception a different way round: a search box is not a record of anything we
 did, it is the app asking the person holding the phone what they want, so it is
-second person the way a button is imperative. It is **one string in four places** and
-has to stay that way; two lists asking the same question in two different voices is
-exactly the small wrongness that makes an app feel unfinished.
+second person the way a button is imperative. It used to be **one string in four
+places**, and it is now one string in one — `SearchLine` in `Search.kt`, which all four
+lists open. Two lists asking the same question in two different voices is exactly the
+small wrongness that makes an app feel unfinished, and the surest way to avoid it is for
+there to be only one place the question can be asked from.
 
 The sell list's heading, **"Co chcesz sprzedać?"**, is that same exception one line
 higher up the screen: the list is being offered to pick from, so the app asks, and it
@@ -606,8 +608,12 @@ outlined, arrow and word, always doing exactly one thing. That is where the thum
 already is, and having one guaranteed exit is what lets the primary button be
 strict about its required fields instead of quietly doubling as the way out. It
 replaced a "Gotowe" here, a "Wróć" there and an "Anuluj" on the two forms that
-write nothing until their main button is pressed. The magazyn list alone puts it
-away while its search is being typed into, the keyboard then covering where it sits.
+write nothing until their main button is pressed. **The four searchable lists put it
+away while the search is open** — the magazyn, the sold list, the giełdy and one
+giełda's own screen — the keyboard then covering where it sits, and the rows wanting
+every line of what it leaves. Nothing is lost by it: the phone's own back closes the
+keyboard, then the search, then the screen, one press each and each undoing exactly one
+thing.
 
 - **Home** — "Nasze starocie" at the top with **the light/dark switch on its line**,
   right-hand end: it is the only app-wide setting there is, and a top bar to hold
@@ -766,6 +772,14 @@ away while its search is being typed into, the keyboard then covering where it s
   row that did one thing from one door and something else from the other is exactly
   the kind of difference that gets learned wrong once and then costs money. The
   photo is no longer a separate target, having nowhere else to go.
+  **The writing sets the row's height, not the photo.** The thumbnail is 40 dp, and it
+  was 52 — the tallest thing on a row whose two lines of text needed 36, so every list
+  was spending a third of its height on a picture. A photo here is supplementary and
+  always was: an item is found by typing its name, and the picture only helps you pick
+  the right one of two similar names out of a list, which it does just as well small. A
+  row is now as tall as what it says — 56 dp for two lines, 68 for the three a lot or a
+  sold thing carries — and there are no rules between rows, the photo column giving the
+  list its rhythm already.
   **A row carries what we paid**, the way the sold list does — "Kupiliśmy za",
   "Kupiliśmy za ok." for a share of a box, "Nie wiemy, za ile kupiliśmy" — because
   the asking price alone does not say whether there is a gap worth stopping at.
@@ -778,15 +792,28 @@ away while its search is being typed into, the keyboard then covering where it s
   find one thing does not change how much we have, so the heading stays put while the
   list under it narrows. The unpriced filter below is the one thing that moves them,
   being a question about the magazyn rather than a search through it.
-  **While the keyboard is up, the screen is for the rows.** The figures under the
-  heading, "Wstecz" and most of the bottom margin go until it is put away, so what the
-  typing found fills the space the keyboard left — on a phone half-covered by it those
-  lines were two or three rows nobody could see. The heading and "Dodaj … i sprzedaj"
-  stay: one says which door this is, the other is where a failed search goes next.
-  Leaving is not lost with the button, the system back closing the keyboard first and
-  bringing it back. This is the one place "Wstecz" is ever not on screen.
-  What the margin gives back is real only because `ScreenColumn` stopped paying for
-  the gesture bar and the keyboard separately — see there.
+  **Searching is a place you go, and while you are there the screen is the list.**
+  At rest there is no box at all — one 44 dp magnifier at the right-hand end of the
+  heading's line, where and how the home screen puts its light/dark switch. Tapped, it
+  opens `SearchLine`: the heading goes, the figures go, the unpriced filter goes,
+  "Wstecz" goes, the bottom margin goes, and what is left is the line being typed into,
+  the rows, and "Dodaj … i sprzedaj". On a phone half covered by the keyboard all of
+  that was two and a half rows of the thing somebody was standing at a table hunting
+  for, which is the friction rule losing to a control on the worst screen to lose it on.
+  **The heading's job passes to the button.** A heading is there to say which of the two
+  doors you came in by, and while the search is open the bottom of the screen says it
+  better: the selling route has "Dodaj … i sprzedaj" under the list and the magazyn
+  route has nothing at all. So the distinction survives in the thing you would actually
+  press, and the line it used to take goes to the rows.
+  The open line has **no border, no container and no fill** — a magnifier, the text, and
+  a ×. A search box is chrome, and drawing a form field round it asks a question the
+  screen is not asking. The × clears what is typed and closes the search when there is
+  nothing to clear; the keyboard's own key is `ImeAction.Search` and puts the keyboard
+  away, where it used to be a default that did nothing at all.
+  **Closing throws the query away**, and has to: a list left narrowed by typing that is
+  nowhere on screen is a list lying about what we have.
+  What the margin gives back is real only because `ScreenColumn` takes the whole bottom
+  edge from one place — see there.
   **One filter sits under that box, "Niewycenione przedmioty"**, and it is the one
   question the typing cannot ask: a thing we have not decided a price for has no
   name to type. It is what the magazyn is read for between giełdy — what still has
@@ -794,7 +821,9 @@ away while its search is being typed into, the keyboard then covering where it s
   than instead of it, so a name typed with the filter on still answers about the
   unpriced ones. It is **drawn only while there is something for it to find**, and
   kept while it is on: pricing the last one would otherwise take the switch away
-  with the list still narrowed to nothing. With it on the second figure changes —
+  with the list still narrowed to nothing. It goes with everything else while the
+  search is open — at the stall the thing being looked for is already in somebody's
+  hand, priced or not, and a chore for between giełdy is one of the lines in the way. With it on the second figure changes —
   "Mamy 3 przedmioty · Jeszcze ich nie wyceniliśmy" — because the asking total of
   things that are asked at nothing is 0,00 zł, which would be the app answering the
   very question it has just been told nobody can answer yet.
@@ -807,12 +836,15 @@ away while its search is being typed into, the keyboard then covering where it s
   rather than sitting under the search box where it used to shove the list down a line
   every time the typing stopped matching; from the magazyn card it is simply absent.
   It also heads the screen **"Co chcesz sprzedać?" rather than "Nasz magazyn"** — the
-  same second person the search box under it uses, and the same reason: the app is
-  asking the person holding the phone, not saying what we did. That is what tells you
-  the list is a step in selling rather than the magazyn arrived at, which matters most
-  coming from a giełda — the one door where what you left is a day rather than a list,
-  and where the sale you are about to make is recorded into that day. The list, its
-  two figures and its rows are identical either way.
+  same second person "Czego szukasz?" uses, and the same reason: the app is asking the
+  person holding the phone, not saying what we did. That is what tells you the list is a
+  step in selling rather than the magazyn arrived at, which matters most coming from a
+  giełda — the one door where what you left is a day rather than a list, and where the
+  sale you are about to make is recorded into that day. **While the search is open the
+  button carries that on its own**, the heading not being drawn at all: one route has a
+  primary button under the rows and the other has nothing, which is the same difference
+  said by the thing you would press rather than by a line at the top. The list, its two
+  figures and its rows are identical either way.
   **The item screen puts the facts above and the three buttons below** — Sprzedaj,
   Usuń, Wstecz — pinned, so what you can do about a thing is always in the same
   place under the thumb while what it is scrolls past.
@@ -971,9 +1003,12 @@ away while its search is being typed into, the keyboard then covering where it s
   a sale already says what is undone, while a button alone under a price field and
   saying only "Cofnij" reads as undoing the typing.
 - **Sold** — the mirror of the stock list, reached from the second home card:
-  everything `SOLD`, newest sale first, **with the magazyn's search over it**. It
-  shares that list's predicate — the name, case-insensitive, in memory — so the
-  two can never answer differently about the same typing. Over the box sit the two
+  everything `SOLD`, newest sale first, **with the magazyn's search over it** — the
+  same magnifier on the heading's line, the same line when it opens, and the same
+  disappearing act while it is open. It shares that list's predicate — the name,
+  case-insensitive, in memory — so the two can never answer differently about the same
+  typing. With no button of its own there is nothing under the rows at all while it is
+  being searched: what the typing found runs from the line to the keyboard. Over the box sit the two
   figures the list is for: "Sprzedaliśmy 12 przedmiotów za 806,00 zł" and
   "Zarobiliśmy ok. 240,00 zł", **both over everything sold rather than over what the
   search found** — the heading says what we have sold, and looking for one thing does
@@ -1085,9 +1120,10 @@ away while its search is being typed into, the keyboard then covering where it s
   lines have no obvious order left. The width is not theirs to spend, either, the
   profit beside them taking what it needs first. That is what the shorter word is
   for: "rzeczy" is what makes the line fit rather than a trim of one that already did.
-  It carries **the same search box as the other two lists**, in the same place and
-  in the same words, because typing is how anything is found in this app and days
-  pile up the way things do. A giełda is matched on its name **and on its
+  It carries **the same search as the other two lists**, behind the same magnifier on
+  its heading's line and in the same words, because typing is how anything is found in
+  this app and days pile up the way things do. Open, it does what they do: the heading
+  goes, "Wstecz" goes, and the days run to the keyboard. A giełda is matched on its name **and on its
   date as the row says it** — most are auto-created and never named, so the date is
   the whole of what such a row shows, and leaving it out would make the search blind
   to the majority of the list. "2026-08" therefore finds a month.
@@ -1125,19 +1161,25 @@ away while its search is being typed into, the keyboard then covering where it s
   things from the magazyn. There the line opens its newest sale's thing. A line of
   several pieces says its prices per piece where they divide into whole grosze, and
   as the total where they do not, rather than rounding into a price nobody paid.
-  That screen carries **the same search box as the three lists, under the day's
-  figures**, and it narrows both sections at once — a thing bought and sold on one day
-  is honestly in each, so one box has to find it in both. It is under the figures
-  rather than over them because those figures are **the day's and stay the day's**:
-  they are what the row in the list behind says as well, and the two must not
-  disagree because somebody is looking for a lamp. The magazyn and the sold list keep
-  their headings still for the same reason. A sale is matched
+  That screen carries **the same search as the three lists**, its magnifier on the line
+  the day names itself on, and it narrows both sections at once — a thing bought and
+  sold on one day is honestly in each, so one box has to find it in both. Open, it takes
+  more away here than anywhere: the name field, the date, the day's two figure lines and
+  the profit beside them, which between them are a third of the screen. A day is read
+  for its figures and searched for one row, and those are not the same errand; they are
+  all back the moment the search closes. Those figures are **the day's and stay the
+  day's** either way, never recomputed over what the typing found: they are what the row
+  in the list behind says as well, and the two must not disagree because somebody is
+  looking for a lamp. The magazyn and the sold list keep their headings still for the
+  same reason. A sale is matched
   on its item's name, so a deleted thing's sale has nothing left to match and drops
   out of a search; it is back the moment the box is cleared. The box only appears
   once the day holds something, there being nothing to search in an empty one.
   **Today's giełda carries one button of its own**, pinned above "Wstecz", and for
   the reason its rows keep "Sprzedaj": the day on screen is the one every write
-  resolves to, so what it records lands in the takings being read. A day that has
+  resolves to, so what it records lands in the takings being read. It goes while the
+  search is open, along with "Wstecz" — this screen's search is over the day's own rows,
+  and a button that leaves for the magazyn is not what a failed search here wants next. A day that has
   been and gone shows none — those sales would be dated today.
   **Nor does a day that has sold nothing yet.** Until the first sale it is a day of
   shopping — the screen "Nasze zakupy" opens, answering for what an afternoon cost —

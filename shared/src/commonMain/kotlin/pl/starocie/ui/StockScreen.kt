@@ -13,10 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -54,6 +52,13 @@ import pl.starocie.domain.format
  * The heading matters most coming from a giełda, which is the one door where the
  * screen behind is a place rather than a list: without it, a day's "Sprzedaj" landed
  * on a page that gave no sign the sale was still going to be recorded into that day.
+ *
+ * **While the search is open the screen is the list and nothing else.** The heading,
+ * the figures, the unpriced filter and "Wstecz" all go, and the only thing left under
+ * the rows is "Dodaj … i sprzedaj" — which is then also what says which door you came
+ * in by, the heading having been the thing that said it before. Somebody is holding an
+ * object out across a table; every line that is not a thing we might be holding is a
+ * line in the way. See `Search.kt`.
  */
 @Composable
 fun StockScreen(
@@ -65,36 +70,42 @@ fun StockScreen(
     val viewModel: SellViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // The keyboard is up only while the search box is being typed into, and then the
-    // screen is for the rows: the heading's figures, "Wstecz" and most of the bottom
-    // margin go until it is put away, so what the typing found is what fills the
-    // space left. Leaving is still one system back away — the first closes the
-    // keyboard and brings the button back.
+    // Opened already if there is a query to open it for. The view model outlives a trip
+    // to "Dodaj … i sprzedaj" and back, so without this the list would come back
+    // narrowed by typing that was nowhere on screen.
+    val search = rememberSearchState(state.query.isNotBlank())
+
+    // Under the keyboard the bottom margin is rows nobody can see, so it goes. The
+    // keyboard is the floor then, and what is pinned above it wants only enough air not
+    // to sit on the keys.
     val ime = WindowInsets.ime
     val density = LocalDensity.current
     val typing by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
 
-    ScreenColumn(bottom = if (typing) 8.dp else 20.dp) {
+    ScreenColumn(bottom = if (typing) 6.dp else 20.dp) {
         // Opened to sell from, the heading is the question being answered — the same
-        // second person the search box under it uses, and for the same reason: it is
-        // the app asking the person holding the phone, not the notebook saying what we
-        // did. It is also what says this is a step in selling rather than the magazyn
-        // arrived at, which a giełda's own "Sprzedaj" had no other way to show.
-        Text(
-            if (selling) "Co chcesz sprzedać?" else "Nasz magazyn",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-
-        if (!typing) {
+        // second person the search box uses, and for the same reason: it is the app
+        // asking the person holding the phone, not the notebook saying what we did. It
+        // is also what says this is a step in selling rather than the magazyn arrived
+        // at, which a giełda's own "Sprzedaj" had no other way to show.
+        //
+        // While the search is open it is not drawn at all, and "Dodaj … i sprzedaj"
+        // below is what tells the two routes apart instead.
+        SearchableHeader(
+            heading = if (selling) "Co chcesz sprzedać?" else "Nasz magazyn",
+            search = search,
+            query = state.query,
+            onQueryChange = viewModel::onQueryChange,
+        ) {
             // Over the magazyn, not over what the search found: the heading says what
             // we have, and looking for one thing does not change that. The unpriced
             // filter does move it, being a question about the magazyn rather than a
             // search through it.
             //
-            // The asking total is what the list is worth, and with the unpriced ones
-            // on their own there is no such number — every one of them is the gap.
-            // "Chcemy sprzedać za łącznie 0,00 zł" would be the app answering a
-            // question it has just been told nobody can answer yet.
+            // The asking total is what the list is worth, and with the unpriced ones on
+            // their own there is no such number — every one of them is the gap.
+            // "Chcemy sprzedać za łącznie 0,00 zł" would be the app answering a question
+            // it has just been told nobody can answer yet.
             val summary = if (state.onlyUnpriced) {
                 "Jeszcze ${if (state.shelfCount == 1) "go" else "ich"} nie wyceniliśmy"
             } else {
@@ -108,27 +119,17 @@ fun StockScreen(
             )
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = state.query,
-            onValueChange = viewModel::onQueryChange,
-            singleLine = true,
-            placeholder = { Text("Czego szukasz?") },
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        // The one thing the search box cannot find: a thing with no asking price has
-        // nothing to type. It sits under the box because it narrows the same list in
-        // the same way, and it is only drawn while there is something to find — a
-        // switch that can only ever empty the list is a line about nothing.
+        // The one thing the search cannot ask for: a thing with no asking price has no
+        // name to type. It is only drawn while there is something for it to find — a
+        // switch that can only ever empty the list is a line about nothing — and kept
+        // while it is on, pricing the last one otherwise taking the switch away with the
+        // list still narrowed to nothing.
         //
-        // Only from the magazyn card, though. It is what the list is read for between
-        // giełdy — what still needs a price before the next one — and at the stall the
-        // thing being looked for is in somebody's hand, priced or not. Each route owns
-        // its own view model, so the selling list can never inherit the filter on.
-        if (!selling && state.offersUnpricedFilter) {
+        // Only from the magazyn card, and only at rest. It is what the list is read for
+        // between giełdy — what still needs a price before the next one — where at the
+        // stall the thing being looked for is already in somebody's hand, priced or not;
+        // and with the search open it is one of the lines that is in the way of the rows.
+        if (!search.isOpen && !selling && state.offersUnpricedFilter) {
             Spacer(Modifier.height(10.dp))
 
             // A tick while it is on, and the slot empty while it is off: the chip's
@@ -151,7 +152,7 @@ fun StockScreen(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (search.isOpen) 8.dp else 12.dp))
 
         if (state.inStock.isEmpty()) {
             Text(
@@ -175,17 +176,17 @@ fun StockScreen(
                         entry.piecesLeft,
                         onClick = { onOpenItem(entry.item.id) },
                     )
-                    HorizontalDivider()
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (search.isOpen) 8.dp else 12.dp))
 
-        // The thing may never have been recorded — most of the time, at the start,
-        // it has not been. It sits at the bottom with the other buttons rather than
-        // under the search box, where it used to push the list down a line every
-        // time the typing stopped matching anything.
+        // The thing may never have been recorded — most of the time, at the start, it
+        // has not been. It sits at the bottom with the other buttons rather than under
+        // the search, where it used to push the list down a line every time the typing
+        // stopped matching anything. With the search open it is the only thing here, and
+        // so is also what says this list was opened to sell from.
         if (selling) {
             Button(
                 onClick = { viewModel.startNewItem(); onAddNew() },
@@ -202,10 +203,10 @@ fun StockScreen(
                 )
             }
 
-            if (!typing) Spacer(Modifier.height(10.dp))
+            if (!search.isOpen) Spacer(Modifier.height(10.dp))
         }
 
-        if (!typing) BackButton(onDone)
+        if (!search.isOpen) BackButton(onDone)
     }
 }
 

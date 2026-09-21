@@ -5,25 +5,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
@@ -53,8 +54,15 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
 
     // The same in-memory search the magazyn does, for the same reason: a name is how
     // a thing is found, and by the time there are enough sales to be worth reading
-    // there are too many to scroll.
+    // there are too many to scroll. It is behind the same magnifier too — see
+    // `Search.kt` — so the two lists are searched by one gesture and not two.
+    val search = rememberSearchState()
     var query by remember { mutableStateOf("") }
+
+    // Under the keyboard the bottom margin is rows nobody can see.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val typing by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
 
     // Newest sale first: the thing you are least sure about is the thing that went
     // last. Items with no completed sale left by some other route, so they fall
@@ -73,31 +81,26 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     val proceeds = remember(everything) { everything.map { (_, stats) -> stats.proceeds }.sum() }
     val profit = remember(everything) { soldProfit(everything.map { (_, stats) -> stats }) }
 
-    ScreenColumn {
-        Text("Co sprzedaliśmy", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "Sprzedaliśmy ${przedmioty(everything.size)} za ${proceeds.format()}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            profit,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    ScreenColumn(bottom = if (typing) 6.dp else 20.dp) {
+        SearchableHeader(
+            heading = "Co sprzedaliśmy",
+            search = search,
+            query = query,
+            onQueryChange = { query = it },
+        ) {
+            Text(
+                "Sprzedaliśmy ${przedmioty(everything.size)} za ${proceeds.format()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                profit,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text("Czego szukasz?") },
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (search.isOpen) 8.dp else 12.dp))
 
         if (sold.isEmpty()) {
             Text(
@@ -110,13 +113,16 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(sold, key = { (item, _) -> item.id }) { (item, stats) ->
                     SoldRow(item, stats) { onOpenItem(item.id) }
-                    HorizontalDivider()
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        BackButton(onDone)
+        // Nothing under the rows while the search is open: this list has no button of
+        // its own, so what the typing found runs all the way to the keyboard.
+        if (!search.isOpen) {
+            Spacer(Modifier.height(12.dp))
+            BackButton(onDone)
+        }
     }
 }
 
@@ -128,7 +134,7 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
 @Composable
 private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

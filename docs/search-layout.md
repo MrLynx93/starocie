@@ -1,6 +1,8 @@
 # Search as a place you go, not a box that is always there
 
-A design, not a change. Nothing here is implemented yet.
+**Built.** This is the note the change was made from; it is kept as the reasoning
+behind it rather than as a proposal. Where the code differs from what is written here,
+the differences are listed at the end.
 
 Supersedes the first draft, which kept the search box permanently on screen and only
 made it shorter. That was the wrong shape: a box you are not typing into is a box
@@ -118,17 +120,43 @@ is whether the search is open.
 - **The figures do not follow the search.** They are hidden while searching, not
   recomputed over what was found.
 
-## Open questions
+## How the code came out
 
-1. **Does the hairline stay?** Board 9 shows it both ways. Without it the typed line
-   floats straight into the first row; with it there is one stroke on screen that is not
-   content.
-2. **Does the magazyn keep its unpriced chip while searching?** It goes here, per "only
-   the add button". The argument for keeping it when it is *on* is that a list narrowed
-   for a reason you cannot see is a list lying about itself — but that is one chip's
-   worth of chrome against the whole point of this change.
-3. **Is 40 dp too small for the photo?** It is a judgement about spotting a thing at a
-   stall in daylight, which is yours to make and not mine.
+Three things were settled while building, and one of them against what is written above.
+
+1. **The hairline stayed.** Without it the typed line runs straight into the first row
+   and the two read as one block.
+2. **The unpriced chip goes while searching**, as written. A list narrowed for a reason
+   you cannot see is a list lying about itself, and that is why it survives *closing* the
+   search — the query is thrown away, so nothing is narrowed invisibly.
+3. **The gap under the button was fixed rather than measured first.** The note above said
+   to measure before choosing, and on reflection the structure was wrong whatever the
+   measurement said: `ScreenColumn` was taking the bottom edge from a `Scaffold` and from
+   `imePadding` with a `consumeWindowInsets` in between to stop it being paid for twice —
+   three things that had to agree. It is now one `windowInsetsPadding(safeDrawing)`,
+   which already unions the status bar, the navigation bar and the keyboard and so cannot
+   disagree with itself. **If the strip is still there on the phone, this was not it** and
+   the next place to look is the button's own container.
+
+Two things beyond what is written above:
+
+- **A giełda's own "Sprzedaj" hides while its search is open**, along with "Wstecz".
+  That screen's search is over the day's own two sections, and a button that leaves for
+  the magazyn is not what a failed search there wants next.
+- **The magazyn reopens its search when it comes back holding a query.** `SellViewModel`
+  outlives a trip to "Dodaj … i sprzedaj" and back, so without that the list would return
+  narrowed by typing that was nowhere on screen.
+
+Still yours to judge: **40 dp for the photo**. It is a question about spotting a thing at
+a stall in daylight, which is not mine to answer.
+
+## Not verified here
+
+There is no Android SDK and no macOS in the environment this was written in, and the
+`shared` module has no other target — so **none of this has been compiled**. It wants a
+build and a run on the phone before it is trusted, and the three things most likely to
+need a second pass are the `ImeAction.Search` key, the back-press order (keyboard, then
+search, then screen) and the gap above.
 
 ## Two things in CLAUDE.md this changes
 

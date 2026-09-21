@@ -48,6 +48,14 @@ import pl.starocie.domain.format
  *
  * The whole row is one target, photo included — it opens the thing, and everything
  * you can do about it is there.
+ *
+ * **The text sets the height, not the photo.** At 52 dp the picture was the tallest
+ * thing on a row whose two lines of writing needed 36, so every list was paying a
+ * third of its height for a thumbnail — and a photo in this app is supplementary,
+ * the name being what a thing is found by. At 40 dp it still does the one job it has,
+ * which is helping you pick the right one of two similar names out of a list, and the
+ * row is as tall as what it says: 56 dp for two lines, 68 for the three a lot or a
+ * sold thing carries.
  */
 @Composable
 internal fun StockRow(
@@ -58,7 +66,7 @@ internal fun StockRow(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -157,13 +165,16 @@ internal fun boughtForLabel(stats: ItemStats, pieces: Int = 1): String {
  * the finding, so a missing photo costs nothing. An empty square stands in for it
  * anyway, so the names stay on one line down the list instead of stepping in and
  * out.
+ *
+ * 40 dp, which is small enough that the writing beside it decides how tall the row
+ * is. It was 52, and a list of things to sell is read for its names.
  */
 @Composable
 internal fun ItemThumb(photo: String?, onClick: (() -> Unit)? = null) {
     val thumb = remember(photo) { photo?.let { decodePhoto(it) } }
     // Clipped before the click so the ripple stays inside the rounded square, and
     // the click last of all so nothing is painted over the ripple afterwards.
-    val square = Modifier.size(52.dp).clip(RoundedCornerShape(10.dp))
+    val square = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
     val tap = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)
 
     if (thumb != null) {
@@ -184,7 +195,7 @@ internal fun ItemThumb(photo: String?, onClick: (() -> Unit)? = null) {
                 Icons.Filled.PhotoCamera,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }
