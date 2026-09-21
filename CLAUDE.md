@@ -550,6 +550,18 @@ the screens live in `commonMain`, so there is nothing else for Swift to do.
 - Observing functions return `Flow<T>`; one-shot operations are `suspend`.
 - Ids are generated client-side, so a record exists locally the instant it is made.
 - Prefer `sealed interface` over strings and booleans for status and result types.
+- **Nothing calls `navigate` or `popBackStack` directly** — every route in `App.kt`
+  goes through `goOnce` or `backOnce`, which drop anything dispatched from a screen
+  that is no longer the current one. A screen stays composed, and its buttons stay
+  live, for as long as it takes to slide off, so a thumb landing twice on "Wstecz"
+  pops the screen underneath it as well. One screen below Home is an empty back
+  stack, and a `NavHost` with nothing on its back stack **draws nothing at all**: the
+  app is still running and still syncing, and the screen is the surface colour and
+  nothing else — black on the dark palette, white on the light one — until it is
+  killed and started again. The system's own back is safe, the library disabling its
+  handler at the last entry, but a `popBackStack()` of ours goes straight past that;
+  `backOnce` keeps that floor itself and never pops the last entry, so the blank
+  screen is unreachable rather than merely unlikely.
 
 ## Voice
 
