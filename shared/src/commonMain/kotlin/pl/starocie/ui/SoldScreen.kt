@@ -28,13 +28,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import pl.starocie.domain.EventStats
 import pl.starocie.domain.Item
 import pl.starocie.domain.ItemStats
 import pl.starocie.domain.ItemStatus
 import pl.starocie.domain.LedgerRepository
 import pl.starocie.domain.Money
 import pl.starocie.domain.format
-import pl.starocie.domain.sum
 
 /**
  * Everything that has already left as a sale, the counterpart to the magazyn list.
@@ -78,8 +78,15 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
     }
     // Over everything sold, not over what the search found: the heading says what we
     // have sold, and looking for one thing does not change that.
-    val proceeds = remember(everything) { everything.map { (_, stats) -> stats.proceeds }.sum() }
-    val profit = remember(everything) { soldProfit(everything.map { (_, stats) -> stats }) }
+    //
+    // And over the *sales*, by way of the days, rather than over the rows below: the
+    // rows are things wholly gone, and a lot of twelve plates is one of them while
+    // being twelve things sold. Counting rows made this line — and the home card
+    // that opens it — read smaller than the giełdy they are the total of, and left
+    // a lot sold in part out altogether, pieces and money both, it being still in
+    // the magazyn. It is [Ledger.overallStats], which is what the giełdy list and
+    // the home screen's own third card read by, so the three cannot disagree.
+    val all = remember(ledger) { ledger.overallStats() }
 
     ScreenColumn(bottom = if (typing) 6.dp else 20.dp) {
         SearchableHeader(
@@ -89,12 +96,12 @@ fun SoldScreen(onOpenItem: (String) -> Unit, onDone: () -> Unit) {
             onQueryChange = { query = it },
         ) {
             Text(
-                "Sprzedaliśmy ${przedmioty(everything.size)} za ${proceeds.format()}",
+                "Sprzedaliśmy ${przedmioty(all.itemsSold)} za ${all.earned.format()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                profit,
+                soldProfit(all),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -151,9 +158,16 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // A lot says how many of it went, in the words its own screen uses:
+            // the heading above counts pieces, so a row standing for twelve of
+            // them has to say twelve or the list will not add up to it.
+            val went = if (stats.soldQuantity > 1) {
+                "Sprzedaliśmy ${sztuki(stats.soldQuantity)} za ${stats.proceeds.format()}"
+            } else {
+                "Sprzedaliśmy za ${stats.proceeds.format()}"
+            }
             Text(
-                text = "Sprzedaliśmy za ${stats.proceeds.format()}" +
-                    if (stats.sellCount > 1) " · w ${stats.sellCount} kawałkach" else "",
+                text = went + if (stats.sellCount > 1) " · w ${stats.sellCount} kawałkach" else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -196,16 +210,18 @@ private fun SoldRow(item: Item, stats: ItemStats, onClick: () -> Unit) {
 private fun approx(stats: ItemStats) = if (stats.profitIsEstimated) "ok. " else ""
 
 /**
- * What everything on screen made together.
+ * What everything we have sold made together.
  *
  * A thing we never recorded buying cost us nothing on the books, so the whole of what
  * it went for is in here — the same rule a giełda's profit follows, and the same one
- * its own row reads by.
+ * its own row reads by. It is every day's profit summed, which is every sale set
+ * against what its own pieces cost, so this line and the giełdy cannot answer
+ * differently about the same afternoon.
  */
-private fun soldProfit(stats: List<ItemStats>): String {
-    val total = stats.map { it.profit }.sum()
+private fun soldProfit(stats: EventStats): String {
+    val total = stats.profit
     // One share of a box anywhere makes the whole figure a guess.
-    val approx = if (stats.any { it.profitIsEstimated }) "ok. " else ""
+    val approx = if (stats.profitIsEstimated) "ok. " else ""
     return if (total.minor < 0) {
         "Straciliśmy $approx${Money(-total.minor).format()}"
     } else {
