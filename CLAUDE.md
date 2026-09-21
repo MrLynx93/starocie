@@ -626,13 +626,32 @@ thing.
   name and, beneath it, what that day spent and took; both are gone. The screen
   answers for everything we have, not for one day, and a pair of figures side by
   side invites exactly the subtraction that is never profit.
-  The round buttons — "Kup paczkę", "Kup", "Sprzedaj" — align their icon and label
-  to the left edge, so three labels of different lengths read as one stack rather
-  than three unrelated buttons. Summary cards follow, each a read-out with its
-  list behind it, then recent activity:
+  **The whole screen scrolls, and the three buttons are pinned under it.** Neither
+  used to be true: only the recent-sales list at the bottom scrolled, so the cards
+  above it could never move out of the way and the list got whatever height was left
+  over — close to none of it on a smaller phone, or on a day when both optional cards
+  are showing. And the buttons were three extended FABs stacked in the bottom-right
+  corner, 188 dp of them, floating over that same list, which is the one thing on this
+  screen that is not a read-out. Pinned, they cover nothing, are always there whatever
+  has been scrolled past, and come to 118 dp: **"Sprzedaj" keeps a row of its own and
+  the two buys share one above it**, because at a stall this screen exists to start a
+  sale and the thumb should not have to pick that button out of three of the same
+  size. That is also what lets the pair shrink — side by side they need neither the
+  full height nor the left-aligned labels the stack needed in order to read as one
+  stack. The recent list inside the scroll is a plain column, not a lazy one: a lazy
+  list in a scrolling column has no height to be measured against and crashes.
+  **The day we are standing in comes first**, then everything we have, then recent
+  activity:
   **"Mamy 12 przedmiotów" / "Chcemy sprzedać za łącznie …"**,
   **"Sprzedaliśmy 12 przedmiotów" / "Sprzedaliśmy za łącznie …"**, and
   **"Mamy za sobą 12 giełd" / "Zarobiliśmy na nich ok. …"**.
+  **Those four totals are rows of one card, not four cards.** They were four of the
+  same shape in the same colour with the same chevron, 320 dp of them, and because
+  they looked alike the eye had to read all four to find one — which is also not what
+  they are: they are one list of totals, everything we have added up. One container
+  says so, and costs three hairlines instead of three gaps and one padding instead of
+  four. Every sentence is intact, both lines of each: what was crowding the screen was
+  the boxes and not the words. Each row still opens its own list.
   **The second card counts pieces and comes out of `overallStats()`**, exactly as the
   third does, so it is the giełdy's own `itemsSold` and `earned` summed and the home
   screen cannot answer smaller than the days it is the total of. It counted the things
@@ -662,13 +681,19 @@ thing.
   sold on any of those days. It is **drawn only when there has been such a day**: a
   card saying we have never had one is a line about nothing, and unlike the three
   above it there is no figure we are waiting on — its own existence is the figure.
-  **Today's day sits under all of them, once anything has happened at it** — a card
+  **Today's day sits above all of them, once anything has happened at it** — a card
   reading "Dzisiejsza giełda" / "Sprzedaliśmy … za …" or, before the first sale,
   "Dzisiejsze zakupy" / "Kupiliśmy … za …", turning into the other the moment the
   first thing goes. It opens the day itself, past the list it would be found in.
+  It used to sit under the four totals, which is the wrong end: at a stall it is the
+  card the app was opened for, and four figures that do not change from one hour to
+  the next were between it and the thumb. It stays **a card of its own, in the
+  secondary colour**, because it is not one of those totals — they are what we have
+  done and this is what is happening — and a colour says that without having to be
+  read.
   **While the ledger is still arriving, the read-outs are bars and nothing else is.**
-  The cards keep their shape, their colour and their chevron and stay openable; the
-  title, the light/dark switch and the three round buttons are drawn for real,
+  The card and the rows keep their shape, their colour and their chevron and stay
+  openable; the title, the light/dark switch and the three buttons are drawn for real,
   because **a write never waits for the network** — an app that greys out "Kup" and
   "Sprzedaj" until Firestore has answered is lying about what it can do, at exactly
   the moment somebody is holding something out. Each bar takes the line height of the
